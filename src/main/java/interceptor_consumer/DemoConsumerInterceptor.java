@@ -8,15 +8,15 @@ import org.apache.kafka.common.TopicPartition;
 import java.util.*;
 
 // import static jdk.internal.org.jline.reader.impl.LineReaderImpl.CompletionType.List;
-
 public class DemoConsumerInterceptor implements ConsumerInterceptor<String,String>{
 
     @Override
     public ConsumerRecords<String, String> onConsume(ConsumerRecords<String, String> consumerRecords) {
         Map<TopicPartition, List<ConsumerRecord<String, String>>> records = new LinkedHashMap<>();
+        TopicPartition topicpartition = null;
+        // Source for iter: https://stackoverflow.com/questions/1839668/what-is-the-best-way-to-combine-two-lists-into-a-map-java
         List<ConsumerRecord<String, String>> mutatedRecords= new ArrayList<>();
         Iterator<ConsumerRecord<String, String>> iter = consumerRecords.iterator();
-        TopicPartition topicpartition = null;
         while(iter.hasNext()){
             ConsumerRecord<String, String> element = iter.next();
             topicpartition = new TopicPartition(element.topic(), element.partition());
