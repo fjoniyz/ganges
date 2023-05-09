@@ -1,4 +1,4 @@
-package interceptor_example;
+package interceptor_producer;
 import org.apache.kafka.clients.producer.ProducerInterceptor;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
@@ -9,7 +9,7 @@ public class DemoProducerInterceptor implements ProducerInterceptor<String,Strin
     @Override
     public ProducerRecord<String, String> onSend(ProducerRecord<String, String> producerRecord) {
         ProducerRecord<String, String> mutatedRecord =
-                new ProducerRecord<>(producerRecord.topic(), producerRecord.key(), producerRecord.value().replaceAll("e", "3").replaceAll("o", "0"));
+                new ProducerRecord<>(producerRecord.topic(), producerRecord.key(), producerRecord.value().replaceAll("e", "3").replaceAll("o", "0") + " X");
         return mutatedRecord;
     }
 

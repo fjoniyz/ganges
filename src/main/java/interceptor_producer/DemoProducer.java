@@ -1,4 +1,4 @@
-package interceptor_example;
+package interceptor_producer;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -19,10 +19,12 @@ public class DemoProducer {
 
         KafkaProducer<String, String> producer = new KafkaProducer<>(properties);
 
-        ProducerRecord<String, String> producerRecord =
-                new ProducerRecord<>(MAIN_TOPIC, "test_record", "Hello World");
+        for (int i = 0; i < 10; i++) {
+            ProducerRecord<String, String> producerRecord =
+                    new ProducerRecord<>(MAIN_TOPIC, "test_record", "Hello World");
 
-        producer.send(producerRecord);
+            producer.send(producerRecord);
+        }
         producer.flush();
         producer.close();
     }
