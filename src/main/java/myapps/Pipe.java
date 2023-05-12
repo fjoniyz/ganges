@@ -7,6 +7,11 @@ import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.KStream;
 
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 
@@ -18,27 +23,32 @@ import java.util.concurrent.CountDownLatch;
 public class Pipe {
 
     public static void main(String[] args) {
-        Properties props = new Properties();
-        props.put(StreamsConfig.APPLICATION_ID_CONFIG, "streams-pipe");
-        props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
-        props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
-        props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+        String userDirectory = System.getProperty("user.dir");
+        try (InputStream inputStream = Files.newInputStream(Paths.get(userDirectory + "/src/main/resources/config.properties"))){
+            Properties props = new Properties();
+            props.load(inputStream);
+            props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+            props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
 
-        final StreamsBuilder builder = new StreamsBuilder();
-        KStream<String, String> src = builder.stream("streams-plaintext-input");
-        src.mapValues(value -> value + "X")
-                .to("streams-pipe-output");
+            final StreamsBuilder builder = new StreamsBuilder();
+            KStream<String, String> src = builder.stream("streams-plaintext-input");
+            src.mapValues(value -> value + "X")
+                    .to("streams-pipe-output");
 
-        final Topology topology = builder.build();
-        final KafkaStreams streams = new KafkaStreams(topology, props);
-        final CountDownLatch latch = new CountDownLatch(1);
+            final Topology topology = builder.build();
+            final KafkaStreams streams = new KafkaStreams(topology, props);
+            final CountDownLatch latch = new CountDownLatch(1);
 
-        try {
-            streams.start();
-            latch.await();
-        } catch (Throwable e) {
-            System.exit(1);
+            try {
+                streams.start();
+                latch.await();
+            } catch (Throwable e) {
+                System.exit(1);
+            }
+            System.exit(0);
+        } catch (IOException ioException) {
+            ioException.printStackTrace();
         }
-        System.exit(0);
+
     }
 }
