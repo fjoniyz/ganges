@@ -10,14 +10,9 @@ import org.apache.kafka.streams.kstream.KStream;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 
-/**
- * In this example, we implement a simple Pipe program using the high-level Streams DSL
- * that reads from a source topic "streams-plaintext-input", where the values of messages represent lines of text,
- * and writes the messages as-is into a sink topic "streams-pipe-output".
- */
-public class Pipe {
+class Pipe {
 
-    public static void main(String[] args) {
+    public static void main(final String[] args) {
         Properties props = new Properties();
         String inputTopic = EnvTools.getEnvValue(EnvTools.INPUT_TOPIC, "streams-input");
         String outputTopic = EnvTools.getEnvValue(EnvTools.OUTPUT_TOPIC, "streams-output");
