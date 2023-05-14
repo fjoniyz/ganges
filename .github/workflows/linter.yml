@@ -1,5 +1,5 @@
 ---
-name: Lint Code Base
+name: Format Code Base
 
 on: [pull_request]
 
@@ -10,15 +10,5 @@ jobs:
 
     steps:
 
-      - name: Checkout Code
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-
-      - name: Lint Code Base
-        uses: github/super-linter@v4
-        env:
-          VALIDATE_MARKDOWN: false
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_SUPER_LINTER: | 
-            super-linter --disable PACKAGE_META
+      - - name: Google Java Format
+          uses: axel-op/googlejavaformat-action@v3.6.0
