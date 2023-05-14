@@ -1,6 +1,5 @@
-FROM ubuntu:latest
-LABEL authors="root"
-RUN apt-get update && apt-get install default-jdk -y && apt-get install maven -y
+FROM maven:amazoncorretto
 COPY ./ /home
 WORKDIR /home
+RUN mvn clean install
 ENTRYPOINT ["mvn", "exec:java", "-Dexec.mainClass=myapps.Pipe"]
