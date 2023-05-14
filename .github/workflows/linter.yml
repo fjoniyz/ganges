@@ -1,14 +1,17 @@
----
-name: Format Code Base
+name: Format
 
-on: [pull_request]
+on:
+  push:
+    branches: [ master ]
 
 jobs:
-  build:
-    name: Lint Code Base
+
+  formatting:
     runs-on: ubuntu-latest
-
     steps:
-
-      - - name: Google Java Format
-          uses: axel-op/googlejavaformat-action@v3.6.0
+      - uses: actions/checkout@v3 # v2 minimum required
+      - uses: axel-op/googlejavaformat-action@v3
+        with:
+          args: "--skip-sorting-imports --replace"
+          # Recommended if you use MacOS:
+          # github-token: ${{ secrets.GITHUB_TOKEN }}
