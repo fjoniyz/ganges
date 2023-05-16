@@ -1,13 +1,13 @@
 package myapps;
 
+import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
-import java.io.*;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
+import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
 
 public class Doca {
 
@@ -60,8 +60,7 @@ public class Doca {
     int num_instances = X.length;
     int num_attributes = X[0].length;
 
-    double sensitivity =
-        1.5 * (getMax(X) - getMin(X));
+    double sensitivity = 1.5 * (getMax(X) - getMin(X));
 
     List<List<Integer>> clusters = new ArrayList<>();
     List<List<Integer>> clusters_final = new ArrayList<>();
@@ -172,9 +171,9 @@ public class Doca {
         // Update min/max
         double[] mn_cluster = mn_c.get(best_cluster);
         double[] mx_cluster = mx_c.get(best_cluster);
-//        for (int i = 0; i < num_attributes; i++) {
-          mn_cluster[best_cluster] = Math.min(mn_cluster[best_cluster], data_point[best_cluster]);
-          mx_cluster[best_cluster] = Math.max(mx_cluster[best_cluster], data_point[best_cluster]);
+        //        for (int i = 0; i < num_attributes; i++) {
+        mn_cluster[best_cluster] = Math.min(mn_cluster[best_cluster], data_point[best_cluster]);
+        mx_cluster[best_cluster] = Math.max(mx_cluster[best_cluster], data_point[best_cluster]);
       }
 
       List<Integer> overripe_clusters = new ArrayList<>();
@@ -291,10 +290,10 @@ public class Doca {
   private static double[] extractColumns(Double[][] data, int index) {
     double[] res = new double[data.length];
     int k = 0;
-    for(Double[] rows: data){
+    for (Double[] rows : data) {
       res[k] = rows[index];
       k++;
-      }
+    }
     return res;
   }
 
