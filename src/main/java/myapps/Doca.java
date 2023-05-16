@@ -1,9 +1,11 @@
 package myapps;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
+import org.apache.commons.lang3.tuple.Pair;
+
+import com.google.common.collect.Streams;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
@@ -31,14 +33,6 @@ public class Doca {
     return min;
   }
 
-  public static double getMean(List<Double> values) {
-    double sum = 0;
-    for (double value : values) {
-      sum += value;
-    }
-    return sum / values.size();
-  }
-
   public static double[] div0(double[] a, double[] b) {
     double[] result = new double[a.length];
     for (int i = 0; i < a.length; i++) {
@@ -53,198 +47,6 @@ public class Doca {
       sum += value;
     }
     return sum;
-  }
-
-  public static double[][] doca(
-      double[][] X, double eps, int delay_constraint, int beta, int mi, boolean inplace) {
-    int num_instances = X.length;
-    int num_attributes = X[0].length;
-
-    double sensitivity = 1.5 * (getMax(X) - getMin(X));
-
-    List<List<Integer>> clusters = new ArrayList<>();
-    List<List<Integer>> clusters_final = new ArrayList<>();
-
-    // Cluster attribute minimum/maximum
-    List<double[]> mn_c = new ArrayList<>();
-    List<double[]> mx_c = new ArrayList<>();
-
-    // Global Attribute Minimum/Maximum
-    double[] mn = new double[num_attributes];
-    double[] mx = new double[num_attributes];
-    for (int i = 0; i < num_attributes; i++) {
-      mn[i] = Double.POSITIVE_INFINITY;
-      mx[i] = Double.NEGATIVE_INFINITY;
-    }
-
-    // Losses saved for tau
-    List<Double> losses = new ArrayList<>();
-
-    double tau = 0;
-
-    // Create Output structure
-    double[][] output;
-    if (inplace) {
-      output = X;
-    } else {
-      output = new double[num_instances][num_attributes];
-    }
-
-    int TODOREMOVE_Perfect = 0;
-
-    for (int clock = 0; clock < num_instances; clock++) {
-      if (clock % 1000 == 0) {
-        System.out.println("Clock " + clock + " " + TODOREMOVE_Perfect);
-      }
-
-      double[] data_point = X[clock];
-
-      // Update min/max
-      for (int i = 0; i < num_attributes; i++) {
-        mn[i] = Math.min(mn[i], data_point[i]);
-        mx[i] = Math.max(mx[i], data_point[i]);
-      }
-
-      double[] dif = new double[num_attributes];
-      for (int i = 0; i < num_attributes; i++) {
-        dif[i] = mx[i] - mn[i];
-      }
-
-      // Find best Cluster
-      Integer best_cluster = null;
-      if (!clusters.isEmpty()) {
-        // Calculate enlargement (the value is not yet divided by the number of attributes!)
-        double[] enlargement = new double[clusters.size()];
-        for (int c = 0; c < clusters.size(); c++) {
-          double sum = 0;
-          for (int i = 0; i < num_attributes; i++) {
-            sum +=
-                Math.max(0, data_point[i] - mx_c.get(c)[i])
-                    - Math.min(0, data_point[i] - mn_c.get(c)[i]);
-          }
-          enlargement[c] = sum;
-        }
-
-        double min_enlarge = Double.MAX_VALUE;
-
-        List<Integer> ok_clusters = new ArrayList<>();
-        List<Integer> min_clusters = new ArrayList<>();
-
-        for (int c = 0; c < clusters.size(); c++) {
-          double enl = enlargement[c];
-          if (enl == min_enlarge) {
-            min_clusters.add(c);
-            double overall_loss = (enl + getSum(div0(mx_c.get(c), dif))) / num_attributes;
-            if (overall_loss <= tau) {
-              ok_clusters.add(c);
-            }
-          }
-        }
-
-        if (!ok_clusters.isEmpty()) {
-          TODOREMOVE_Perfect += 1;
-          best_cluster =
-              ok_clusters.stream()
-                  .min(
-                      (c1, c2) -> Integer.compare(clusters.get(c1).size(), clusters.get(c2).size()))
-                  .orElse(null);
-        } else if (clusters.size() >= beta) {
-          best_cluster =
-              min_clusters.stream()
-                  .min(
-                      (c1, c2) -> Integer.compare(clusters.get(c1).size(), clusters.get(c2).size()))
-                  .orElse(null);
-        }
-      }
-
-      if (best_cluster == null) {
-        // Add new Cluster
-        List<Integer> new_cluster = new ArrayList<>();
-        new_cluster.add(clock);
-        clusters.add(new_cluster);
-
-        // Set Min/Max of new Cluster
-        mn_c.add(data_point.clone());
-        mx_c.add(data_point.clone());
-      } else {
-        clusters.get(best_cluster).add(clock);
-        // Update min/max
-        double[] mn_cluster = mn_c.get(best_cluster);
-        double[] mx_cluster = mx_c.get(best_cluster);
-        //        for (int i = 0; i < num_attributes; i++) {
-        mn_cluster[best_cluster] = Math.min(mn_cluster[best_cluster], data_point[best_cluster]);
-        mx_cluster[best_cluster] = Math.max(mx_cluster[best_cluster], data_point[best_cluster]);
-      }
-
-      List<Integer> overripe_clusters = new ArrayList<>();
-      for (int c = 0; c < clusters.size(); c++) {
-        if (clusters.get(c).contains(clock - delay_constraint)) {
-          overripe_clusters.add(c);
-        }
-      }
-      assert overripe_clusters.size() <= 1
-          : "Every datapoint should only be able to be in one cluster!?";
-      if (!overripe_clusters.isEmpty()) {
-        int c = overripe_clusters.get(0);
-        double[] dif_cluster = new double[num_attributes];
-        for (int i = 0; i < num_attributes; i++) {
-          dif_cluster[i] = mx_c.get(c)[i] - mn_c.get(c)[i];
-        }
-        double loss = getSum(div0(dif_cluster, dif)) / num_attributes;
-        losses.add(loss);
-        clusters_final.add(clusters.get(c));
-        clusters.remove(c);
-        mn_c.remove(c);
-        mx_c.remove(c);
-      }
-    }
-
-    clusters_final.addAll(clusters);
-
-    for (List<Integer> cs : clusters_final) {
-      double[] mean = new double[num_attributes];
-      for (int i : cs) {
-        for (int j = 0; j < num_attributes; j++) {
-          mean[j] += X[i][j];
-        }
-      }
-      for (int j = 0; j < num_attributes; j++) {
-        mean[j] /= cs.size();
-      }
-      double scale = (sensitivity / (cs.size() * eps));
-      double[] laplace = new double[num_attributes];
-      for (int j = 0; j < num_attributes; j++) {
-        laplace[j] = Math.random() - 0.5;
-      }
-      for (int j = 0; j < num_attributes; j++) {
-        output[cs.get(0)][j] = mean[j] + scale * laplace[j];
-      }
-    }
-
-    return output;
-  }
-
-  public static void main(String[] args) throws FileNotFoundException {
-    List<Double[]> dataList = readCSVFile("./adult_train.csv");
-
-    List<String> columns =
-        Arrays.asList(
-            "age",
-            "education-num",
-            "marital-status",
-            "gender",
-            "capital-gain",
-            "hours-per-week",
-            "income");
-    Double[][] data = extractColumns(dataList, columns);
-
-    mapIncomeColumn(data);
-
-    double[][] normalizedData = normalizeDataFrame(data);
-
-    double[][] res = doca(normalizedData, 100, 1000, 50, 100, false);
-
-    printResult(res);
   }
 
   private static Double[][] extractColumns(List<Double[]> dataList, List<String> columns) {
@@ -326,5 +128,252 @@ public class Doca {
       k++;
       System.out.println();
     }
+  }
+
+  private static double getMinForArray(double[] inputArr) {
+    double min = 0;
+    for(double d: inputArr) {
+      if(d < min){
+        min = d;
+      }
+    }
+    return min;
+  }
+
+  //The minimum value(mnc) is in this case the first element of the pair
+  //The maximum value(mxc) is the second element of the pair
+  private static List<double[]> zip(double[] mn_c, double[] mx_c) {
+    List<double[]> pairs = new ArrayList<>();
+    for(int index = 0; index < mn_c.length; index++) {
+      double[] pair = new double[] {mn_c[index], mx_c[index]};
+      pairs.add(pair);
+    }
+    return pairs;
+  }
+
+  private static double sum(double[] divisions) {
+    double sum = 0;
+    for(double d: divisions) {
+      sum = sum + d;
+    }
+    return sum;
+  }
+
+  private static List<Double> enlargementCalculator(List<double[]> mn_c, List<double[]> mx_c, double[] data_points, double[] dif) {
+
+    List<Double> enlargements = new ArrayList<>();
+    List<Pair> pairs = Streams.zip(mn_c.stream(), mx_c.stream(), Pair::new)
+            .collect(Collectors.toList());
+
+    double[] spreads = new double[mn_c.size()/2];
+    double[] divisions;
+    for(int i = 0; i < pairs.size(); i++) {
+      double positive_distance = 0;
+      double negative_distance = 0;
+      if(data_points[i] > mx_c[i]){
+        positive_distance = data_points[i] - mx_c[i];
+      }
+      if(data_points[i] < mn_c[i]){
+        negative_distance = data_points[i] - mn_c[i];
+      }
+      spreads[i] = positive_distance-negative_distance;
+    }
+    divisions = div0(spreads, dif);
+    enlargements.add(sum(divisions));
+    return enlargements;
+  }
+
+  public static double[][] doca(
+      double[][] X, double eps, int delay_constraint, int beta, int mi, boolean inplace) {
+    int num_instances = X.length;
+    int num_attributes = X[0].length;
+
+    double sensitivity = 1.5 * (getMax(X) - getMin(X));
+
+    List<List<Integer>> clusters = new ArrayList<>();
+    List<List<Integer>> clusters_final = new ArrayList<>();
+
+    // Cluster attribute minimum/maximum
+    List<double[]> mn_c = new ArrayList<>();
+    List<double[]> mx_c = new ArrayList<>();
+
+    // Global Attribute Minimum/Maximum
+    double[] mn = new double[num_attributes];
+    double[] mx = new double[num_attributes];
+    for (int i = 0; i < num_attributes; i++) {
+      mn[i] = Double.POSITIVE_INFINITY;
+      mx[i] = Double.NEGATIVE_INFINITY;
+    }
+
+    // Losses saved for tau
+    List<Double> losses = new ArrayList<>();
+
+    double tau = 0;
+
+    // Create Output structure
+    double[][] output;
+    if (inplace) {
+      output = X;
+    } else {
+      output = new double[num_instances][num_attributes];
+    }
+
+    int TODOREMOVE_Perfect = 0;
+
+    for (int clock = 0; clock < num_instances; clock++) {
+      if (clock % 1000 == 0) {
+        System.out.println("Clock " + clock + " " + TODOREMOVE_Perfect);
+      }
+
+      double[] data_point = X[clock];
+
+      // Update min/max
+      for (int i = 0; i < num_attributes; i++) {
+        mn[i] = Math.min(mn[i], data_point[i]);
+        mx[i] = Math.max(mx[i], data_point[i]);
+      }
+
+      double[] dif = new double[num_attributes];
+      for (int i = 0; i < num_attributes; i++) {
+        dif[i] = mx[i] - mn[i];
+      }
+
+      // Find best Cluster
+      Integer best_cluster = null;
+      if (!clusters.isEmpty()) {
+        // Calculate enlargement (the value is not yet divided by the number of attributes!)
+        double[] enlargement = new double[clusters.size()];
+        for (int c = 0; c < clusters.size(); c++) {
+          double sum = 0;
+          for (int i = 0; i < num_attributes; i++) {
+            sum +=
+                Math.max(0, data_point[i] - mx_c.get(c)[i])
+                    - Math.min(0, data_point[i] - mn_c.get(c)[i]);
+          }
+          enlargement[c] = sum;
+        }
+
+        double min_enlarge = enlargementCalculator(mn_c, mx_c, data_point, dif);
+
+        List<Integer> ok_clusters = new ArrayList<>();
+        List<Integer> min_clusters = new ArrayList<>();
+
+        for (int c = 0; c < clusters.size(); c++) {
+          double enl = enlargement[c];
+          if (enl == min_enlarge) {
+            min_clusters.add(c);
+            double overall_loss = (enl + getSum(div0(mx_c.get(c), dif))) / num_attributes;
+            if (overall_loss <= tau) {
+              ok_clusters.add(c);
+            }
+          }
+        }
+
+        if (!ok_clusters.isEmpty()) {
+          TODOREMOVE_Perfect += 1;
+          //Finds the smallest item in ok_clusters
+          best_cluster =
+              ok_clusters.stream()
+                  .min(
+                          Comparator.comparingInt(c -> clusters.get(c).size()))
+                  .orElse(null);
+        } else if (clusters.size() >= beta) {
+          //Find the smallest item in min_clusters
+          best_cluster =
+              min_clusters.stream()
+                  .min(
+                          Comparator.comparingInt(c -> clusters.get(c).size()))
+                  .orElse(null);
+        }
+      }
+
+      if (best_cluster == null) {
+        // Add new Cluster
+        List<Integer> new_cluster = new ArrayList<>();
+        new_cluster.add(clock);
+        clusters.add(new_cluster);
+        // Set Min/Max of new Cluster
+        mn_c.add(data_point.clone());
+        mx_c.add(data_point.clone());
+      } else {
+        clusters.get(best_cluster).add(clock);
+        // Update min/max
+        double[] mn_cluster = mn_c.get(best_cluster);
+        double[] mx_cluster = mx_c.get(best_cluster);
+        for (int i = 0; i < num_attributes; i++) {
+          mn_cluster[best_cluster] = Math.min(mn_cluster[best_cluster], data_point[best_cluster]);
+          mx_cluster[best_cluster] = Math.max(mx_cluster[best_cluster], data_point[best_cluster]);
+        }
+      }
+
+      List<Integer> overripe_clusters = new ArrayList<>();
+      for (int c = 0; c < clusters.size(); c++) {
+        if (clusters.get(c).contains(clock - delay_constraint)) {
+          overripe_clusters.add(c);
+        }
+      }
+      assert overripe_clusters.size() <= 1
+          : "Every datapoint should only be able to be in one cluster!?";
+      if (!overripe_clusters.isEmpty()) {
+        int c = overripe_clusters.get(0);
+        double[] dif_cluster = new double[num_attributes];
+        for (int i = 0; i < num_attributes; i++) {
+          dif_cluster[i] = mx_c.get(c)[i] - mn_c.get(c)[i];
+        }
+        double loss = getSum(div0(dif_cluster, dif)) / num_attributes;
+        losses.add(loss);
+        clusters_final.add(clusters.get(c));
+        clusters.remove(c);
+        mn_c.remove(c);
+        mx_c.remove(c);
+      }
+    }
+
+    clusters_final.addAll(clusters);
+
+    for (List<Integer> cs : clusters_final) {
+      double[] mean = new double[num_attributes];
+      for (int i : cs) {
+        for (int j = 0; j < num_attributes; j++) {
+          mean[j] += X[i][j];
+        }
+      }
+      for (int j = 0; j < num_attributes; j++) {
+        mean[j] /= cs.size();
+      }
+      double scale = (sensitivity / (cs.size() * eps));
+      double[] laplace = new double[num_attributes];
+      for (int j = 0; j < num_attributes; j++) {
+        laplace[j] = Math.random() - 0.5;
+      }
+      for (int j = 0; j < num_attributes; j++) {
+        output[cs.get(0)][j] = mean[j] + scale * laplace[j];
+      }
+    }
+
+    return output;
+  }
+
+  public static void main(String[] args) {
+    List<Double[]> dataList = readCSVFile("./adult_train.csv");
+
+    List<String> columns =
+        Arrays.asList(
+            "age",
+            "education-num",
+            "marital-status",
+            "gender",
+            "capital-gain",
+            "hours-per-week",
+            "income");
+    Double[][] data = extractColumns(dataList, columns);
+
+    mapIncomeColumn(data);
+
+    double[][] normalizedData = normalizeDataFrame(data);
+
+    double[][] res = doca(normalizedData, 100, 1000, 50, 100, false);
+
+    printResult(res);
   }
 }
