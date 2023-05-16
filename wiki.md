@@ -14,4 +14,5 @@ Within in Database:
 - API to make this data available for OPERATE tech
 
 #### E-Mobilität
-- the data is not raised in different phases of the Costumer Journey -> data assigned to specific use case
+- Transformed with Kafka and loaded in the database
+- The data is not raised in different phases of the Costumer Journey -> data assigned to specific use case
