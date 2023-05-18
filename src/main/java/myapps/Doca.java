@@ -2,8 +2,10 @@ package myapps;
 
 import java.io.*;
 import java.util.*;
+import java.util.function.BiFunction;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
-import org.apache.commons.lang3.tuple.Pair;
+import java.util.stream.IntStream;
 
 import com.google.common.collect.Streams;
 import org.apache.commons.csv.CSVFormat;
@@ -129,64 +131,35 @@ public class Doca {
       System.out.println();
     }
   }
-
-  private static double getMinForArray(double[] inputArr) {
-    double min = 0;
-    for(double d: inputArr) {
-      if(d < min){
-        min = d;
-      }
-    }
-    return min;
-  }
-
-  //The minimum value(mnc) is in this case the first element of the pair
-  //The maximum value(mxc) is the second element of the pair
-  private static List<double[]> zip(double[] mn_c, double[] mx_c) {
-    List<double[]> pairs = new ArrayList<>();
-    for(int index = 0; index < mn_c.length; index++) {
-      double[] pair = new double[] {mn_c[index], mx_c[index]};
-      pairs.add(pair);
-    }
-    return pairs;
-  }
-
-  private static double sum(double[] divisions) {
+  public static double sum(double[] input){
     double sum = 0;
-    for(double d: divisions) {
-      sum = sum + d;
+    for(double d: input){
+      sum += d;
     }
     return sum;
   }
-
-  private static List<Double> enlargementCalculator(List<double[]> mn_c, List<double[]> mx_c, double[] data_points, double[] dif) {
-
-    List<Double> enlargements = new ArrayList<>();
-    List<Pair> pairs = Streams.zip(mn_c.stream(), mx_c.stream(), Pair::new)
-            .collect(Collectors.toList());
-
-    double[] spreads = new double[mn_c.size()/2];
-    double[] divisions;
-    for(int i = 0; i < pairs.size(); i++) {
-      double positive_distance = 0;
-      double negative_distance = 0;
-      if(data_points[i] > mx_c[i]){
-        positive_distance = data_points[i] - mx_c[i];
-      }
-      if(data_points[i] < mn_c[i]){
-        negative_distance = data_points[i] - mn_c[i];
-      }
-      spreads[i] = positive_distance-negative_distance;
+  public static ArrayList<double[]> zip(double[] a, double[] b) {
+    ArrayList<double[]> res = new ArrayList<>();
+    int maxLength = Math.min(a.length, b.length);
+    for(int i = 0; i < maxLength; i++){
+      res.add(new double[] {a[i], b[i]});
     }
-    divisions = div0(spreads, dif);
-    enlargements.add(sum(divisions));
-    return enlargements;
+    return res;
+  }
+
+  public static double[] vectorize(
+          BiFunction<Double, Double, Double> function, double[] a, double[] b) {
+    Predicate<Integer> nonZero = value -> value != 0;
+    return IntStream.range(0, Math.min(a.length, b.length))
+            .mapToDouble(i -> function.apply(a[i], b[i]))
+            .toArray();
   }
 
   public static double[][] doca(
       double[][] X, double eps, int delay_constraint, int beta, int mi, boolean inplace) {
     int num_instances = X.length;
     int num_attributes = X[0].length;
+    BiFunction<Double, Double, Double> divisionFunction = (a, b) -> b != 0 ? (double) a / b : 0;
 
     double sensitivity = 1.5 * (getMax(X) - getMin(X));
 
@@ -253,7 +226,12 @@ public class Doca {
           enlargement[c] = sum;
         }
 
-        double min_enlarge = enlargementCalculator(mn_c, mx_c, data_point, dif);
+        double[] zippedEntries = new double[mn_c.size()];
+//        for(int i = 0; i < mn_c.size(); i++){
+//          zippedEntries[i] = zip(mn_c.get(i), mx_c.get(i))
+//        }
+
+        double min_enlarge = 30;
 
         List<Integer> ok_clusters = new ArrayList<>();
         List<Integer> min_clusters = new ArrayList<>();
