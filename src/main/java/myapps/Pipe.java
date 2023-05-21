@@ -9,7 +9,12 @@ import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.KStream;
 
-class Pipe {
+/**
+ * In this example, we implement a simple Pipe program using the high-level Streams DSL that reads
+ * from a source topic "streams-plaintext-input", where the values of messages represent lines of
+ * text, and writes the messages as-is into a sink topic "streams-pipe-output".
+ */
+public class Pipe {
 
     public static void main(final String[] args) {
         Properties props = new Properties();
