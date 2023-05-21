@@ -10,9 +10,10 @@ from datetime import datetime
 from random import uniform
 from time import sleep
 import numpy as np
+import os
 
 # there are about 100 apartments
-with open('../data/sanierungsdata.csv', 'w', newline='') as file:
+with open(os.path.dirname(os.path.realpath(__file__)) + '/../data/sanierungsdata.csv', 'w', newline='') as file:
     writer = csv.writer(file)
     field = ["Datetime","Seconds_EnergyConsumption", "apartment_number", "location"]
     writer.writerow(field)
