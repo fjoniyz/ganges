@@ -23,7 +23,7 @@ pip install -r requirements.txt
 
 ## Usage
 
-To create sample data you can run any of scripts in `generators/` folder. The scripts generate data until their execution is terminated (i.e. with Ctrl+C).
+To create sample data you can run any of scripts in `generators/` folder. The scripts generate data until their execution is terminated (i.e. with Ctrl+C). Data is created in the `data/` folder.
 
 `producer.py` script can create several Kafka producers in separate processes that will simultaneously send data from several .csv files in different topics. To generate Kafka records, configureate needed datasets in `config.yaml` and simply start the producer.py with `python producer.py`. More about configuration in the next section.
 
