@@ -4,10 +4,8 @@ import java.io.*;
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import com.google.common.collect.Streams;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVRecord;
@@ -35,8 +33,8 @@ public class Doca {
     return min;
   }
 
-  public static double[] div0(double[] a, double[] b) {
-    double[] result = new double[a.length];
+  public static Double[] div0(double[] a, double[] b) {
+    Double[] result = new Double[a.length];
     for (int i = 0; i < a.length; i++) {
       result[i] = (b[i] != 0) ? a[i] / b[i] : 0;
     }
@@ -214,22 +212,20 @@ public class Doca {
       // Find best Cluster
       Integer best_cluster = null;
       if (!clusters.isEmpty()) {
+        ArrayList<ArrayList<double[]>> zippedEntries = new ArrayList<>();
+        for(int i = 0; i < mn_c.size(); i++){
+          zippedEntries.set(i, zip(mn_c.get(i), mx_c.get(i)));
+        }
         // Calculate enlargement (the value is not yet divided by the number of attributes!)
-        double[] enlargement = new double[clusters.size()];
+        ArrayList<Double[]> enlargement = new ArrayList<>();
+        double[] zeros = new double[zippedEntries.size()];
         for (int c = 0; c < clusters.size(); c++) {
           double sum = 0;
           for (int i = 0; i < num_attributes; i++) {
-            sum +=
-                Math.max(0, data_point[i] - mx_c.get(c)[i])
-                    - Math.min(0, data_point[i] - mn_c.get(c)[i]);
+            enlargement.set(i,
+                div0(maximumArray(zeros, subtractArrays(data_point, zippedEntries.get(c).get(i))), dif));
           }
-          enlargement[c] = sum;
         }
-
-        double[] zippedEntries = new double[mn_c.size()];
-//        for(int i = 0; i < mn_c.size(); i++){
-//          zippedEntries[i] = zip(mn_c.get(i), mx_c.get(i))
-//        }
 
         double min_enlarge = 30;
 
@@ -237,7 +233,7 @@ public class Doca {
         List<Integer> min_clusters = new ArrayList<>();
 
         for (int c = 0; c < clusters.size(); c++) {
-          double enl = enlargement[c];
+          double enl = enlargement.get(c);
           if (enl == min_enlarge) {
             min_clusters.add(c);
             double overall_loss = (enl + getSum(div0(mx_c.get(c), dif))) / num_attributes;
@@ -330,6 +326,40 @@ public class Doca {
     }
 
     return output;
+  }
+
+  public static double[] subtractArrays(double[] first, double[] second) {
+    int min_length = Math.min(first.length, second.length);
+    double[] result = new double[min_length];
+    for(int i = 0; i < min_length; i++){
+      result[i] = first[i] - second[i];
+    }
+    return result;
+  }
+
+  public static double[] maximumArray(double[]a, double[]b) {
+    int min_length = Math.min(a.length, b.length);
+    int max_length = Math.max(a.length, b.length);
+    int difference = max_length - min_length;
+    double[] results_arr = new double[max_length];
+    for(int i = 0; i < min_length; i++){
+      results_arr[i] = Math.max(a[i], b[i]);
+    }
+    if(a.length > b.length){
+      if (max_length - difference >= 0)
+        System.arraycopy(a, difference, results_arr, difference, max_length - difference);
+    }else{
+      if (max_length - difference >= 0)
+        System.arraycopy(b, difference, results_arr, difference, max_length - difference);
+    }
+    return results_arr;
+  }
+
+  public static double[] fill(double[] arrayToFill, int startIndex, int endIndex, double value){
+    for(int i = startIndex; i < endIndex; i++){
+      arrayToFill[i] = value;
+    }
+    return arrayToFill;
   }
 
   public static void main(String[] args) {
