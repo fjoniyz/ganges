@@ -7,32 +7,43 @@ import java.util.List;
 import java.util.Optional;
 
 public class CastleGuard {
+    private CGConfig config;
+    private List<String> headers;
+    private String sensitiveAttr;
 
     public CastleGuard(CGConfig config, List<String> headers, String sensitiveAttr) {
+        this.config = config;
+        this.headers = headers;
+        this.sensitiveAttr = sensitiveAttr;
     }
 
     /**
      * insert() in castle.py
      * @param data
      */
-    void insertData(HashMap<String, Integer> data) {
+    public void insertData(HashMap<String, Integer> data) {
         // TODO: Implement (basis)
         // Create Item here
     }
 
-    Object outputCluster(Item item) {
+    /**
+     * Called by the object that manages anonymization class
+     * @param item
+     * @return
+     */
+    public Object outputCluster(Item item) {
         return null;
     }
 
-    void insertIntoCluster(HashMap<String, Integer> data, Object cluster) {
+    private void insertIntoCluster(HashMap<String, Integer> data, Object cluster) {
         // TODO: Implement (basis)
     }
 
-    void createCluster() {
+    private void createCluster() {
         // TODO: Implement
     }
 
-    void delayConstraint(HashMap<String, Integer> data) {
+    private void delayConstraint(HashMap<String, Integer> data) {
         // TODO: Implement
     }
 
@@ -40,7 +51,7 @@ public class CastleGuard {
      * fudge_tuple() in castle.py
      * @return
      */
-    HashMap<String, Integer> perturb() {
+    private HashMap<String, Integer> perturb() {
         // TODO: Implement
         return null;
     }
@@ -49,12 +60,12 @@ public class CastleGuard {
      * best_selection() in castle.py
      * @return cluster
      */
-    Optional<Object> bestSelection() {
+    private Optional<Object> bestSelection() {
         // TODO: Implement
         return null;
     }
 
-    void updateGlobalRanges(Object data) {
+    private void updateGlobalRanges(Object data) {
         // TODO: Implement (Basis)
     }
 
