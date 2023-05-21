@@ -3,6 +3,7 @@ from datetime import datetime
 from random import uniform, randint
 from time import sleep
 import numpy as np
+import os
 
 
 # What is realistic for a second in energy consumption in a household of 1 to 4 persons
@@ -10,7 +11,7 @@ import numpy as np
 # We disregard electricity production (only usage), since it is not common within Rental apartments
 
 # writes into a Mieterstromdata file with random secondly Endery Consumption
-with open('../data/EV_Station_Usage.csv', 'w', newline='') as file:
+with open(os.path.dirname(os.path.realpath(__file__))  + '/../data/EV_Station_Usage.csv', 'w', newline='') as file:
     writer = csv.writer(file)
     field = ["Datetime","Seconds_EnergyConsumption", "apartment_number"]
     writer.writerow(field)
