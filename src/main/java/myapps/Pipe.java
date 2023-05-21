@@ -1,14 +1,13 @@
 package myapps;
 
+import java.util.Properties;
+import java.util.concurrent.CountDownLatch;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
 import org.apache.kafka.streams.kstream.KStream;
-
-import java.util.Properties;
-import java.util.concurrent.CountDownLatch;
 
 /**
  * In this example, we implement a simple Pipe program using the high-level Streams DSL
