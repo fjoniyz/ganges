@@ -32,10 +32,13 @@ To create sample data you can run any of scripts in `generators/` folder. The sc
 `config.yaml` has following sections:
 
 `bootstrap_servers` - list of one or more addresses of Kafka brokers
+
 `dataset_topic` - dictionary for datasets to be sent in different topics. Values should be written in format "path-to-dataset": "topic-name"
+
 `delay` - delay between two messages, sent by a single producer (valid for all created producers)
 
 ## Data Schema
 
 Key: 'record' (constant for now)
+
 Value: JSON dict with keys corresponding to .csv headers and values of related headers 
