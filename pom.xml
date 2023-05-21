@@ -15,7 +15,6 @@
         <kafka.version>3.4.0</kafka.version>
         <slf4j.version>1.7.36</slf4j.version>
     </properties>
-
     <dependencies>
         <!-- https://mvnrepository.com/artifact/org.apache.kafka/kafka-clients -->
         <dependency>
@@ -33,11 +32,6 @@
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-reload4j</artifactId>
             <version>${slf4j.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>com.google.googlejavaformat</groupId>
-            <artifactId>google-java-format</artifactId>
-            <version>1.17.0</version>
         </dependency>
     </dependencies>
 </project>
