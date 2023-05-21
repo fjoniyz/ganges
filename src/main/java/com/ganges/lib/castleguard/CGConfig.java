@@ -14,7 +14,7 @@ class CGConfig {
      */
     private int beta;
     /**
-     * The percentage chance of ignoring a tuple
+     * The probability of ignoring a tuple
      */
     private double bigBeta;
     /**

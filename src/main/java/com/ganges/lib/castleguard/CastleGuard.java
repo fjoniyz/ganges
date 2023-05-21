@@ -1,15 +1,13 @@
 package com.ganges.lib.castleguard;
 
-import org.apache.commons.lang3.Range;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 public class CastleGuard {
-    private CGConfig config;
+    private final CGConfig config;
     private List<String> headers;
     private String sensitiveAttr;
+    private Deque<Item> items;
 
     public CastleGuard(CGConfig config, List<String> headers, String sensitiveAttr) {
         this.config = config;
@@ -19,11 +17,30 @@ public class CastleGuard {
 
     /**
      * insert() in castle.py
-     * @param data
+     * @param data value tuple
      */
     public void insertData(HashMap<String, Integer> data) {
-        // TODO: Implement (basis)
-        // Create Item here
+        Random rand = new Random();
+        if (config.isUseDiffPrivacy() && rand.nextDouble(1) > config.getBigBeta()) {
+            return;
+        }
+        Item item = new Item(data, this.headers, this.sensitiveAttr);
+        updateGlobalRanges(item);
+
+        if (config.isUseDiffPrivacy()) {
+            item = perturb(item);
+        }
+        Optional<Object> cluster = bestSelection(item);
+        if (!cluster.isPresent()) {
+            // TODO: create cluster here
+        } else {
+            insertIntoCluster(item, cluster.get());
+        }
+
+        items.add(item);
+        if (items.size() > config.getDelta()) {
+            delayConstraint(items.pop());
+        }
     }
 
     /**
@@ -35,15 +52,16 @@ public class CastleGuard {
         return null;
     }
 
-    private void insertIntoCluster(HashMap<String, Integer> data, Object cluster) {
+    private void insertIntoCluster(Item item, Object cluster) {
         // TODO: Implement (basis)
+
     }
 
     private void createCluster() {
         // TODO: Implement
     }
 
-    private void delayConstraint(HashMap<String, Integer> data) {
+    private void delayConstraint(Item item) {
         // TODO: Implement
     }
 
@@ -51,21 +69,21 @@ public class CastleGuard {
      * fudge_tuple() in castle.py
      * @return
      */
-    private HashMap<String, Integer> perturb() {
+    private Item perturb(Item item) {
         // TODO: Implement
         return null;
     }
 
     /**
      * best_selection() in castle.py
-     * @return cluster
+     * @return cluster or null
      */
-    private Optional<Object> bestSelection() {
+    private Optional<Object> bestSelection(Item item) {
         // TODO: Implement
         return null;
     }
 
-    private void updateGlobalRanges(Object data) {
+    private void updateGlobalRanges(Item item) {
         // TODO: Implement (Basis)
     }
 
