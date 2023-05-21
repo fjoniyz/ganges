@@ -27,6 +27,7 @@ public class Pipe {
         props.put(StreamsConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServerConfig);
         props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
         props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+        props.put(StreamsConfig.METADATA_MAX_AGE_CONFIG, "500" );   // Needed to prevent timeouts during broker startup.
 
         final StreamsBuilder builder = new StreamsBuilder();
         KStream<String, String> src = builder.stream(inputTopic);
