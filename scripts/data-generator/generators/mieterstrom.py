@@ -13,16 +13,18 @@ import os
 # writes into a Mieterstromdata file with random secondly Endery Consumption
 with open(os.path.dirname(os.path.realpath(__file__))  + '/../data/EV_Station_Usage.csv', 'w', newline='') as file:
     writer = csv.writer(file)
-    field = ["Datetime","Seconds_EnergyConsumption", "apartment_number"]
+    field = ["Timestamp","timeseries_id", "Seconds_EnergyConsumption", "location", "inhabitants"]
     writer.writerow(field)
 
-    
+    # order of magnitude is completely wrong
     # apartments is an array with the nuber of inhabitants
     apartments = np.random.randint(1,6,100) 
+    locations = ["street a", "street b", "street c", "street c"]
+    locations = int(len(apartments)/len(locations) + 1)*locations
     while True:   
-        for inhabitants, apartment in zip(apartments, range(1, 100)):
+        for location, apartment, inhabitants in zip(locations, range(1, 100), apartments):
             date = datetime.now()
             # the number of inhabitants effects energy consumption
             EV = round(uniform(1000*inhabitants, 10000*inhabitants), 2)
-            writer.writerow([date,EV, apartment])
+            writer.writerow([date, f"{apartment}"+"sanierung-apartment", EV, location, inhabitants])
         sleep(0.1)
