@@ -17,9 +17,9 @@ public class Cluster {
         // Initialises the cluster
         this.contents= new ArrayList<>();
         this.ranges = new HashMap<>();
-        // TODO: research about the Ranges method
+        // Ranges method -> in Python zero arguments and initialized with zeros
         headers.forEach(header -> {
-            this.ranges.put(header, new Range<Integer>());
+            this.ranges.put(header, Range.between(0, 0));
         });
         this.diversity = new HashSet();
         this.sample_values = new HashMap<>();
@@ -33,6 +33,7 @@ public class Cluster {
         // Check whether the item is already in a cluster
         if (element.parent != null){
             // If it is, remove it so that we do not reach an invalid state
+            // TODO: How to remove element here (conflict with datatypes)
             element.parent.remove(element);
         }
         // Add sensitive attribute value to the diversity of cluster
@@ -57,7 +58,7 @@ public class Cluster {
 
         }
 
-     float tuple_enlargement(Item item, HashMap<String, Range> global_ranges){
+     float tuple_enlargement(Item item, HashMap<String, Range<Integer>> global_ranges){
             /*Calculates the enlargement value for adding <item> into this cluster
 
         Args:
@@ -71,7 +72,7 @@ public class Cluster {
         return (given - current) /this.ranges.size();
     }
 
-    float cluster_enlargement(Cluster cluster, HashMap<String, Range> global_ranges){
+    float cluster_enlargement(Cluster cluster, HashMap<String, Range<Integer>> global_ranges){
         /*Calculates the enlargement value for merging <cluster> into this cluster
 
         Args:
@@ -79,10 +80,12 @@ public class Cluster {
         global_ranges: The globally known ranges for each attribute
 
         Returns: The information loss upon merging cluster with this cluster*/
-        return 1.0F;
+        Float given = this.information_loss_given_c(cluster, global_ranges);
+        Float current = this.information_loss(global_ranges);
+        return (given - current) / this.ranges.size();
     }
 
-    float information_loss_given_t(Item item, HashMap<String, Range> global_ranges){
+    float information_loss_given_t(Item item, HashMap<String, Range<Integer>> global_ranges){
         /*Calculates the information loss upon adding <item> into this cluster
 
         Args:
@@ -90,11 +93,28 @@ public class Cluster {
         global_ranges: The globally known ranges for each attribute
 
         Returns: The information loss given that we insert item into this cluster*/
+        float loss = 0F;
 
-        return 1.0F;
+        // For each range, check if <item> would extend it
+        Range <Integer> updated = null;
+        for (Map.Entry<String, Range<Integer>> header: this.ranges.entrySet()){
+            Range <Integer> global_range = global_ranges.get(header.getKey());
+            updated = Range.between((int) Math.min(header.getValue().getMinimum(), item.data.get(header.getKey())), (int) Math.max(header.getValue().getMaximum(), item.data.get(header.getKey())));
+            loss += range_information_loss(updated, global_range);
+        }
+        return loss;
+    }
+    // TODO: this is actually a Range Method
+    float range_information_loss(Range<Integer> actual, Range<Integer> other){
+        float diff_self = Math.abs(actual.getMaximum()-actual.getMinimum());
+        float diff_other = Math.abs(other.getMaximum()-other.getMinimum());;
+        if (diff_other == 0){
+            return 0F;
+        }
+        return diff_self/diff_other;
     }
 
-    float information_loss_given_c(Cluster cluster, HashMap<String, Range> global_ranges) {
+    float information_loss_given_c(Cluster cluster, HashMap<String, Range<Integer>> global_ranges) {
        /* Calculates the information loss upon merging <cluster> into this cluster
 
         Args:
@@ -102,20 +122,38 @@ public class Cluster {
             global_ranges: The globally known ranges for each attribute
 
         Returns: The information loss given that we merge cluster with this cluster*/
-        return 1.0F;
+        float loss = 0F;
+
+        // For each range, check if <item> would extend it
+        Range <Integer> updated = null;
+        for (Map.Entry<String, Range<Integer>> header: this.ranges.entrySet()){
+            Range <Integer> global_range = global_ranges.get(header.getKey());
+            updated = Range.between((int) Math.min(header.getValue().getMinimum(), cluster.ranges.get(header.getKey()).getMinimum()), (int) Math.max(header.getValue().getMaximum(),cluster.ranges.get(header.getKey()).getMinimum()));
+            loss += range_information_loss(updated, global_range);
+        }
+        return loss;
     }
 
-    float information_loss(HashMap<String, Range> global_ranges){
+    float information_loss(HashMap<String, Range<Integer>> global_ranges){
         /*Calculates the information loss of this cluster
 
         Args:
         global_ranges: The globally known ranges for each attribute
 
         Returns: The current information loss of the cluster*/
-        return 1.0F;
+        float loss = 0F;
+
+        // For each range, check if <item> would extend it
+        Range <Integer> updated = null;
+        for (Map.Entry<String, Range<Integer>> header: this.ranges.entrySet()){
+            Range <Integer> global_range = global_ranges.get(header.getKey());
+            loss += range_information_loss(header.getValue(), global_range);
+        }
+        return loss;
     }
 
-    float distance(Item other){
+    // TODO: find Datatype of other
+    float distance(Range<Integer> other){
         /*Calculates the distance from this tuple to another
 
         Args:
@@ -133,13 +171,6 @@ public class Cluster {
         item: The tuple to perform bounds checking on
 
         Returns: Whether or not the tuple is within the bounds of the cluster*/
-
-        for (header, header_range in this.ranges.items()){
-            if (!header_range.within_bounds(item[header])) {
-                return false;
-            }
-        }
-
         return true;
     }
 
