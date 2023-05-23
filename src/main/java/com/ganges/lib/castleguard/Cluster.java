@@ -11,7 +11,7 @@ import java.lang.Float;
 public class Cluster {
     List<Item> contents;
     Map<String, Range<Float>> ranges;
-    // TODO: change type Object
+    // TODO: change datatype from Object
     Set<Object> diversity;
     Map<String, Float> sample_values;
     Utils utils;
@@ -21,10 +21,8 @@ public class Cluster {
         this.contents= new ArrayList<>();
         this.ranges = new HashMap<>();
         // Ranges method -> in Python zero arguments and initialized with zeros
-        headers.forEach(header -> {
-            this.ranges.put(header, Range.between(0F, 0F));
-        });
-        this.diversity = new HashSet();
+        headers.forEach(header -> this.ranges.put(header, Range.between(0F, 0F)));
+        this.diversity = new HashSet<>();
         this.sample_values = new HashMap<>();
 
         this.utils = new Utils();
@@ -38,8 +36,8 @@ public class Cluster {
         // Check whether the item is already in a cluster
         if (element.parent != null){
             // If it is, remove it so that we do not reach an invalid state
-            // TODO: How to remove element here (conflict with datatypes)
-            element.parent.remove(element);
+            // TODO: How to remove element here (conflict with datatype)
+            element.parent = null;
         }
         // Add sensitive attribute value to the diversity of cluster
         this.diversity.add(element.sensitive_attr);
@@ -61,26 +59,23 @@ public class Cluster {
 
     // Note: Return value without Item -> In Cluster.py return value (gen_tuple, item)
      Item generalise(Item item){
-        Item gen_tuple = item;
-
          for (Map.Entry<String, Range<Float>> header: this.ranges.entrySet()){
              if (! this.sample_values.containsKey(header.getKey())){
-                 // TODO: create Random Array
-                 this.sample_values.put(header.getKey()) = np.random.choice(self.contents)[header];
+                 this.sample_values.put(header.getKey(),  this.utils.random_choice(this.contents).data.get(header.getKey()));
              }
-             gen_tuple.data.put("min" + header.getKey(), header.getValue().getMinimum());
-             gen_tuple.data.put("spc" + header.getKey(), this.sample_values.get(header.getKey()));
-             gen_tuple.data.put("max" + header.getKey(), header.getValue().getMaximum());
+             item.data.put("min" + header.getKey(), header.getValue().getMinimum());
+             item.data.put("spc" + header.getKey(), this.sample_values.get(header.getKey()));
+             item.data.put("max" + header.getKey(), header.getValue().getMaximum());
 
-             gen_tuple.headers.add("min"+header.getKey());
-             gen_tuple.headers.add("spc"+header.getKey());
-             gen_tuple.headers.add("max"+header.getKey());
+             item.headers.add("min"+header.getKey());
+             item.headers.add("spc"+header.getKey());
+             item.headers.add("max"+header.getKey());
 
-             gen_tuple.headers.remove(header);
-             gen_tuple.data.remove(header.getKey());
-             gen_tuple.data.remove("pid");
+             item.headers.remove(header.getKey());
+             item.data.remove(header.getKey());
+             item.data.remove("pid");
          }
-         return gen_tuple;
+         return item;
     }
 
      float tuple_enlargement(Item item, HashMap<String, Range<Float>> global_ranges){
@@ -109,7 +104,7 @@ public class Cluster {
         Float current = this.information_loss(global_ranges);
         return (given - current) / this.ranges.size();
     }
-    // TODO: alles mit size / len nochmal überprüfen
+    // TODO: check everything with size
     float information_loss_given_t(Item item, HashMap<String, Range<Float>> global_ranges){
         /*Calculates the information loss upon adding <item> into this cluster
 
@@ -121,7 +116,7 @@ public class Cluster {
         float loss = 0F;
 
         // For each range, check if <item> would extend it
-        Range <Float> updated = null;
+        Range <Float> updated;
         for (Map.Entry<String, Range<Float>> header: this.ranges.entrySet()){
             Range <Float> global_range = global_ranges.get(header.getKey());
             updated = Range.between((Math.min(header.getValue().getMinimum(), item.data.get(header.getKey()))), Math.max(header.getValue().getMaximum(), item.data.get(header.getKey())));
@@ -142,7 +137,7 @@ public class Cluster {
         float loss = 0F;
 
         // For each range, check if <item> would extend it
-        Range <Float> updated = null;
+        Range <Float> updated;
         for (Map.Entry<String, Range<Float>> header: this.ranges.entrySet()){
             Range <Float> global_range = global_ranges.get(header.getKey());
             updated = Range.between(Math.min(header.getValue().getMinimum(), cluster.ranges.get(header.getKey()).getMinimum()),Math.max(header.getValue().getMaximum(),cluster.ranges.get(header.getKey()).getMinimum()));
@@ -169,8 +164,6 @@ public class Cluster {
         return loss;
     }
 
-    // TODO: implement difference Mehtod of Range
-    // implement difference
     float distance(Item other){
         /*Calculates the distance from this tuple to another
 
@@ -180,20 +173,20 @@ public class Cluster {
         Returns: The distance to the other tuple*/
         float total_distance = 0;
         for (Map.Entry<String, Range<Float>> header: this.ranges.entrySet()) {
-            total_distance += Math.abs(this.utils.range_difference(other.data.get(header.getKey())));
+            total_distance += Math.abs(other.data.get(header.getKey()) - this.utils.range_difference(header.getValue()));
         }
         return total_distance;
     }
 
-    // TODO: implemtation of this function
+    // TODO: implementation of this function
     boolean within_bounds(Item item){
-       /* Checks whether a tuple is within all the ranges of the this
-        cluster, eg. would cause no information loss on being entered.
+       /* Checks whether a tuple is within all the ranges of the
+        cluster, e.g. would cause no information loss on being entered.
 
                 Args:
         item: The tuple to perform bounds checking on
 
-        Returns: Whether or not the tuple is within the bounds of the cluster*/
+        Returns: Whether the tuple is within the bounds of the cluster*/
 
         return true;
     }

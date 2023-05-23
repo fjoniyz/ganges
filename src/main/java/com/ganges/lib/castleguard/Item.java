@@ -6,7 +6,7 @@ public class Item {
     List<String> headers;
     Float sensitive_attr;
     // TODO: is this Cluster or Item Type?
-    Object parent = null;
+    Cluster parent = null;
 
     public Item(Map <String, Float> data, List <String>  headers, String sensitive_attr){
         this.data  = data;
@@ -20,9 +20,9 @@ public class Item {
         other: The tuple to calculate the distance to
         Returns: The distance to the tuple*/
 
-        Float error = Math.abs(this.data.get(this.headers) - other.data.get(this.headers));
+        float error = Math.abs(this.data.get(this.headers) - other.data.get(this.headers));
         // TODO: noch Mean Value darauf anwenden
-        Float mean_squared_error = (float) Math.pow(error, 2);
+        float mean_squared_error = (float) Math.pow(error, 2);
         return (float) Math.sqrt(mean_squared_error);
     }
 
