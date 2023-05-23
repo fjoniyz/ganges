@@ -6,7 +6,7 @@ public class Item {
     List<String> headers;
     Float sensitive_attr;
     // TODO: is this Cluster or Item Type?
-    Cluster parent = null;
+    Object parent = null;
 
     public Item(Map <String, Float> data, List <String>  headers, String sensitive_attr){
         this.data  = data;
