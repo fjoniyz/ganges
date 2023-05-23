@@ -1,11 +1,12 @@
 package interceptor_producer;
+
 import org.apache.kafka.clients.producer.ProducerInterceptor;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
 
 import java.util.Map;
 
-public class DemoProducerInterceptor implements ProducerInterceptor<String,String>{
+public class DemoProducerInterceptor implements ProducerInterceptor<String, String> {
     @Override
     public ProducerRecord<String, String> onSend(ProducerRecord<String, String> producerRecord) {
         ProducerRecord<String, String> mutatedRecord =

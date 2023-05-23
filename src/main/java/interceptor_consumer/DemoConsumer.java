@@ -1,5 +1,6 @@
 // package com.example.kafka;
 package interceptor_consumer;
+
 import java.util.Properties;
 import java.util.Arrays;
 import java.time.Duration;
