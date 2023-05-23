@@ -36,8 +36,7 @@ public class Cluster {
         // Check whether the item is already in a cluster
         if (element.parent != null){
             // If it is, remove it so that we do not reach an invalid state
-            // TODO: How to remove element here (conflict with datatype)
-            element.parent = null;
+            element.parent.remove(element);
         }
         // Add sensitive attribute value to the diversity of cluster
         this.diversity.add(element.sensitive_attr);
