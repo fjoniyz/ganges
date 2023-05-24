@@ -33,7 +33,11 @@ public class Pipe {
 
     final StreamsBuilder builder = new StreamsBuilder();
     KStream<String, String> src = builder.stream(inputTopic);
-    src.mapValues(value -> value + "X").to(outputTopic);
+    src.mapValues(value -> {
+      double[] values = 
+      Doca d = new Doca();
+      d.doca(value, );
+    }).to(outputTopic);
 
     final Topology topology = builder.build();
     try (KafkaStreams streams = new KafkaStreams(topology, props)) {
@@ -47,5 +51,22 @@ public class Pipe {
       }
     }
     System.exit(0);
+  }
+  private static double[] createValues (String valuesString) {
+    String[] s = valuesString.split(",");
+    List<Double> values = s.stream().map(element -> Double.valueOf(element));
+  }
+   private static String modifyJson(String json) {
+    try {
+      ObjectMapper objectMapper = new ObjectMapper();
+      JsonNode jsonNode = objectMapper.readTree(json);
+      ((ObjectNode) jsonNode).put("AEP_MW", "x");
+
+      return jsonNode.toString();
+    } catch (Exception e) {
+      // Handle any exception that occurred during JSON processing
+      e.printStackTrace();
+      return null; // or throw an exception if desired
+    }
   }
 }

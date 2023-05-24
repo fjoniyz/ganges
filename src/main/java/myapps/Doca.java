@@ -55,7 +55,7 @@ public class Doca {
     return sum;
   }
 
-  public static double[][] doca(
+  public double[][] doca(
       double[][] X, double eps, int delay_constraint, int beta, int mi, boolean inplace) {
     int num_instances = X.length;
     int num_attributes = X[0].length;
@@ -242,7 +242,7 @@ public class Doca {
 
     double[][] normalizedData = normalizeDataFrame(data);
 
-    double[][] res = doca(normalizedData, 100, 1000, 50, 100, false);
+    // double[][] res = doca(normalizedData, 100, 1000, 50, 100, false);
 
     printResult(res);
   }
