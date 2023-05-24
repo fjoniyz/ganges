@@ -56,12 +56,11 @@ public class Doca {
   }
 
   public static double[][] doca(
-          double[][] X, double eps, int delay_constraint, int beta, int mi, boolean inplace) {
+      double[][] X, double eps, int delay_constraint, int beta, int mi, boolean inplace) {
     int num_instances = X.length;
     int num_attributes = X[0].length;
 
-    double sensitivity =
-            1.5 * (getMax(X) - getMin(X));
+    double sensitivity = 1.5 * (getMax(X) - getMin(X));
 
     List<List<Integer>> clusters = new ArrayList<>();
     List<List<Integer>> clusters_final = new ArrayList<>();
@@ -120,8 +119,8 @@ public class Doca {
           double sum = 0;
           for (int i = 0; i < num_attributes; i++) {
             sum +=
-                    Math.max(0, data_point[i] - mx_c.get(c)[i])
-                            - Math.min(0, data_point[i] - mn_c.get(c)[i]);
+                Math.max(0, data_point[i] - mx_c.get(c)[i])
+                    - Math.min(0, data_point[i] - mn_c.get(c)[i]);
           }
           enlargement[c] = sum;
         }
@@ -145,16 +144,16 @@ public class Doca {
         if (!ok_clusters.isEmpty()) {
           TODOREMOVE_Perfect += 1;
           best_cluster =
-                  ok_clusters.stream()
-                          .min(
-                                  (c1, c2) -> Integer.compare(clusters.get(c1).size(), clusters.get(c2).size()))
-                          .orElse(null);
+              ok_clusters.stream()
+                  .min(
+                      (c1, c2) -> Integer.compare(clusters.get(c1).size(), clusters.get(c2).size()))
+                  .orElse(null);
         } else if (clusters.size() >= beta) {
           best_cluster =
-                  min_clusters.stream()
-                          .min(
-                                  (c1, c2) -> Integer.compare(clusters.get(c1).size(), clusters.get(c2).size()))
-                          .orElse(null);
+              min_clusters.stream()
+                  .min(
+                      (c1, c2) -> Integer.compare(clusters.get(c1).size(), clusters.get(c2).size()))
+                  .orElse(null);
         }
       }
 
@@ -172,7 +171,7 @@ public class Doca {
         // Update min/max
         double[] mn_cluster = mn_c.get(best_cluster);
         double[] mx_cluster = mx_c.get(best_cluster);
-//        for (int i = 0; i < num_attributes; i++) {
+        //        for (int i = 0; i < num_attributes; i++) {
         mn_cluster[best_cluster] = Math.min(mn_cluster[best_cluster], data_point[best_cluster]);
         mx_cluster[best_cluster] = Math.max(mx_cluster[best_cluster], data_point[best_cluster]);
       }
@@ -184,7 +183,7 @@ public class Doca {
         }
       }
       assert overripe_clusters.size() <= 1
-              : "Every datapoint should only be able to be in one cluster!?";
+          : "Every datapoint should only be able to be in one cluster!?";
       if (!overripe_clusters.isEmpty()) {
         int c = overripe_clusters.get(0);
         double[] dif_cluster = new double[num_attributes];
@@ -229,14 +228,14 @@ public class Doca {
     List<Double[]> dataList = readCSVFile("./adult_train.csv");
 
     List<String> columns =
-            Arrays.asList(
-                    "age",
-                    "education-num",
-                    "marital-status",
-                    "gender",
-                    "capital-gain",
-                    "hours-per-week",
-                    "income");
+        Arrays.asList(
+            "age",
+            "education-num",
+            "marital-status",
+            "gender",
+            "capital-gain",
+            "hours-per-week",
+            "income");
     Double[][] data = extractColumns(dataList, columns);
 
     mapIncomeColumn(data);
@@ -291,7 +290,7 @@ public class Doca {
   private static double[] extractColumns(Double[][] data, int index) {
     double[] res = new double[data.length];
     int k = 0;
-    for(Double[] rows: data){
+    for (Double[] rows : data) {
       res[k] = rows[index];
       k++;
     }
