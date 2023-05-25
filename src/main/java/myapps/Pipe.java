@@ -46,10 +46,8 @@ public class Pipe {
                 String[] values = value.split(",");
                 System.out.println("Values: " + Arrays.toString(values));
                 List<String> strings = Arrays.asList(values);
-                System.out.println("We get here too");
                 List<Double> listOfDoubles =
                     strings.stream().map(Double::valueOf).collect(Collectors.toList());
-                System.out.println("What about here");
                 double[] arr = listOfDoubles.stream().mapToDouble(Double::doubleValue).toArray();
                 double[][] input = new double[][] {arr, arr};
                 System.out.println("Input: " + input);
