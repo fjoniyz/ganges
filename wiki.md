@@ -16,9 +16,18 @@ Within in Database:
 
 - API to make this data available for OPERATE tech
 
+Schema: 
+```
+{'GERAET_NR':string, 'GERAET_ZAEHLERPLATZ':string, 'GERAET_ZAEHLERTYP':string, 'GERAET_WFAKTOR':int, 'MESSART':string}
+```
+
 #### E-Mobilität
 - Transformed with Kafka and loaded in the database
 - The data is not raised in different phases of the Costumer Journey -> data assigned to specific use case
+- `timeseries_id` is a hashed int value
+```
+{'Timestamp':string, 'timeseries_id':string, 'value':string}
+```
 
 ## Anonymization Algorithms
 
