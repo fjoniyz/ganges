@@ -1,12 +1,13 @@
 package com.ganges.lib.castleguard;
 import java.util.*;
+import com.ganges.lib.castleguard.utils.Utils;
 
 public class Item {
     Map<String, Float> data;
     List<String> headers;
     Float sensitive_attr;
-    // TODO: is this Cluster or Item Type?
     Cluster parent = null;
+    Utils util;
 
     public Item(Map <String, Float> data, List <String>  headers, String sensitive_attr){
         this.data  = data;
@@ -19,11 +20,7 @@ public class Item {
         Args:
         other: The tuple to calculate the distance to
         Returns: The distance to the tuple*/
-
-        float error = Math.abs(this.data.get(this.headers) - other.data.get(this.headers));
-        // TODO: noch Mean Value darauf anwenden
-        float mean_squared_error = (float) Math.pow(error, 2);
-        return (float) Math.sqrt(mean_squared_error);
+        return 0F;
     }
 
     void update_attribute(String header, Float value) {

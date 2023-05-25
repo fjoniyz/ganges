@@ -11,8 +11,7 @@ import java.lang.Float;
 public class Cluster {
     List<Item> contents;
     Map<String, Range<Float>> ranges;
-    // TODO: change datatype from Object
-    Set<Object> diversity;
+    Set<Float> diversity;
     Map<String, Float> sample_values;
     Utils utils;
 
@@ -103,7 +102,7 @@ public class Cluster {
         Float current = this.information_loss(global_ranges);
         return (given - current) / this.ranges.size();
     }
-    // TODO: check everything with size
+
     float information_loss_given_t(Item item, HashMap<String, Range<Float>> global_ranges){
         /*Calculates the information loss upon adding <item> into this cluster
 
@@ -177,7 +176,6 @@ public class Cluster {
         return total_distance;
     }
 
-    // TODO: implementation of this function
     boolean within_bounds(Item item){
        /* Checks whether a tuple is within all the ranges of the
         cluster, e.g. would cause no information loss on being entered.
@@ -186,9 +184,11 @@ public class Cluster {
         item: The tuple to perform bounds checking on
 
         Returns: Whether the tuple is within the bounds of the cluster*/
-
+        for (Map.Entry<String, Range<Float>> header: this.ranges.entrySet()) {
+            if (! header.getValue().contains(item.data.get(header.getKey()))) {
+                return false;
+            }
+        }
         return true;
     }
-
-
 }
