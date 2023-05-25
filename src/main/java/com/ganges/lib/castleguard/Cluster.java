@@ -43,8 +43,8 @@ public class Cluster {
     }
 
     void remove(Item element){
-       //  Removes a tuple from the cluster
-       //  Args:
+        //  Removes a tuple from the cluster
+        //  Args:
         //            element: The element to remove from the cluster
         this.contents.remove(element);
         for(Item e : this.contents){
@@ -56,27 +56,27 @@ public class Cluster {
     }
 
     // Note: Return value without Item -> In Cluster.py return value (gen_tuple, item)
-     Item generalise(Item item){
-         for (Map.Entry<String, Range<Float>> header: this.ranges.entrySet()){
-             if (! this.sample_values.containsKey(header.getKey())){
-                 this.sample_values.put(header.getKey(),  this.utils.random_choice(this.contents).data.get(header.getKey()));
-             }
-             item.data.put("min" + header.getKey(), header.getValue().getMinimum());
-             item.data.put("spc" + header.getKey(), this.sample_values.get(header.getKey()));
-             item.data.put("max" + header.getKey(), header.getValue().getMaximum());
+    Item generalise(Item item){
+        for (Map.Entry<String, Range<Float>> header: this.ranges.entrySet()){
+            if (! this.sample_values.containsKey(header.getKey())){
+                this.sample_values.put(header.getKey(),  this.utils.random_choice(this.contents).data.get(header.getKey()));
+            }
+            item.data.put("min" + header.getKey(), header.getValue().getMinimum());
+            item.data.put("spc" + header.getKey(), this.sample_values.get(header.getKey()));
+            item.data.put("max" + header.getKey(), header.getValue().getMaximum());
 
-             item.headers.add("min"+header.getKey());
-             item.headers.add("spc"+header.getKey());
-             item.headers.add("max"+header.getKey());
+            item.headers.add("min"+header.getKey());
+            item.headers.add("spc"+header.getKey());
+            item.headers.add("max"+header.getKey());
 
-             item.headers.remove(header.getKey());
-             item.data.remove(header.getKey());
-             item.data.remove("pid");
-         }
-         return item;
+            item.headers.remove(header.getKey());
+            item.data.remove(header.getKey());
+            item.data.remove("pid");
+        }
+        return item;
     }
 
-     float tuple_enlargement(Item item, HashMap<String, Range<Float>> global_ranges){
+    float tuple_enlargement(Item item, HashMap<String, Range<Float>> global_ranges){
             /*Calculates the enlargement value for adding <item> into this cluster
 
         Args:

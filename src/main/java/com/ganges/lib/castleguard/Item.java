@@ -6,7 +6,7 @@ public class Item {
     Map<String, Float> data;
     List<String> headers;
     Float sensitive_attr;
-    Cluster parent = null;
+    Cluster parent;
     Utils util;
 
     public Item(Map <String, Float> data, List <String>  headers, String sensitive_attr){
