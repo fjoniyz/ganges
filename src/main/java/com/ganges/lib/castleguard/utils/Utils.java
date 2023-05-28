@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Random;
 
 public class Utils {
-    Range<Integer> updateRange() {
+    public static Range<Integer> updateRange() {
         return null;
     }
 
