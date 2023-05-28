@@ -11,8 +11,7 @@ import java.lang.Float;
 public class Cluster {
     List<Item> contents;
     Map<String, Range<Float>> ranges;
-    // TODO: change datatype from Object
-    Set<Object> diversity;
+    Set<Float> diversity;
     Map<String, Float> sample_values;
     Utils utils;
 
@@ -36,8 +35,7 @@ public class Cluster {
         // Check whether the item is already in a cluster
         if (element.parent != null){
             // If it is, remove it so that we do not reach an invalid state
-            // TODO: How to remove element here (conflict with datatype)
-            element.parent = null;
+            element.parent.remove(element);
         }
         // Add sensitive attribute value to the diversity of cluster
         this.diversity.add(element.sensitive_attr);
@@ -45,8 +43,8 @@ public class Cluster {
     }
 
     void remove(Item element){
-       //  Removes a tuple from the cluster
-       //  Args:
+        //  Removes a tuple from the cluster
+        //  Args:
         //            element: The element to remove from the cluster
         this.contents.remove(element);
         for(Item e : this.contents){
@@ -58,27 +56,27 @@ public class Cluster {
     }
 
     // Note: Return value without Item -> In Cluster.py return value (gen_tuple, item)
-     Item generalise(Item item){
-         for (Map.Entry<String, Range<Float>> header: this.ranges.entrySet()){
-             if (! this.sample_values.containsKey(header.getKey())){
-                 this.sample_values.put(header.getKey(),  this.utils.random_choice(this.contents).data.get(header.getKey()));
-             }
-             item.data.put("min" + header.getKey(), header.getValue().getMinimum());
-             item.data.put("spc" + header.getKey(), this.sample_values.get(header.getKey()));
-             item.data.put("max" + header.getKey(), header.getValue().getMaximum());
+    Item generalise(Item item){
+        for (Map.Entry<String, Range<Float>> header: this.ranges.entrySet()){
+            if (! this.sample_values.containsKey(header.getKey())){
+                this.sample_values.put(header.getKey(),  this.utils.random_choice(this.contents).data.get(header.getKey()));
+            }
+            item.data.put("min" + header.getKey(), header.getValue().getMinimum());
+            item.data.put("spc" + header.getKey(), this.sample_values.get(header.getKey()));
+            item.data.put("max" + header.getKey(), header.getValue().getMaximum());
 
-             item.headers.add("min"+header.getKey());
-             item.headers.add("spc"+header.getKey());
-             item.headers.add("max"+header.getKey());
+            item.headers.add("min"+header.getKey());
+            item.headers.add("spc"+header.getKey());
+            item.headers.add("max"+header.getKey());
 
-             item.headers.remove(header.getKey());
-             item.data.remove(header.getKey());
-             item.data.remove("pid");
-         }
-         return item;
+            item.headers.remove(header.getKey());
+            item.data.remove(header.getKey());
+            item.data.remove("pid");
+        }
+        return item;
     }
 
-     float tuple_enlargement(Item item, HashMap<String, Range<Float>> global_ranges){
+    float tuple_enlargement(Item item, HashMap<String, Range<Float>> global_ranges){
             /*Calculates the enlargement value for adding <item> into this cluster
 
         Args:
@@ -104,7 +102,7 @@ public class Cluster {
         Float current = this.information_loss(global_ranges);
         return (given - current) / this.ranges.size();
     }
-    // TODO: check everything with size
+
     float information_loss_given_t(Item item, HashMap<String, Range<Float>> global_ranges){
         /*Calculates the information loss upon adding <item> into this cluster
 
@@ -178,7 +176,6 @@ public class Cluster {
         return total_distance;
     }
 
-    // TODO: implementation of this function
     boolean within_bounds(Item item){
        /* Checks whether a tuple is within all the ranges of the
         cluster, e.g. would cause no information loss on being entered.
@@ -187,9 +184,11 @@ public class Cluster {
         item: The tuple to perform bounds checking on
 
         Returns: Whether the tuple is within the bounds of the cluster*/
-
+        for (Map.Entry<String, Range<Float>> header: this.ranges.entrySet()) {
+            if (! header.getValue().contains(item.data.get(header.getKey()))) {
+                return false;
+            }
+        }
         return true;
     }
-
-
 }
