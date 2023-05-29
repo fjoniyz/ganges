@@ -4,18 +4,18 @@ import java.util.HashMap;
 import java.util.List;
 
 public class Item {
-    private HashMap<String, Integer> data;
+    private HashMap<String, Float> data;
     private List<String> headers;
-    private String sensitiveAttr;
-    private Object cluster;
+    private Float sensitiveAttr;
+    private Cluster parent;
 
-    public Item(HashMap<String, Integer> data, List<String> headers, String sensitiveAttr) {
+    public Item(HashMap<String, Float> data, List<String> headers, Float sensitiveAttr) {
         this.data = data;
         this.headers = headers;
         this.sensitiveAttr = sensitiveAttr;
     }
 
-    public HashMap<String, Integer> getData() {
+    public HashMap<String, Float> getData() {
         return data;
     }
 
@@ -23,15 +23,20 @@ public class Item {
         return headers;
     }
 
-    public String getSensitiveAttr() {
+    public Float getSensitiveAttr() {
         return sensitiveAttr;
     }
 
-    public Object getCluster() {
-        return cluster;
+    public Cluster getCluster() {
+        return parent;
     }
 
-    public void setCluster(Object cluster) {
-        this.cluster = cluster;
+    public void setCluster(Cluster cluster) {
+        this.parent = cluster;
+    }
+
+    public Float tupleDistance(Item item) {
+        // TODO: Implement
+        return null;
     }
 }

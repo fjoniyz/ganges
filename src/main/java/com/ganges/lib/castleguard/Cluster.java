@@ -9,7 +9,7 @@ import java.lang.String;
 import java.lang.Float;
 
 public class Cluster {
-    List<Item> contents;
+    private List<Item> contents;
     Map<String, Range<Float>> ranges;
     Set<Float> diversity;
     Map<String, Float> sample_values;
@@ -26,6 +26,11 @@ public class Cluster {
 
         this.utils = new Utils();
     }
+
+    public List<Item> getContents(){
+        return this.contents;
+    }
+
     void insert(Item element){
         // Inserts a tuple into the cluster
         // Args:
@@ -33,13 +38,13 @@ public class Cluster {
         this.contents.add(element);
 
         // Check whether the item is already in a cluster
-        if (element.parent != null){
+        if (element.getCluster() != null){
             // If it is, remove it so that we do not reach an invalid state
-            element.parent.remove(element);
+            element.getCluster().remove(element);
         }
         // Add sensitive attribute value to the diversity of cluster
-        this.diversity.add(element.sensitive_attr);
-        element.parent = this;
+        this.diversity.add(element.getSensitiveAttr());
+        element.setCluster(this);
     }
 
     void remove(Item element){
@@ -48,8 +53,8 @@ public class Cluster {
         //            element: The element to remove from the cluster
         this.contents.remove(element);
         for(Item e : this.contents){
-            if (! (Objects.equals(e.sensitive_attr, element.sensitive_attr))) {
-                this.diversity.remove(element.sensitive_attr);
+            if (! (Objects.equals(e.getSensitiveAttr(), element.getSensitiveAttr()))) {
+                this.diversity.remove(element.getSensitiveAttr());
             }
 
         }
@@ -59,19 +64,19 @@ public class Cluster {
     Item generalise(Item item){
         for (Map.Entry<String, Range<Float>> header: this.ranges.entrySet()){
             if (! this.sample_values.containsKey(header.getKey())){
-                this.sample_values.put(header.getKey(),  this.utils.random_choice(this.contents).data.get(header.getKey()));
+                this.sample_values.put(header.getKey(),  this.utils.random_choice(this.contents).getData().get(header.getKey()));
             }
-            item.data.put("min" + header.getKey(), header.getValue().getMinimum());
-            item.data.put("spc" + header.getKey(), this.sample_values.get(header.getKey()));
-            item.data.put("max" + header.getKey(), header.getValue().getMaximum());
+            item.getData().put("min" + header.getKey(), header.getValue().getMinimum());
+            item.getData().put("spc" + header.getKey(), this.sample_values.get(header.getKey()));
+            item.getData().put("max" + header.getKey(), header.getValue().getMaximum());
 
-            item.headers.add("min"+header.getKey());
-            item.headers.add("spc"+header.getKey());
-            item.headers.add("max"+header.getKey());
+            item.getHeaders().add("min"+header.getKey());
+            item.getHeaders().add("spc"+header.getKey());
+            item.getHeaders().add("max"+header.getKey());
 
-            item.headers.remove(header.getKey());
-            item.data.remove(header.getKey());
-            item.data.remove("pid");
+            item.getHeaders().remove(header.getKey());
+            item.getData().remove(header.getKey());
+            item.getData().remove("pid");
         }
         return item;
     }
@@ -117,7 +122,7 @@ public class Cluster {
         Range <Float> updated;
         for (Map.Entry<String, Range<Float>> header: this.ranges.entrySet()){
             Range <Float> global_range = global_ranges.get(header.getKey());
-            updated = Range.between((Math.min(header.getValue().getMinimum(), item.data.get(header.getKey()))), Math.max(header.getValue().getMaximum(), item.data.get(header.getKey())));
+            updated = Range.between((Math.min(header.getValue().getMinimum(), item.getData().get(header.getKey()))), Math.max(header.getValue().getMaximum(), item.getData().get(header.getKey())));
             loss += this.utils.range_information_loss(updated, global_range);
         }
         return loss;
@@ -171,7 +176,7 @@ public class Cluster {
         Returns: The distance to the other tuple*/
         float total_distance = 0;
         for (Map.Entry<String, Range<Float>> header: this.ranges.entrySet()) {
-            total_distance += Math.abs(other.data.get(header.getKey()) - this.utils.range_difference(header.getValue()));
+            total_distance += Math.abs(other.getData().get(header.getKey()) - this.utils.range_difference(header.getValue()));
         }
         return total_distance;
     }
@@ -185,7 +190,7 @@ public class Cluster {
 
         Returns: Whether the tuple is within the bounds of the cluster*/
         for (Map.Entry<String, Range<Float>> header: this.ranges.entrySet()) {
-            if (! header.getValue().contains(item.data.get(header.getKey()))) {
+            if (! header.getValue().contains(item.getData().get(header.getKey()))) {
                 return false;
             }
         }
