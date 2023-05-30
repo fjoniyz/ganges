@@ -9,11 +9,8 @@ public class CastleGuard {
     private List<String> headers;
     private Float sensitiveAttr;
     private Deque<Item> items;
-
     private List<Cluster> bigGamma;
-
     private HashMap<String, Range<Float>> globalRanges;
-
     double tau;
 
     public CastleGuard(CGConfig config, List<String> headers, Float sensitiveAttr) {
@@ -349,7 +346,7 @@ public class CastleGuard {
 
         while (c.getContents().size() < this.config.getK() || c.diversity.size() < this.config.getL()) {
             // Get the cluster with the lowest enlargement value
-            Cluster lowestEnlargementCluster = Collections.min(gamma_c, Comparator.comparingDouble(cl -> c.cluster_enlargement(cl, this.globalRanges)));
+            Cluster lowestEnlargementCluster = Collections.min(gamma_c, Comparator.comparingDouble(cl -> cl.cluster_enlargement(cl, this.globalRanges)));
             List<Item> items = new ArrayList<>(lowestEnlargementCluster.getContents());
 
             for (Item t : items) {
