@@ -10,10 +10,10 @@ import java.lang.Float;
 
 public class Cluster {
     private List<Item> contents;
-    Map<String, Range<Float>> ranges;
-    Set<Float> diversity;
-    Map<String, Float> sample_values;
-    Utils utils;
+    private Map<String, Range<Float>> ranges;
+    private Set<Float> diversity;
+    private Map<String, Float> sample_values;
+    private final Utils utils;
 
     public Cluster(List<String> headers){
         // Initialises the cluster
@@ -30,6 +30,22 @@ public class Cluster {
     public List<Item> getContents(){
         return this.contents;
     }
+
+    public void setContents(List<Item> value){
+        this.contents = value;
+    }
+
+    public Map<String, Range<Float>> getRanges(){ return  this.ranges; }
+
+    public void setRanges(Map<String, Range<Float>> value){ this.ranges = value; }
+
+    public Map<String, Float> getSample_values(){ return  this.sample_values; }
+
+    public void setSample_values(Map<String, Float> value){ this.sample_values = value; }
+
+    public Set<Float> getDiversity(){return this.diversity; }
+
+    public void setDiversity(Set<Float> value){ this.diversity = value; }
 
     void insert(Item element){
         // Inserts a tuple into the cluster

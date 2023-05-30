@@ -344,7 +344,7 @@ public class CastleGuard {
         List<Cluster> gamma_c = new ArrayList<>(this.bigGamma);
         gamma_c.remove(c);
 
-        while (c.getContents().size() < this.config.getK() || c.diversity.size() < this.config.getL()) {
+        while (c.getContents().size() < this.config.getK() || c.getDiversity().size() < this.config.getL()) {
             // Get the cluster with the lowest enlargement value
             Cluster lowestEnlargementCluster = Collections.min(gamma_c, Comparator.comparingDouble(cl -> cl.cluster_enlargement(cl, this.globalRanges)));
             List<Item> items = new ArrayList<>(lowestEnlargementCluster.getContents());
