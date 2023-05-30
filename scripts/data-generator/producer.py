@@ -20,7 +20,8 @@ def send_dataset(bootstrap_servers: List[str], dataset: Iterable, topic: str, de
 
     for instance in dataset[1:]:
         instance_dict = {headers[i]: instance[i] for i in range(len(instance))}
-        msg = json.dumps(instance_dict)
+        msg = instance_dict
+        print("Msg: ", msg)
         # logging.info(f"{topic} {str(msg)}")
         producer.send(topic, value=str(msg).encode(
             'utf-8'), key="record".encode('utf-8'))

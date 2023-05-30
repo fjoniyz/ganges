@@ -7,6 +7,8 @@ import java.nio.file.Paths;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
@@ -29,8 +31,8 @@ public class Pipe {
         Files.newInputStream(Paths.get(userDirectory + "/src/main/resources/config.properties"))) {
       Properties props = new Properties();
 
-      String inputTopic = "input";
-      String outputTopic = "output";
+      String inputTopic = "input-data";
+      String outputTopic = "output-events";
 
       props.load(inputStream);
       props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
@@ -39,19 +41,21 @@ public class Pipe {
           StreamsConfig.METADATA_MAX_AGE_CONFIG,
           "1000"); // Needed to prevent timeouts during broker startup.
 
+      ObjectMapper mapper = new ObjectMapper();
       final StreamsBuilder builder = new StreamsBuilder();
       KStream<String, String> src = builder.stream(inputTopic);
       src.mapValues(
               value -> {
                 String[] values = value.split(",");
-                System.out.println("Values: " + Arrays.toString(values));
+                String[] parsed = {values[values.length - 1]};
+                System.out.println("Values: " + Arrays.toString(parsed));
                 List<String> strings = Arrays.asList(values);
                 List<Double> listOfDoubles =
                     strings.stream().map(Double::valueOf).collect(Collectors.toList());
                 double[] arr = listOfDoubles.stream().mapToDouble(Double::doubleValue).toArray();
                 double[][] input = new double[][] {arr, arr};
                 System.out.println("Input: " + input);
-                double[][] output = Doca.doca(input, 100, 1000, 60, 100, false);
+                double[][] output = Doca.doca(input, 0.01, 1000, 60, 100, false);
                 System.out.println("Output: " + output);
                 String result = Arrays.deepToString(output);
                 System.out.println("Result: " + result);
@@ -74,11 +78,5 @@ public class Pipe {
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
-  }
-
-  private static List<Double> createValues(String valuesString) {
-    String[] s = valuesString.split(",");
-    List<String> strings = Arrays.asList(s);
-    return strings.stream().map(Double::valueOf).collect(Collectors.toList());
   }
 }
