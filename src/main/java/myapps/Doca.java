@@ -13,10 +13,12 @@ public class Doca {
 
   public static double getMax(double[][] X) {
     double max = Double.NEGATIVE_INFINITY;
+    int j = 0;
     for (double[] row : X) {
       for (double value : row) {
         max = Math.max(max, value);
       }
+      j += 1;
     }
     return max;
   }
@@ -60,7 +62,7 @@ public class Doca {
     int num_instances = X.length;
     int num_attributes = X[0].length;
 
-    double sensitivity = Math.abs((getMax(X) - getMin(X)));
+    double sensitivity = 1.5 * (getMax(X) - getMin(X));
 
     List<List<Integer>> clusters = new ArrayList<>();
     List<List<Integer>> clusters_final = new ArrayList<>();

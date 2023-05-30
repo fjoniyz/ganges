@@ -1,22 +1,14 @@
 package myapps;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.List;
-import java.util.Properties;
-import java.util.concurrent.CountDownLatch;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.kafka.common.serialization.Serdes;
-import org.apache.kafka.streams.KafkaStreams;
-import org.apache.kafka.streams.StreamsBuilder;
-import org.apache.kafka.streams.StreamsConfig;
-import org.apache.kafka.streams.Topology;
-import org.apache.kafka.streams.kstream.KStream;
-import java.util.*;
-import java.util.stream.Collectors;
+import com.opencsv.CSVReader;
+import com.opencsv.exceptions.CsvException;
 
 /**
  * In this example, we implement a simple Pipe program using the high-level Streams DSL that reads
@@ -25,57 +17,45 @@ import java.util.stream.Collectors;
  */
 public class Pipe {
 
-  public static void main(final String[] args) {
-    String userDirectory = System.getProperty("user.dir");
-    try (InputStream inputStream =
-        Files.newInputStream(Paths.get(userDirectory + "/src/main/resources/config.properties"))) {
-      Properties props = new Properties();
+  public static double[][] deleteLastRow(double[][] array) {
+    if (array == null || array.length == 0) {
+        throw new IllegalArgumentException("Array cannot be null or empty.");
+    }
 
-      String inputTopic = "input-data";
-      String outputTopic = "output-events";
+    int numRows = array.length - 1;
+    double[][] newArray = new double[numRows][];
 
-      props.load(inputStream);
-      props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
-      props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
-      props.put(
-          StreamsConfig.METADATA_MAX_AGE_CONFIG,
-          "1000"); // Needed to prevent timeouts during broker startup.
+    // Copy all rows except the last one
+    for (int i = 0; i < numRows; i++) {
+        newArray[i] = array[i];
+    }
 
-      final StreamsBuilder builder = new StreamsBuilder();
-      KStream<String, String> src = builder.stream(inputTopic);
-      src.mapValues(
-              value -> {
-                String[] values = value.split(",");
-                String[] parsed = {values[values.length - 1]};
-                System.out.println("Values: " + Arrays.toString(parsed));
-                List<String> strings = Arrays.asList(values);
-                List<Double> listOfDoubles =
-                    strings.stream().map(Double::valueOf).collect(Collectors.toList());
-                double[] arr = listOfDoubles.stream().mapToDouble(Double::doubleValue).toArray();
-                double[][] input = new double[][] {arr, arr};
-                System.out.println("Input: " + input);
-                double[][] output = Doca.doca(input, 0.01, 1000, 60, 100, false);
-                System.out.println("Output: " + output);
-                String result = Arrays.deepToString(output);
-                System.out.println("Result: " + result);
-                return result;
-              })
-          .to(outputTopic);
+    return newArray;
+}
+  public static void main(final String[] args) throws CsvException, FileNotFoundException, IOException {
 
-      final Topology topology = builder.build();
-      try (KafkaStreams streams = new KafkaStreams(topology, props)) {
-        final CountDownLatch latch = new CountDownLatch(1);
-
-        try {
-          streams.start();
-          latch.await();
-        } catch (Throwable e) {
-          System.exit(1);
+      String filename = "adult_test.csv";
+      String filePath = System.getProperty("user.dir") + File.separator + filename;
+      try(CSVReader reader = new CSVReader(new FileReader(filePath))) {
+        List<String[]> rows = reader.readAll();
+        double[][] dataArray = new double[rows.size()][];
+        int k = 0;
+        for(int i = 0; i < rows.size(); i++){
+          if(i != 0) {
+            dataArray[k] =  Arrays.stream(rows.get(i))
+            .mapToDouble(Double::parseDouble)
+            .toArray();
+            k += 1;
+          }
+        }
+        double[][] deletedLastRow = deleteLastRow(dataArray);
+        double[][]output = Doca.doca(deletedLastRow, 1000000, 1000, 50, 100, false);
+        for(double[] dArray: output){
+          for(double d: dArray){
+            System.out.print(d + ",");
+          }
+          System.out.println();
         }
       }
-      System.exit(0);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
     }
   }
-}
