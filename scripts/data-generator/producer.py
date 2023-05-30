@@ -6,6 +6,7 @@ import json
 import yaml
 from time import sleep
 import logging
+import os
 
 
 def send_dataset(bootstrap_servers: List[str], dataset: Iterable, topic: str, delay: int = 0):
@@ -38,7 +39,7 @@ if __name__ == "__main__":
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     
-    with open("config.yaml", 'r') as f:
+    with open(os.path.dirname(os.path.realpath(__file__)) + "/config.yaml", 'r') as f:
         config = yaml.safe_load(f)
     logging.info("Config:", config)
 
