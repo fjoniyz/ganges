@@ -41,7 +41,6 @@ public class Pipe {
           StreamsConfig.METADATA_MAX_AGE_CONFIG,
           "1000"); // Needed to prevent timeouts during broker startup.
 
-      ObjectMapper mapper = new ObjectMapper();
       final StreamsBuilder builder = new StreamsBuilder();
       KStream<String, String> src = builder.stream(inputTopic);
       src.mapValues(

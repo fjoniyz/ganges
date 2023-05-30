@@ -60,7 +60,7 @@ public class Doca {
     int num_instances = X.length;
     int num_attributes = X[0].length;
 
-    double sensitivity = 1.5 * (getMax(X) - getMin(X));
+    double sensitivity = Math.abs((getMax(X) - getMin(X)));
 
     List<List<Integer>> clusters = new ArrayList<>();
     List<List<Integer>> clusters_final = new ArrayList<>();
