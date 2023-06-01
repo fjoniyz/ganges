@@ -37,6 +37,15 @@ Implementation [Link](https://github.com/itsjorgemg/TFM-deltaDoca)
 
 #### Summary:
 
+δ-DOCA is a strategy to anonymize data streams in a non-interactive context, with the addition of noise directly on the data. It consists of two stages: Domain Bounding by δ and DOCA. In the first stage, the data domain is defined and adjusted by a δ, obtaining the sensitivity value of the differential privacy. Then, in the second stage, the stage of utility improvement, an online microaggregation is performed prior to adding noise to data.
+
+| Parameter     | Description   | Default       | 
+| ------------- | ------------- | ------------- | 
+| ε  | privacy budget | |
+| delay constraint  | maximum number of tuples that can be active | |
+| b  | maximum number of clusters that can be active | |
+| μ  | maximum number of clusters that are used to calculate information loss  | |
+
 
 ### CASTLEGUARD [Link](https://ieeexplore.ieee.org/abstract/document/9251212)
 
@@ -56,7 +65,3 @@ CASTLEGUARD is a data stream anonymization approach that provides a reliable gua
 | b  | maximum number of clusters that can be active | |
 | δ  | maximum number of tuples that can be active (delay constraint) | |
 | μ  |   |
-
-
-
-
