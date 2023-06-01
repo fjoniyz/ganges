@@ -3,7 +3,6 @@ package com.ganges.lib.castleguard;
 import org.apache.commons.lang3.Range;
 
 import java.util.*;
-import org.apache.commons.lang3.Range;
 import org.apache.commons.math3.distribution.LaplaceDistribution;
 import org.apache.commons.math3.random.JDKRandomGenerator;
 
@@ -18,9 +17,7 @@ public class CastleGuard {
 
     public CastleGuard(CGConfig config, List<String> headers, Float sensitiveAttr) {
         this.config = config;
-        for (String header : headers) {
-            this.headers.put(header, Range.between(null, null));
-        }
+        this.headers = headers;
         this.sensitiveAttr = sensitiveAttr;
         this.bigGamma = new ArrayList<>();
         this.globalRanges = new HashMap<>();
@@ -36,7 +33,7 @@ public class CastleGuard {
         if (config.isUseDiffPrivacy() && rand.nextDouble(1) > config.getBigBeta()) {
             return;
         }
-        Item item = new Item(data, new ArrayList<>(this.headers.keySet()), this.sensitiveAttr);
+        Item item = new Item(data, this.headers, this.sensitiveAttr);
         updateGlobalRanges(item);
 
         if (config.isUseDiffPrivacy()) {
@@ -81,13 +78,13 @@ public class CastleGuard {
      * fudge_tuple() in castle.py
      */
     private void perturb(Item item) {
-        HashMap<String, Double> data = item.getData();
+        HashMap<String, Float> data = item.getData();
 
-        for (Map.Entry<String, Range<Double>> header : this.headers.entrySet()) {
+        for (String header : this.headers) {
             // Check if header has a range
-            if (header.getValue().getMinimum() != null || header.getValue().getMaximum() != null) {
-                double max_value = header.getValue().getMaximum();
-                double min_value = header.getValue().getMinimum();
+            if (this.globalRanges.get(header).getMinimum() != null || this.globalRanges.get(header).getMaximum() != null) {
+                double max_value = this.globalRanges.get(header).getMaximum();
+                double min_value = this.globalRanges.get(header).getMinimum();
 
                 // Calaculate scale
                 double scale = Math.max((max_value - min_value), 1) / this.config.getPhi();
@@ -95,12 +92,12 @@ public class CastleGuard {
                 // Draw random noise from Laplace distribution
                 JDKRandomGenerator rg = new JDKRandomGenerator();
                 LaplaceDistribution laplaceDistribution = new LaplaceDistribution(rg, 0, scale);
-                double noise = laplaceDistribution.sample();
+                float noise = (float) laplaceDistribution.sample();
 
                 // Add noise to original value
-                double original_value = data.get(header.getKey());
-                double perturbed_value = original_value + noise;
-                item.updateAttributes(header.getKey(), perturbed_value);
+                float originalValue = data.get(header);
+                float perturbedValue = originalValue + noise;
+                item.updateAttributes(header, perturbedValue);
             }
         }
     }

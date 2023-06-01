@@ -19,7 +19,7 @@ public class Item {
         return data;
     }
 
-    public void updateAttributes(String header, Double value) {
+    public void updateAttributes(String header, Float value) {
         this.data.put(header, value);
     }
 
