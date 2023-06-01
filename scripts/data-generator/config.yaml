@@ -1,0 +1,3 @@
+bootstrap_servers: ["localhost:9092"]
+dataset_topic: {"data/mieterstromdata.csv": "energy-data", "data/sanierungsdata.csv": 'sanierung-data'}
+delay: 0
