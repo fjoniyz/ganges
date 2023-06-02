@@ -12,12 +12,10 @@ import org.apache.kafka.streams.KafkaStreams;
 import org.apache.kafka.streams.StreamsBuilder;
 import org.apache.kafka.streams.StreamsConfig;
 import org.apache.kafka.streams.Topology;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-
 import org.apache.kafka.streams.kstream.Consumed;
+import org.apache.kafka.streams.kstream.KStream;
+import org.apache.kafka.streams.kstream.Produced;
+import org.json.JSONObject;
 
 /**
  * In this example, we implement a simple Pipe program using the high-level
@@ -32,25 +30,44 @@ public class Pipe {
     String inputTopic = EnvTools.getEnvValue(EnvTools.INPUT_TOPIC, "streams-input");
     String outputTopic = EnvTools.getEnvValue(EnvTools.OUTPUT_TOPIC, "streams-output");
     String bootstrapServerConfig = EnvTools.getEnvValue(EnvTools.BOOTSTRAP_SERVERS_CONFIG, "localhost:9092");
+    String jsonStringConfig = EnvTools.getEnvValue(EnvTools.ANON_CONFIG, "{\n"
+        + " \"functionName\": \"delta-doca\", \n"
+        + "  \"parameters\": { \n"
+        + "    \"eps\": 0.01, \n"
+        + "    \"delay_constraint\": 1000 \n"
+        + "    \"beta\": 60, \n"
+        + "    \"mi\": 100, \n"
+        + "    \"inplace\": false \n"
+        + "  }"
+        + "}"); // Read the configuration form environment variable
+    final JSONObject config = new JSONObject(jsonStringConfig);
 
-    // Create an AdminClient to creat the input and output topics
-    Properties adminProps = new Properties();
-    
-    adminProps.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServerConfig);
+    AnonymizationFunction anonymize = null;
+    String functionName = config.get("functionName").toString();
 
-    // Create an AdminClient
-    AdminClient adminClient = AdminClient.create(adminProps);
+    // TODO: Add correct parameters for each function
+    if (functionName.equals("delta-doca")) {
+      anonymize = (input, parameters) -> {
+        int eps = parameters.getInt("eps");
+        int delay_constraint = parameters.getInt("delay_constraint");
+        int beta = parameters.getInt("beta");
+        int mi = parameters.getInt("mi");
+        boolean inplace = parameters.getBoolean("inplace");
+        return Doca.doca(input, eps, delay_constraint, beta, mi, inplace);
+      };
+    } else if (functionName.equals("castle-guard")) {
+      anonymize = (input, parameters) -> {
+        int eps = parameters.getInt("eps");
+        int delay_constraint = parameters.getInt("delay_constraint");
+        int beta = parameters.getInt("beta");
+        int mi = parameters.getInt("mi");
+        boolean inplace = parameters.getBoolean("inplace");
+        return CastleGuard.castle_guard(input, eps, delay_constraint, beta, mi, inplace);
+      };
+    }
 
-    // Create the input and output topics with 1 partition and a replication factor of 1
-    NewTopic newInputTopic = new NewTopic(inputTopic, 1, (short) 1);
-    NewTopic newOutputTopic = new NewTopic(outputTopic, 1, (short) 1);
-
-    // Create the topics using the AdminClient
-    adminClient.createTopics(Collections.singleton(newInputTopic));
-    adminClient.createTopics(Collections.singleton(newOutputTopic));
-
-    // Close the AdminClient
-    adminClient.close();
+    // Create the input and output topics with the broker
+    createTopics(bootstrapServerConfig, inputTopic, outputTopic);
 
     // Set up the streams configuration.
     Properties props = new Properties();
@@ -65,12 +82,17 @@ public class Pipe {
     // Create an instance of StreamsBuilder
     final StreamsBuilder builder = new StreamsBuilder();
 
-    // Read the input Kafka topic into a KStream instance and 
-    // process the stream by applying teh modifyJson method to each value
-    // write the result to the output topic
-    builder.stream(inputTopic, Consumed.with(Serdes.String(), Serdes.String())).mapValues(Pipe::modifyJson)
-        .to(outputTopic);
+    // Read the input Kafka topic into a KStream instance
+    KStream<String, String> inputStream = builder.stream(inputTopic, Consumed.with(Serdes.String(), Serdes.String()));
 
+    // Apply the anonymization function to the input stream
+    KStream<String, String> outputStream = inputStream
+        .mapValues(value -> anonymize.execute(value, config.getJSONObject("parameters")));
+
+    // Write the output stream to the output topic
+    outputStream.to(outputTopic, Produced.with(Serdes.String(), Serdes.String()));
+
+    // Build the topology and start streaming!
     final Topology topology = builder.build();
     try (KafkaStreams streams = new KafkaStreams(topology, props)) {
       final CountDownLatch latch = new CountDownLatch(1);
@@ -83,19 +105,24 @@ public class Pipe {
       }
     }
     System.exit(0);
-  }
+  };
 
-  private static String modifyJson(String json) {
-    try {
-      ObjectMapper objectMapper = new ObjectMapper();
-      JsonNode jsonNode = objectMapper.readTree(json);
-      ((ObjectNode) jsonNode).put("AEP_MW", "x");
+  private static void createTopics(String bootstrapServerConfig, String inputTopic, String outputTopic) {
+    // Create an AdminClient to create the input and output topics with the broker
+    Properties adminProps = new Properties();
 
-      return jsonNode.toString();
-    } catch (Exception e) {
-      // Handle any exception that occurred during JSON processing
-      e.printStackTrace();
-      return null; // or throw an exception if desired
-    }
+    adminProps.put(AdminClientConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServerConfig);
+
+    AdminClient adminClient = AdminClient.create(adminProps);
+
+    // Create the input and output topics
+    // with 1 partition and a replication factor of 1
+    NewTopic newInputTopic = new NewTopic(inputTopic, 1, (short) 1);
+    NewTopic newOutputTopic = new NewTopic(outputTopic, 1, (short) 1);
+
+    adminClient.createTopics(Collections.singleton(newInputTopic));
+    adminClient.createTopics(Collections.singleton(newOutputTopic));
+
+    adminClient.close();
   }
-}
+};
