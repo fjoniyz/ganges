@@ -13,11 +13,11 @@ def generate_electricity_rows() -> Iterable:
         locations = ["street a", "street b", "street c", "street c"]
         locations = int(len(apartments)/len(locations) + 1)*locations
         apartments = np.random.randint(1,6,100) 
-        for inhabitants, apartment in zip(apartments, range(1, 100)):
+        for location, apartment, inhabitants in zip(locations, range(1, 100), apartments):
             date = datetime.now()
             # the number of inhabitants effects energy consumption
             EV = round(uniform(1000*inhabitants, 10000*inhabitants), 2)
-            yield [date,EV, apartment]
+            yield [date, f"{apartment}"+"sanierung-apartment", EV, location, inhabitants]
         
 def get_fields_names():
     return ["Datetime","Seconds_EnergyConsumption", "apartment_number"]
