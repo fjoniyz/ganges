@@ -9,12 +9,15 @@ import os
 
 def generate_electricity_rows() -> Iterable:
     """Returns value in format [Datetime, Seconds_EnergyConsumption, apartment_number]"""
-    apartments = np.random.randint(1,6,100) 
-    for inhabitants, apartment in zip(apartments, range(1, 100)):
-        date = datetime.now()
-        # the number of inhabitants effects energy consumption
-        EV = round(uniform(1000*inhabitants, 10000*inhabitants), 2)
-        yield [date,EV, apartment]
+    while True:   
+        locations = ["street a", "street b", "street c", "street c"]
+        locations = int(len(apartments)/len(locations) + 1)*locations
+        apartments = np.random.randint(1,6,100) 
+        for inhabitants, apartment in zip(apartments, range(1, 100)):
+            date = datetime.now()
+            # the number of inhabitants effects energy consumption
+            EV = round(uniform(1000*inhabitants, 10000*inhabitants), 2)
+            yield [date,EV, apartment]
         
 def get_fields_names():
     return ["Datetime","Seconds_EnergyConsumption", "apartment_number"]
@@ -24,16 +27,13 @@ def get_fields_names():
 # We disregard electricity production (only usage), since it is not common within Rental apartments
 
 # writes into a Mieterstromdata file with random secondly Endery Consumption
-with open(os.path.dirname(os.path.realpath(__file__)) + '/../data/EV_Station_Usage.csv', 'w', newline='') as file:
-    writer = csv.writer(file)
-    field = get_fields_names()
-    writer.writerow(field)
+if __name__ == "__main__":
+    with open(os.path.dirname(os.path.realpath(__file__)) + '/../data/EV_Station_Usage.csv', 'w', newline='') as file:
+        writer = csv.writer(file)
+        field = get_fields_names()
+        writer.writerow(field)
 
-    # apartments is an array with the nuber of inhabitants
-    apartments = np.random.randint(1,6,100) 
-    locations = ["street a", "street b", "street c", "street c"]
-    locations = int(len(apartments)/len(locations) + 1)*locations
-    while True:   
+        # apartments is an array with the nuber of inhabitants
         for row in generate_electricity_rows():
             writer.writerow(row)
         sleep(0.1)
