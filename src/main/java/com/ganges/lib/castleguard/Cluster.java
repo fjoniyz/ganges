@@ -10,14 +10,14 @@ import java.lang.Float;
 
 public class Cluster {
     private List<Item> contents;
-    private Map<String, Range<Float>> ranges;
+    private HashMap<String, Range<Float>> ranges;
     private Set<Float> diversity;
     private Map<String, Float> sample_values;
     private final Utils utils;
 
-    public Cluster(List<String> headers){
+    public Cluster(List<String> headers) {
         // Initialises the cluster
-        this.contents= new ArrayList<>();
+        this.contents = new ArrayList<>();
         this.ranges = new HashMap<>();
         // Ranges method -> in Python zero arguments and initialized with zeros
         headers.forEach(header -> this.ranges.put(header, Range.between(0F, 0F)));
@@ -27,34 +27,46 @@ public class Cluster {
         this.utils = new Utils();
     }
 
-    public List<Item> getContents(){
+    public List<Item> getContents() {
         return this.contents;
     }
 
-    public void setContents(List<Item> value){
+    public void setContents(List<Item> value) {
         this.contents = value;
     }
 
-    public Map<String, Range<Float>> getRanges(){ return  this.ranges; }
+    public HashMap<String, Range<Float>> getRanges() {
+        return this.ranges;
+    }
 
-    public void setRanges(Map<String, Range<Float>> value){ this.ranges = value; }
+    public void setRanges(HashMap<String, Range<Float>> value) {
+        this.ranges = value;
+    }
 
-    public Map<String, Float> getSample_values(){ return  this.sample_values; }
+    public Map<String, Float> getSample_values() {
+        return this.sample_values;
+    }
 
-    public void setSample_values(Map<String, Float> value){ this.sample_values = value; }
+    public void setSample_values(Map<String, Float> value) {
+        this.sample_values = value;
+    }
 
-    public Set<Float> getDiversity(){return this.diversity; }
+    public Set<Float> getDiversity() {
+        return this.diversity;
+    }
 
-    public void setDiversity(Set<Float> value){ this.diversity = value; }
+    public void setDiversity(Set<Float> value) {
+        this.diversity = value;
+    }
 
-    void insert(Item element){
+    void insert(Item element) {
         // Inserts a tuple into the cluster
         // Args:
         //            element (Item): The element to insert into the cluster
         this.contents.add(element);
 
         // Check whether the item is already in a cluster
-        if (element.getCluster() != null){
+        if (element.getCluster() != null) {
             // If it is, remove it so that we do not reach an invalid state
             element.getCluster().remove(element);
         }
@@ -63,32 +75,38 @@ public class Cluster {
         element.setCluster(this);
     }
 
-    void remove(Item element){
+    void remove(Item element) {
         //  Removes a tuple from the cluster
         //  Args:
         //            element: The element to remove from the cluster
         this.contents.remove(element);
-        for(Item e : this.contents){
-            if (! (Objects.equals(e.getSensitiveAttr(), element.getSensitiveAttr()))) {
-                this.diversity.remove(element.getSensitiveAttr());
+
+        boolean containsSensitiveAttr = false;
+        for (Item e : this.contents) {
+            if (Objects.equals(e.getSensitiveAttr(), element.getSensitiveAttr())) {
+                containsSensitiveAttr = true;
+                break;
             }
 
+        }
+        if (!containsSensitiveAttr) {
+            this.diversity.remove(element.getSensitiveAttr());
         }
     }
 
     // Note: Return value without Item -> In Cluster.py return value (gen_tuple, item)
-    Item generalise(Item item){
-        for (Map.Entry<String, Range<Float>> header: this.ranges.entrySet()){
-            if (! this.sample_values.containsKey(header.getKey())){
-                this.sample_values.put(header.getKey(),  this.utils.random_choice(this.contents).getData().get(header.getKey()));
+    Item generalise(Item item) {
+        for (Map.Entry<String, Range<Float>> header : this.ranges.entrySet()) {
+            if (!this.sample_values.containsKey(header.getKey())) {
+                this.sample_values.put(header.getKey(), this.utils.random_choice(this.contents).getData().get(header.getKey()));
             }
             item.getData().put("min" + header.getKey(), header.getValue().getMinimum());
             item.getData().put("spc" + header.getKey(), this.sample_values.get(header.getKey()));
             item.getData().put("max" + header.getKey(), header.getValue().getMaximum());
 
-            item.getHeaders().add("min"+header.getKey());
-            item.getHeaders().add("spc"+header.getKey());
-            item.getHeaders().add("max"+header.getKey());
+            item.getHeaders().add("min" + header.getKey());
+            item.getHeaders().add("spc" + header.getKey());
+            item.getHeaders().add("max" + header.getKey());
 
             item.getHeaders().remove(header.getKey());
             item.getData().remove(header.getKey());
@@ -97,7 +115,7 @@ public class Cluster {
         return item;
     }
 
-    float tuple_enlargement(Item item, HashMap<String, Range<Float>> global_ranges){
+    float tuple_enlargement(Item item, HashMap<String, Range<Float>> global_ranges) {
             /*Calculates the enlargement value for adding <item> into this cluster
 
         Args:
@@ -108,10 +126,10 @@ public class Cluster {
            */
         Float given = this.information_loss_given_t(item, global_ranges);
         Float current = this.information_loss(global_ranges);
-        return (given - current) /this.ranges.size();
+        return (given - current) / this.ranges.size();
     }
 
-    float cluster_enlargement(Cluster cluster, HashMap<String, Range<Float>> global_ranges){
+    float cluster_enlargement(Cluster cluster, HashMap<String, Range<Float>> global_ranges) {
         /*Calculates the enlargement value for merging <cluster> into this cluster
 
         Args:
@@ -124,7 +142,7 @@ public class Cluster {
         return (given - current) / this.ranges.size();
     }
 
-    float information_loss_given_t(Item item, HashMap<String, Range<Float>> global_ranges){
+    float information_loss_given_t(Item item, HashMap<String, Range<Float>> global_ranges) {
         /*Calculates the information loss upon adding <item> into this cluster
 
         Args:
@@ -135,9 +153,9 @@ public class Cluster {
         float loss = 0F;
 
         // For each range, check if <item> would extend it
-        Range <Float> updated;
-        for (Map.Entry<String, Range<Float>> header: this.ranges.entrySet()){
-            Range <Float> global_range = global_ranges.get(header.getKey());
+        Range<Float> updated;
+        for (Map.Entry<String, Range<Float>> header : this.ranges.entrySet()) {
+            Range<Float> global_range = global_ranges.get(header.getKey());
             updated = Range.between((Math.min(header.getValue().getMinimum(), item.getData().get(header.getKey()))), Math.max(header.getValue().getMaximum(), item.getData().get(header.getKey())));
             loss += this.utils.range_information_loss(updated, global_range);
         }
@@ -156,16 +174,16 @@ public class Cluster {
         float loss = 0F;
 
         // For each range, check if <item> would extend it
-        Range <Float> updated;
-        for (Map.Entry<String, Range<Float>> header: this.ranges.entrySet()){
-            Range <Float> global_range = global_ranges.get(header.getKey());
-            updated = Range.between(Math.min(header.getValue().getMinimum(), cluster.ranges.get(header.getKey()).getMinimum()),Math.max(header.getValue().getMaximum(),cluster.ranges.get(header.getKey()).getMinimum()));
+        Range<Float> updated;
+        for (Map.Entry<String, Range<Float>> header : this.ranges.entrySet()) {
+            Range<Float> global_range = global_ranges.get(header.getKey());
+            updated = Range.between(Math.min(header.getValue().getMinimum(), cluster.ranges.get(header.getKey()).getMinimum()), Math.max(header.getValue().getMaximum(), cluster.ranges.get(header.getKey()).getMinimum()));
             loss += this.utils.range_information_loss(updated, global_range);
         }
         return loss;
     }
 
-    float information_loss(HashMap<String, Range<Float>> global_ranges){
+    float information_loss(HashMap<String, Range<Float>> global_ranges) {
         /*Calculates the information loss of this cluster
 
         Args:
@@ -175,15 +193,15 @@ public class Cluster {
         float loss = 0F;
 
         // For each range, check if <item> would extend it
-        Range <Integer> updated = null;
-        for (Map.Entry<String, Range<Float>> header: this.ranges.entrySet()){
-            Range <Float> global_range = global_ranges.get(header.getKey());
+        Range<Integer> updated = null;
+        for (Map.Entry<String, Range<Float>> header : this.ranges.entrySet()) {
+            Range<Float> global_range = global_ranges.get(header.getKey());
             loss += this.utils.range_information_loss(header.getValue(), global_range);
         }
         return loss;
     }
 
-    float distance(Item other){
+    float distance(Item other) {
         /*Calculates the distance from this tuple to another
 
         Args:
@@ -191,13 +209,13 @@ public class Cluster {
 
         Returns: The distance to the other tuple*/
         float total_distance = 0;
-        for (Map.Entry<String, Range<Float>> header: this.ranges.entrySet()) {
+        for (Map.Entry<String, Range<Float>> header : this.ranges.entrySet()) {
             total_distance += Math.abs(other.getData().get(header.getKey()) - this.utils.range_difference(header.getValue()));
         }
         return total_distance;
     }
 
-    boolean within_bounds(Item item){
+    boolean within_bounds(Item item) {
        /* Checks whether a tuple is within all the ranges of the
         cluster, e.g. would cause no information loss on being entered.
 
@@ -205,8 +223,8 @@ public class Cluster {
         item: The tuple to perform bounds checking on
 
         Returns: Whether the tuple is within the bounds of the cluster*/
-        for (Map.Entry<String, Range<Float>> header: this.ranges.entrySet()) {
-            if (! header.getValue().contains(item.getData().get(header.getKey()))) {
+        for (Map.Entry<String, Range<Float>> header : this.ranges.entrySet()) {
+            if (!header.getValue().contains(item.getData().get(header.getKey()))) {
                 return false;
             }
         }

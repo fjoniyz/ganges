@@ -28,7 +28,7 @@ public class CastleGuard {
      */
     public void insertData(HashMap<String, Float> data) {
         Random rand = new Random();
-        if (config.isUseDiffPrivacy() && rand.nextDouble(1) > config.getBigBeta()) {
+        if (config.isUseDiffPrivacy() && rand.nextDouble() > config.getBigBeta()) {
             return;
         }
         Item item = new Item(data, this.headers, this.sensitiveAttr);
