@@ -31,14 +31,6 @@ public class Doca {
     return min;
   }
 
-  public static double getMean(List<Double> values) {
-    double sum = 0;
-    for (double value : values) {
-      sum += value;
-    }
-    return sum / values.size();
-  }
-
   public static double[] div0(double[] a, double[] b) {
     double[] result = new double[a.length];
     for (int i = 0; i < a.length; i++) {
@@ -56,7 +48,7 @@ public class Doca {
   }
 
   public static double[][] doca(
-      double[][] X, double eps, int delay_constraint, int beta, int mi, boolean inplace) {
+      double[][] X, double eps, int delay_constraint, int beta, boolean inplace) {
     int num_instances = X.length;
     int num_attributes = X[0].length;
 
@@ -171,7 +163,6 @@ public class Doca {
         // Update min/max
         double[] mn_cluster = mn_c.get(best_cluster);
         double[] mx_cluster = mx_c.get(best_cluster);
-        //        for (int i = 0; i < num_attributes; i++) {
         mn_cluster[best_cluster] = Math.min(mn_cluster[best_cluster], data_point[best_cluster]);
         mx_cluster[best_cluster] = Math.max(mx_cluster[best_cluster], data_point[best_cluster]);
       }
@@ -224,7 +215,7 @@ public class Doca {
     return output;
   }
 
-  public static void main(String[] args) throws FileNotFoundException {
+  public static void main(String[] args) {
     List<Double[]> dataList = readCSVFile("./adult_train.csv");
 
     List<String> columns =
@@ -242,7 +233,7 @@ public class Doca {
 
     double[][] normalizedData = normalizeDataFrame(data);
 
-    double[][] res = doca(normalizedData, 100, 1000, 50, 100, false);
+    double[][] res = doca(normalizedData, 100, 1000, 50, false);
 
     printResult(res);
   }
