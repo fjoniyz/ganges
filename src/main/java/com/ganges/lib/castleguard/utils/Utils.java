@@ -3,18 +3,22 @@ package com.ganges.lib.castleguard.utils;
 import com.ganges.lib.castleguard.Item;
 import org.apache.commons.lang3.Range;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
 public class Utils {
-    public static Range<Integer> updateRange() {
-        return null;
-    }
-
-    Random random;
+    private static Random random;
 
     public Utils() {
         this.random = new Random();
+    }
+
+    public static Range<Float> updateRange(Range<Float> range, float newVal) {
+        float max = Math.max(range.getMaximum(), newVal);
+        float min = Math.min(range.getMinimum(), newVal);
+        Range<Float> newRange = Range.between(min, max);
+        return newRange;
     }
 
     public float range_information_loss(Range<Float> actual, Range<Float> other) {
@@ -35,11 +39,24 @@ public class Utils {
     }
 
     // replacement for nonexistant python function np.random.choice()
-    public Item random_choice(List<Item> content) {
+    public static <T> T random_choice(List<T> content) {
+        return random_choice(content, 1).get(0);
+    }
+    public static <T> List<T> random_choice(List<T> content, int size) {
         /* Arg: a List of Items
         Return: random Element in the List of Items
          */
-        int index = random.nextInt(content.size());
-        return content.get(index);
+        List<T> sampled = new ArrayList<>();
+        int i = 0;
+        while(i < size) {
+            int index = random.nextInt(content.size());
+            if (sampled.contains(content.get(index))) {
+               continue;
+            }
+            sampled.add(content.get(index));
+            i++;
+        }
+
+        return sampled;
     }
 }

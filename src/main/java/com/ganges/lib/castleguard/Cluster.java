@@ -10,10 +10,10 @@ import java.lang.Float;
 
 public class Cluster {
     private List<Item> contents;
-    Map<String, Range<Float>> ranges;
+    private Map<String, Range<Float>> ranges;
     Set<Float> diversity;
-    Map<String, Float> sample_values;
-    Utils utils;
+    private Map<String, Float> sample_values;
+    private Utils utils;
 
     public Cluster(List<String> headers){
         // Initialises the cluster
@@ -30,6 +30,8 @@ public class Cluster {
     public List<Item> getContents(){
         return this.contents;
     }
+    public int getSize() { return this.contents.size(); }
+    public int getDiversitySize() { return this.diversity.size(); }
 
     void insert(Item element){
         // Inserts a tuple into the cluster
@@ -62,21 +64,22 @@ public class Cluster {
 
     // Note: Return value without Item -> In Cluster.py return value (gen_tuple, item)
     Item generalise(Item item){
+        Item generalizedItem = new Item(item);
         for (Map.Entry<String, Range<Float>> header: this.ranges.entrySet()){
             if (! this.sample_values.containsKey(header.getKey())){
                 this.sample_values.put(header.getKey(),  this.utils.random_choice(this.contents).getData().get(header.getKey()));
             }
-            item.getData().put("min" + header.getKey(), header.getValue().getMinimum());
-            item.getData().put("spc" + header.getKey(), this.sample_values.get(header.getKey()));
-            item.getData().put("max" + header.getKey(), header.getValue().getMaximum());
+            generalizedItem.getData().put("min" + header.getKey(), header.getValue().getMinimum());
+            generalizedItem.getData().put("spc" + header.getKey(), this.sample_values.get(header.getKey()));
+            generalizedItem.getData().put("max" + header.getKey(), header.getValue().getMaximum());
 
-            item.getHeaders().add("min"+header.getKey());
-            item.getHeaders().add("spc"+header.getKey());
-            item.getHeaders().add("max"+header.getKey());
+            generalizedItem.getHeaders().add("min"+header.getKey());
+            generalizedItem.getHeaders().add("spc"+header.getKey());
+            generalizedItem.getHeaders().add("max"+header.getKey());
 
-            item.getHeaders().remove(header.getKey());
-            item.getData().remove(header.getKey());
-            item.getData().remove("pid");
+            generalizedItem.getHeaders().remove(header.getKey());
+            generalizedItem.getData().remove(header.getKey());
+            generalizedItem.getData().remove("pid");
         }
         return item;
     }

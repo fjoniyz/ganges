@@ -1,27 +1,31 @@
 package com.ganges.lib.castleguard;
 
+import com.ganges.lib.castleguard.utils.Utils;
 import org.apache.commons.lang3.Range;
 
 import java.util.*;
 import org.apache.commons.math3.distribution.LaplaceDistribution;
 import org.apache.commons.math3.random.JDKRandomGenerator;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 public class CastleGuard {
     private final CGConfig config;
     private List<String> headers;
-    private Float sensitiveAttr;
-    private Deque<Item> items;
-    private List<Cluster> bigGamma;
+    private String sensitiveAttr;
+    private Deque<Item> items; // a.k.a. global_tuples in castle.py
+    private List<Cluster> bigGamma = new ArrayList<>(); // Set of non-ks anonymised clusters
+    private List<Cluster> bigOmega = new ArrayList<>(); // Set of ks anonymised clusters
     private HashMap<String, Range<Float>> globalRanges;
-    double tau;
+    private List<Float> recentLosses = new ArrayList<>();
+    private double tau  = Double.POSITIVE_INFINITY;
 
-    public CastleGuard(CGConfig config, List<String> headers, Float sensitiveAttr) {
+    public CastleGuard(CGConfig config, List<String> headers, String sensitiveAttr) {
         this.config = config;
         this.headers = headers;
         this.sensitiveAttr = sensitiveAttr;
-        this.bigGamma = new ArrayList<>();
-        this.globalRanges = new HashMap<>();
-        this.tau = Double.POSITIVE_INFINITY;
+        for (String header : headers) {
+            globalRanges.put(header, Range.between(Float.NEGATIVE_INFINITY, Float.POSITIVE_INFINITY));
+        }
     }
 
     /**
@@ -41,37 +45,101 @@ public class CastleGuard {
         }
         Optional<Cluster> cluster = bestSelection(item);
         if (!cluster.isPresent()) {
-            // TODO: create cluster here
+            // Create new cluster
+            Cluster newCluster = new Cluster(this.headers);
+            this.bigGamma.add(newCluster);
+            newCluster.insert(item);
         } else {
-            insertIntoCluster(item, cluster.get());
+            cluster.get().insert(item);
         }
 
         items.add(item);
         if (items.size() > config.getDelta()) {
             delayConstraint(items.pop());
         }
+        this.updateTau();
     }
 
-    /**
-     * Called by the object that manages anonymization class
-     * @param item
-     * @return
-     */
-    public Object outputCluster(Item item) {
-        return null;
+    public void outputCluster(Cluster cluster) {
+        Set<Float> outputPids = new HashSet<>();
+        Set<Float> outputDiversity = new HashSet<>();
+
+        boolean splittable = cluster.getSize() >= 2 * config.getK() && cluster.getDiversitySize() >= config.getL();
+        List<Cluster> splitted = splittable ? splitL(cluster) : List.of(cluster);
+        for (Cluster sCluster : splitted) {
+            for (Item item : sCluster.getContents()) {
+                Item generalized = sCluster.generalise(item);
+                // TODO: output generalized
+
+                outputPids.add(item.getData().get("pid"));
+                outputDiversity.add(item.getSensitiveAttr());
+                suppressItem(item);
+            }
+
+            // Calculate loss
+            float loss = sCluster.information_loss(globalRanges);
+            recentLosses.add(loss);
+            if (recentLosses.size() > config.getMu()) {
+                recentLosses.remove(0);
+            }
+
+            updateTau();
+            assert outputPids.size() >= config.getK();
+            assert outputDiversity.size() >= config.getL();
+
+            bigOmega.add(sCluster);
+        }
     }
 
-    private void insertIntoCluster(Item item, Object cluster) {
-        // TODO: Implement (basis)
+    private void updateTau() {
+        this.tau = Double.POSITIVE_INFINITY;
+        if (!recentLosses.isEmpty()) {
+            tau = recentLosses.stream().reduce(0F, Float::sum);
+        } else if (!bigGamma.isEmpty()) {
+            int sampleSize = Math.min(bigGamma.size(), 5);
+            List<Cluster> chosen = Utils.random_choice(bigGamma, sampleSize);
 
+            float totalLoss = chosen.stream().map(c -> c.information_loss(globalRanges)).reduce(0F, Float::sum);
+            tau = totalLoss / sampleSize;
+        }
     }
 
-    private void createCluster() {
-        // TODO: Implement
+    private void delayConstraint(@NonNull Item item) {
+        Cluster itemCluster = item.getCluster();
+        if (this.config.getK() <= itemCluster.getSize() && this.config.getL() < itemCluster.getDiversitySize()) {
+            outputCluster(itemCluster);
+            return;
+        }
+        Optional<Cluster> randomCluster = this.bigOmega.stream().filter(c -> c.within_bounds(item)).findAny();
+        if (randomCluster.isPresent()) {
+            Item generalised = randomCluster.get().generalise(item);
+            suppressItem(item);
+            // TODO: output generalized
+            return;
+        }
+
+        int biggerClustersNum = 0;
+        for (Cluster cluster : bigGamma) {
+            if (itemCluster.getSize() < cluster.getSize()) {
+                biggerClustersNum++;
+            }
+        }
+        if (biggerClustersNum > bigGamma.size() / 2) {
+            suppressItem(item);
+            return;
+        }
+        Cluster merged = mergeClusters(itemCluster);
+        outputCluster(merged);
     }
 
-    private void delayConstraint(Item item) {
-        // TODO: Implement
+    public void suppressItem(Item item) {
+        this.items.remove(item);
+        Cluster parentCluster = item.getCluster();
+        parentCluster.remove(item);
+
+        if (parentCluster.getSize() == 0) {
+            bigGamma.remove(parentCluster);
+        }
     }
 
     /**
@@ -156,8 +224,9 @@ public class CastleGuard {
         return Optional.of(setCokList.get(randomIndex));
     }
 
-    void updateGlobalRanges(Object data) {
-        // TODO: Implement (Basis)
+    void updateGlobalRanges(Item item) {
+        globalRanges.replaceAll(
+                (h, v) -> Utils.updateRange(globalRanges.get(h), item.getData().get(h)));
     }
 
     public List<Cluster> split(Cluster c) {
