@@ -162,9 +162,32 @@ public class ClusterTest {
 
     @Test
     public void distance() {
+
     }
 
     @Test
     public void within_bounds() {
+        ArrayList<String> headers = new ArrayList<>();
+        headers.add("timeseries_id");
+        headers.add("Seconds_EnergyConsumption");
+
+        HashMap<String, Float> data_one = new HashMap<>();
+        data_one.put(headers.get(0), 1.0F);
+        data_one.put(headers.get(1), 200.0F);
+
+        Item one = new Item(data_one,headers,null);
+
+        HashMap<String, Float> data_two = new HashMap<>();
+        data_two.put(headers.get(0), 4.0F);
+        data_two.put(headers.get(1), 400.0F);
+
+        Item two = new Item(data_two,headers,null);
+        Cluster cluster = new Cluster(headers);
+        Assert.assertFalse(cluster.within_bounds(one));
+        cluster.insert(one);
+        Assert.assertTrue(cluster.within_bounds(one));
+        Assert.assertFalse(cluster.within_bounds(two));
+        cluster.insert(two);
+        Assert.assertTrue(cluster.within_bounds(two));
     }
 }
