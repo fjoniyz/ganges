@@ -28,5 +28,5 @@ if __name__ == "__main__":
         writer.writerow(field)
         for row in generate_station_rows():
             writer.writerow(row)
-        sleep(0.1)
+            sleep(0.1)
             

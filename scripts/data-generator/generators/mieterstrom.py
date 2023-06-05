@@ -36,4 +36,4 @@ if __name__ == "__main__":
         # apartments is an array with the nuber of inhabitants
         for row in generate_electricity_rows():
             writer.writerow(row)
-        sleep(0.1)
+            sleep(0.1)
