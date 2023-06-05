@@ -227,7 +227,10 @@ public class Cluster {
         Returns: The distance to the other tuple*/
         float total_distance = 0;
         for (Map.Entry<String, Range<Float>> header : this.ranges.entrySet()) {
+            System.out.println(header);
             total_distance += Math.abs(other.getData().get(header.getKey()) - this.utils.range_difference(header.getValue()));
+            System.out.println(header.getValue());
+            System.out.println(other.getData().get(header.getKey()));
         }
         return total_distance;
     }
