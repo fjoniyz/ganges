@@ -39,6 +39,7 @@ public class ClusterTest {
     public void remove() {
         String[] array = {"timeseries_id","Seconds_EnergyConsumption"};
         List<String> headers = Arrays.asList(array);
+
         Cluster testCluster = new Cluster(headers);
         HashMap<String, Float> data = new HashMap<>();
         data.put("pid", 3.0F);
@@ -73,8 +74,48 @@ public class ClusterTest {
         Assert.assertEquals(expected_diversity, diversity);
     }
 
+    Item element(float spc_timeseries, float spc_EngergyConsumption, List<String> headers){
+        HashMap<String, Float> expected_data = new HashMap<>();
+        expected_data.put("mintimeseries_id", 1.0F);
+        expected_data.put("spctimeseries_id", spc_timeseries);
+        expected_data.put("maxtimeseries_id", 4.0F);
+        expected_data.put("minSeconds_EnergyConsumption", 200.0F);
+        expected_data.put("spcSeconds_EnergyConsumption",spc_EngergyConsumption);
+        expected_data.put("maxSeconds_EnergyConsumption", 400.0F);
+        return new Item(expected_data,headers,null);
+    }
+
     @Test
     public void generalise() {
+        ArrayList<String> headers = new ArrayList<>();
+        headers.add("timeseries_id");
+        headers.add("Seconds_EnergyConsumption");
+
+        HashMap<String, Float> data_one = new HashMap<>();
+        data_one.put(headers.get(0), 1.0F);
+        data_one.put(headers.get(1), 200.0F);
+
+        Item one = new Item(data_one,headers,null);
+
+        HashMap<String, Float> data_two = new HashMap<>();
+        data_two.put(headers.get(0), 4.0F);
+        data_two.put(headers.get(1), 400.0F);
+
+        Item two = new Item(data_two,headers,null);
+        Cluster cluster = new Cluster(headers);
+
+        cluster.insert(one);
+        cluster.insert(two);
+        Item result = cluster.generalise(one);
+
+        String[] gen_array = {"mintimeseries_id", "spctimeseries_id", "maxtimeseries_id", "minSeconds_EnergyConsumption", "spcSeconds_EnergyConsumption", "maxSeconds_EnergyConsumption"};
+        List<String> gen_headers = Arrays.asList(gen_array);
+
+        Item expected_item_one = element(1.0F, 200.0F, gen_headers);
+        Item expected_item_two = element(4.0F, 200.0F, gen_headers);
+        Item expected_item_three = element(1.0F, 400.0F, gen_headers);
+        Item expected_item_four = element(4.0F, 200.0F, gen_headers);
+        Assert.assertTrue(result.getData().equals(expected_item_one.getData()) || result.getData().equals(expected_item_two.getData()) || result.getData().equals(expected_item_three.getData()) || result.getData().equals(expected_item_four.getData()));
     }
 
     @Test

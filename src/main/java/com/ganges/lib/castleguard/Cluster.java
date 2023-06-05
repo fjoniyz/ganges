@@ -10,7 +10,7 @@ import java.lang.Float;
 
 public class Cluster {
     private List<Item> contents;
-    private HashMap<String, Range<Float>> ranges;
+    private Map<String, Range<Float>> ranges;
     private Set<Float> diversity;
     private Map<String, Float> sample_values;
     private final Utils utils;
@@ -18,7 +18,7 @@ public class Cluster {
     public Cluster(List<String> headers) {
         // Initialises the cluster
         this.contents = new ArrayList<>();
-        this.ranges = new HashMap<>();
+        this.ranges = new LinkedHashMap<>();
         // Ranges method -> in Python zero arguments and initialized with zeros
         headers.forEach(header -> this.ranges.put(header, Range.between(0F, 0F)));
         this.diversity = new HashSet<>();
@@ -35,7 +35,7 @@ public class Cluster {
         this.contents = value;
     }
 
-    public HashMap<String, Range<Float>> getRanges() {
+    public Map<String, Range<Float>> getRanges() {
         return this.ranges;
     }
 
@@ -63,8 +63,13 @@ public class Cluster {
         // Inserts a tuple into the cluster
         // Args:
         //            element (Item): The element to insert into the cluster
-        this.contents.add(element);
 
+        // checks for an empty cluster
+        boolean first_elem = false;
+        if (this.contents.isEmpty()) {
+            first_elem = true;
+        }
+        this.contents.add(element);
         // Check whether the item is already in a cluster
         if (element.getCluster() != null) {
             // If it is, remove it so that we do not reach an invalid state
@@ -73,6 +78,18 @@ public class Cluster {
         // Add sensitive attribute value to the diversity of cluster
         this.diversity.add(element.getSensitiveAttr());
         element.setCluster(this);
+
+        // in case of an empty Cluster the Ranges are set to the items values
+        if (first_elem) {
+            for (Map.Entry<String, Range<Float>> header : this.ranges.entrySet()) {
+                header.setValue(Range.between(element.getData().get(header.getKey()), element.getData().get(header.getKey())));
+            }
+        // Otherwise we search for the Minimum /Maximum
+        } else {
+            for (Map.Entry<String, Range<Float>> header : this.ranges.entrySet()) {
+                header.setValue(Range.between(Math.min(header.getValue().getMinimum(), element.getData().get(header.getKey())), Math.max(header.getValue().getMaximum(), element.getData().get(header.getKey()))));
+            }
+        }
     }
 
     void remove(Item element) {
@@ -94,7 +111,7 @@ public class Cluster {
         }
     }
 
-    // Note: Return value without Item -> In Cluster.py return value (gen_tuple, item)
+    // Note: Return value with only Item -> In Cluster.py return value (gen_tuple, item)
     Item generalise(Item item) {
         for (Map.Entry<String, Range<Float>> header : this.ranges.entrySet()) {
             if (!this.sample_values.containsKey(header.getKey())) {
@@ -104,13 +121,13 @@ public class Cluster {
             item.getData().put("spc" + header.getKey(), this.sample_values.get(header.getKey()));
             item.getData().put("max" + header.getKey(), header.getValue().getMaximum());
 
-            item.getHeaders().add("min" + header.getKey());
-            item.getHeaders().add("spc" + header.getKey());
-            item.getHeaders().add("max" + header.getKey());
+            item.addHeaders("min" + header.getKey());
+            item.addHeaders("spc" + header.getKey());
+            item.addHeaders("max" + header.getKey());
 
-            item.getHeaders().remove(header.getKey());
-            item.getData().remove(header.getKey());
-            item.getData().remove("pid");
+            item.removeHeaders(header.getKey());
+            item.removeData(header.getKey());
+            //item.removeHeaders("pid");
         }
         return item;
     }

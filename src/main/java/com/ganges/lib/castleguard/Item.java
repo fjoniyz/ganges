@@ -19,8 +19,21 @@ public class Item {
         return data;
     }
 
+
+    public void removeData(String elem) {
+        this.data.remove(elem);
+    }
+
     public List<String> getHeaders() {
         return headers;
+    }
+
+    public void addHeaders(String elem) {
+        this.headers.add(elem);
+    }
+
+    public void removeHeaders(String elem) {
+        this.headers.remove(elem);
     }
 
     public Float getSensitiveAttr() {
