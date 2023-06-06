@@ -17,7 +17,7 @@ public class ClusterTest {
         data.put("timeseries_id", 1.0F);
         data.put("Seconds_EnergyConsumption", 2.0F);
 
-        Item testItem = new Item(data, headers,4.0F);
+        Item testItem = new Item(data, headers,"Seconds_EnergyConsumption");
 
         testCluster.insert(testItem);
 
@@ -45,9 +45,9 @@ public class ClusterTest {
         data.put("timeseries_id", 1.0F);
         data.put("Seconds_EnergyConsumption", 2.0F);
 
-        Item testItem = new Item(data, headers,4.0F);
-        Item testItem2 = new Item(data, headers,5.0F);
-        Item testItem3 = new Item(data, headers,4.0F);
+        Item testItem = new Item(data, headers,"Seconds_EnergyConsumption");
+        Item testItem2 = new Item(data, headers,"Seconds_EnergyConsumption");
+        Item testItem3 = new Item(data, headers,"Seconds_EnergyConsumption");
 
         testCluster.insert(testItem);
         testCluster.insert(testItem2);
@@ -144,9 +144,9 @@ public class ClusterTest {
         data.put("timeseries_id", 1.0F);
         data.put("Seconds_EnergyConsumption", 2.0F);
 
-        Item testItem = new Item(data, headers,4.0F);
-        Item testItem2 = new Item(data, headers,5.0F);
-        Item testItem3 = new Item(data, headers,4.0F);
+        Item testItem = new Item(data, headers,"Seconds_EnergyConsumption");
+        Item testItem2 = new Item(data, headers,"Seconds_EnergyConsumption");
+        Item testItem3 = new Item(data, headers,"Seconds_EnergyConsumption");
 
         testCluster.insert(testItem);
         testCluster.insert(testItem2);
