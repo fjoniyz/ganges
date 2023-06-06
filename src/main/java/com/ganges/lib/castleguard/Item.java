@@ -1,5 +1,8 @@
 package com.ganges.lib.castleguard;
 
+import org.checkerframework.checker.nullness.qual.NonNull;
+
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
@@ -9,10 +12,17 @@ public class Item {
     private Float sensitiveAttr;
     private Cluster parent;
 
-    public Item(HashMap<String, Float> data, List<String> headers, Float sensitiveAttr) {
+    public Item(HashMap<String, Float> data, List<String> headers, String sensitiveAttr) {
         this.data = data;
         this.headers = headers;
-        this.sensitiveAttr = sensitiveAttr;
+        this.sensitiveAttr = data.get(sensitiveAttr);
+    }
+
+    public Item(@NonNull Item another) {
+        this.data = (HashMap<String, Float>) another.data.clone();
+        this.headers = new ArrayList<>(another.getHeaders());
+        this.sensitiveAttr = another.sensitiveAttr;
+        this.parent = another.parent;
     }
 
     public HashMap<String, Float> getData() {
@@ -22,6 +32,10 @@ public class Item {
 
     public void removeData(String elem) {
         this.data.remove(elem);
+    }
+
+    public void updateAttributes(String header, Float value) {
+        this.data.put(header, value);
     }
 
     public List<String> getHeaders() {

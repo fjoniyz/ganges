@@ -30,6 +30,8 @@ public class Cluster {
     public List<Item> getContents() {
         return this.contents;
     }
+    public int getSize() { return this.contents.size(); }
+    public int getDiversitySize() { return this.diversity.size(); }
 
     public void setContents(List<Item> value) {
         this.contents = value;
