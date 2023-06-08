@@ -1,10 +1,9 @@
 package com.ganges.lib.castleguard.utils;
 
-import org.apache.commons.lang3.Range;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import org.apache.commons.lang3.Range;
 
 public class Utils {
     private static Random random;
@@ -18,6 +17,29 @@ public class Utils {
         float min = Math.min(range.getMinimum(), newVal);
         Range<Float> newRange = Range.between(min, max);
         return newRange;
+    }
+
+    // replacement for nonexistant python function np.random.choice()
+    public static <T> T randomChoice(List<T> content) {
+        return randomChoice(content, 1).get(0);
+    }
+
+    public static <T> List<T> randomChoice(List<T> content, int size) {
+        /* Arg: a List of Items
+        Return: random Element in the List of Items
+         */
+        List<T> sampled = new ArrayList<>();
+        int i = 0;
+        while(i < size) {
+            int index = random.nextInt(content.size());
+            if (sampled.contains(content.get(index))) {
+               continue;
+            }
+            sampled.add(content.get(index));
+            i++;
+        }
+
+        return sampled;
     }
 
     public float rangeInformationLoss(Range<Float> actual, Range<Float> other) {
@@ -35,27 +57,5 @@ public class Utils {
         Return: the maximum difference within Range object
          */
         return Math.abs(range.getMaximum() - range.getMinimum());
-    }
-
-    // replacement for nonexistant python function np.random.choice()
-    public static <T> T randomChoice(List<T> content) {
-        return randomChoice(content, 1).get(0);
-    }
-    public static <T> List<T> randomChoice(List<T> content, int size) {
-        /* Arg: a List of Items
-        Return: random Element in the List of Items
-         */
-        List<T> sampled = new ArrayList<>();
-        int i = 0;
-        while(i < size) {
-            int index = random.nextInt(content.size());
-            if (sampled.contains(content.get(index))) {
-               continue;
-            }
-            sampled.add(content.get(index));
-            i++;
-        }
-
-        return sampled;
     }
 }

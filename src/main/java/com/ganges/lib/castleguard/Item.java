@@ -1,10 +1,9 @@
 package com.ganges.lib.castleguard;
 
-import org.checkerframework.checker.nullness.qual.NonNull;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 public class Item {
     private HashMap<String, Float> data;

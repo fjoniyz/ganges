@@ -1,18 +1,15 @@
 package com.ganges.lib.castleguard;
 
-import org.apache.commons.lang3.Range;
 import com.ganges.lib.castleguard.utils.Utils;
-
 import java.util.*;
-import java.lang.String;
-import java.lang.Float;
+import org.apache.commons.lang3.Range;
 
 public class Cluster {
+  private final Utils utils;
   private List<Item> contents;
   private Map<String, Range<Float>> ranges;
   private Set<Float> diversity;
   private Map<String, Float> sampleValues;
-  private final Utils utils;
 
   public Cluster(List<String> headers) {
     // Initialises the cluster
@@ -30,16 +27,16 @@ public class Cluster {
     return this.contents;
   }
 
+  public void setContents(List<Item> value) {
+    this.contents = value;
+  }
+
   public int getSize() {
     return this.contents.size();
   }
 
   public int getDiversitySize() {
     return this.diversity.size();
-  }
-
-  public void setContents(List<Item> value) {
-    this.contents = value;
   }
 
   public Map<String, Range<Float>> getRanges() {
