@@ -107,7 +107,7 @@ public class ClusterManagement {
                 List<Item> currentBucket = entry.getValue();
 
                 // Sort the bucket by the enlargement value of that cluster
-                currentBucket.sort(Comparator.comparingDouble(tuple -> c.tuple_enlargement(tuple, globalRanges)));
+                currentBucket.sort(Comparator.comparingDouble(tuple -> c.tupleEnlargement(tuple, globalRanges)));
 
                 // Count the number of tuples we have
                 int totalTuples = 0;
@@ -193,7 +193,7 @@ public class ClusterManagement {
 
         while (c.getContents().size() < this.k || c.getDiversity().size() < this.l) {
             // Get the cluster with the lowest enlargement value
-            Cluster lowestEnlargementCluster = Collections.min(gamma_c, Comparator.comparingDouble(cl -> cl.cluster_enlargement(cl, globalRanges)));
+            Cluster lowestEnlargementCluster = Collections.min(gamma_c, Comparator.comparingDouble(cl -> cl.clusterEnlargement(cl, globalRanges)));
             List<Item> items = new ArrayList<>(lowestEnlargementCluster.getContents());
 
             for (Item t : items) {
@@ -214,15 +214,15 @@ public class ClusterManagement {
             tau = recentLosses.stream().reduce(0F, Float::sum);
         } else if (!bigGamma.isEmpty()) {
             int sampleSize = Math.min(bigGamma.size(), 5);
-            List<Cluster> chosen = Utils.random_choice(bigGamma, sampleSize);
+            List<Cluster> chosen = Utils.randomChoice(bigGamma, sampleSize);
 
-            float totalLoss = chosen.stream().map(c -> c.information_loss(globalRanges)).reduce(0F, Float::sum);
+            float totalLoss = chosen.stream().map(c -> c.informationLoss(globalRanges)).reduce(0F, Float::sum);
             tau = totalLoss / sampleSize;
         }
     }
 
     public void updateLoss(Cluster c, HashMap<String, Range<Float>> globalRanges) {
-        float loss = c.information_loss(globalRanges);
+        float loss = c.informationLoss(globalRanges);
         recentLosses.add(loss);
         if (recentLosses.size() > this.mu) {
             recentLosses.remove(0);
