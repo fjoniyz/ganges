@@ -2,9 +2,8 @@ package com.ganges.lib.castleguard;
 
 import com.ganges.lib.castleguard.utils.ClusterManagement;
 import com.ganges.lib.castleguard.utils.Utils;
-import org.apache.commons.lang3.Range;
-
 import java.util.*;
+import org.apache.commons.lang3.Range;
 import org.apache.commons.math3.distribution.LaplaceDistribution;
 import org.apache.commons.math3.random.JDKRandomGenerator;
 import org.checkerframework.checker.nullness.qual.NonNull;
@@ -95,7 +94,8 @@ public class CastleGuard {
             outputCluster(itemCluster);
             return;
         }
-        Optional<Cluster> randomCluster = bigOmega.stream().filter(c -> c.within_bounds(item)).findAny();
+
+        Optional<Cluster> randomCluster = bigOmega.stream().filter(c -> c.withinBounds(item)).findAny();
         if (randomCluster.isPresent()) {
             Item generalised = randomCluster.get().generalise(item);
             suppressItem(item);
@@ -168,7 +168,7 @@ public class CastleGuard {
         Set<Float> e = new HashSet<>();
 
         for (Cluster cluster : bigGamma) {
-            e.add(cluster.tuple_enlargement(item, globalRanges));
+            e.add(cluster.tupleEnlargement(item, globalRanges));
         }
 
         if (e.isEmpty()) {
@@ -180,7 +180,7 @@ public class CastleGuard {
         List<Cluster> setCmin = new ArrayList<>();
 
         for (Cluster cluster : bigGamma) {
-            if (cluster.tuple_enlargement(item, globalRanges) == minima) {
+            if (cluster.tupleEnlargement(item, globalRanges) == minima) {
                 setCmin.add(cluster);
             }
         }
@@ -188,7 +188,7 @@ public class CastleGuard {
         Set<Cluster> setCok = new HashSet<>();
 
         for (Cluster cluster : setCmin) {
-            double ilcj = cluster.information_loss_given_t(item, globalRanges);
+            double ilcj = cluster.informationLossGivenT(item, globalRanges);
             if (ilcj <= tau) {
                 setCok.add(cluster);
             }
