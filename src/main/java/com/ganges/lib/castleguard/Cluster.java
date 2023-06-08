@@ -12,7 +12,7 @@ public class Cluster {
     private List<Item> contents;
     private Map<String, Range<Float>> ranges;
     private Set<Float> diversity;
-    private Map<String, Float> sample_values;
+    private Map<String, Float> sampleValues;
     private final Utils utils;
 
     public Cluster(List<String> headers) {
@@ -22,7 +22,7 @@ public class Cluster {
         // Ranges method -> in Python zero arguments and initialized with zeros
         headers.forEach(header -> this.ranges.put(header, Range.between(0F, 0F)));
         this.diversity = new HashSet<>();
-        this.sample_values = new HashMap<>();
+        this.sampleValues = new HashMap<>();
 
         this.utils = new Utils();
     }
@@ -45,12 +45,12 @@ public class Cluster {
         this.ranges = value;
     }
 
-    public Map<String, Float> getSample_values() {
-        return this.sample_values;
+    public Map<String, Float> getSampleValues() {
+        return this.sampleValues;
     }
 
-    public void setSample_values(Map<String, Float> value) {
-        this.sample_values = value;
+    public void setSampleValues(Map<String, Float> value) {
+        this.sampleValues = value;
     }
 
     public Set<Float> getDiversity() {
@@ -116,11 +116,11 @@ public class Cluster {
     // Note: Return value with only Item -> In Cluster.py return value (gen_tuple, item)
     Item generalise(Item item) {
         for (Map.Entry<String, Range<Float>> header : this.ranges.entrySet()) {
-            if (!this.sample_values.containsKey(header.getKey())) {
-                this.sample_values.put(header.getKey(), this.utils.random_choice(this.contents).getData().get(header.getKey()));
+            if (!this.sampleValues.containsKey(header.getKey())) {
+                this.sampleValues.put(header.getKey(), this.utils.randomChoice(this.contents).getData().get(header.getKey()));
             }
             item.getData().put("min" + header.getKey(), header.getValue().getMinimum());
-            item.getData().put("spc" + header.getKey(), this.sample_values.get(header.getKey()));
+            item.getData().put("spc" + header.getKey(), this.sampleValues.get(header.getKey()));
             item.getData().put("max" + header.getKey(), header.getValue().getMaximum());
 
             item.addHeaders("min" + header.getKey());
@@ -134,7 +134,7 @@ public class Cluster {
         return item;
     }
 
-    float tuple_enlargement(Item item, HashMap<String, Range<Float>> global_ranges) {
+    float tupleEnlargement(Item item, HashMap<String, Range<Float>> global_ranges) {
             /*Calculates the enlargement value for adding <item> into this cluster
 
         Args:
@@ -143,12 +143,12 @@ public class Cluster {
 
     Returns: The information loss if we added item into this cluster
            */
-        Float given = this.information_loss_given_t(item, global_ranges);
-        Float current = this.information_loss(global_ranges);
+        Float given = this.informationLossGivenT(item, global_ranges);
+        Float current = this.informationLoss(global_ranges);
         return (given - current) / this.ranges.size();
     }
 
-    float cluster_enlargement(Cluster cluster, HashMap<String, Range<Float>> global_ranges) {
+    float clusterEnlargement(Cluster cluster, HashMap<String, Range<Float>> global_ranges) {
         /*Calculates the enlargement value for merging <cluster> into this cluster
 
         Args:
@@ -156,12 +156,12 @@ public class Cluster {
         global_ranges: The globally known ranges for each attribute
 
         Returns: The information loss upon merging cluster with this cluster*/
-        Float given = this.information_loss_given_c(cluster, global_ranges);
-        Float current = this.information_loss(global_ranges);
+        Float given = this.informationLossGivenC(cluster, global_ranges);
+        Float current = this.informationLoss(global_ranges);
         return (given - current) / this.ranges.size();
     }
 
-    float information_loss_given_t(Item item, HashMap<String, Range<Float>> global_ranges) {
+    float informationLossGivenT(Item item, HashMap<String, Range<Float>> global_ranges) {
         /*Calculates the information loss upon adding <item> into this cluster
 
         Args:
@@ -176,13 +176,13 @@ public class Cluster {
         for (Map.Entry<String, Range<Float>> header : this.ranges.entrySet()) {
             Range<Float> global_range = global_ranges.get(header.getKey());
             updated = Range.between((Math.min(header.getValue().getMinimum(), item.getData().get(header.getKey()))), Math.max(header.getValue().getMaximum(), item.getData().get(header.getKey())));
-            loss += this.utils.range_information_loss(updated, global_range);
+            loss += this.utils.rangeInformationLoss(updated, global_range);
         }
         return loss;
     }
 
 
-    float information_loss_given_c(Cluster cluster, HashMap<String, Range<Float>> global_ranges) {
+    float informationLossGivenC(Cluster cluster, HashMap<String, Range<Float>> global_ranges) {
        /* Calculates the information loss upon merging <cluster> into this cluster
 
         Args:
@@ -197,12 +197,12 @@ public class Cluster {
         for (Map.Entry<String, Range<Float>> header : this.ranges.entrySet()) {
             Range<Float> global_range = global_ranges.get(header.getKey());
             updated = Range.between(Math.min(header.getValue().getMinimum(), cluster.ranges.get(header.getKey()).getMinimum()), Math.max(header.getValue().getMaximum(), cluster.ranges.get(header.getKey()).getMinimum()));
-            loss += this.utils.range_information_loss(updated, global_range);
+            loss += this.utils.rangeInformationLoss(updated, global_range);
         }
         return loss;
     }
 
-    float information_loss(HashMap<String, Range<Float>> global_ranges) {
+    float informationLoss(HashMap<String, Range<Float>> global_ranges) {
         /*Calculates the information loss of this cluster
 
         Args:
@@ -215,7 +215,7 @@ public class Cluster {
         Range<Integer> updated = null;
         for (Map.Entry<String, Range<Float>> header : this.ranges.entrySet()) {
             Range<Float> global_range = global_ranges.get(header.getKey());
-            loss += this.utils.range_information_loss(header.getValue(), global_range);
+            loss += this.utils.rangeInformationLoss(header.getValue(), global_range);
         }
         return loss;
     }
@@ -230,14 +230,14 @@ public class Cluster {
         float total_distance = 0;
         for (Map.Entry<String, Range<Float>> header : this.ranges.entrySet()) {
             System.out.println(header);
-            total_distance += Math.abs(other.getData().get(header.getKey()) - this.utils.range_difference(header.getValue()));
+            total_distance += Math.abs(other.getData().get(header.getKey()) - this.utils.rangeDifference(header.getValue()));
             System.out.println(header.getValue());
             System.out.println(other.getData().get(header.getKey()));
         }
         return total_distance;
     }
 
-    boolean within_bounds(Item item) {
+    boolean withinBounds(Item item) {
        /* Checks whether a tuple is within all the ranges of the
         cluster, e.g. would cause no information loss on being entered.
 

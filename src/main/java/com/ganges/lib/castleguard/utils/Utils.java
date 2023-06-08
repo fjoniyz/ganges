@@ -1,6 +1,5 @@
 package com.ganges.lib.castleguard.utils;
 
-import com.ganges.lib.castleguard.Item;
 import org.apache.commons.lang3.Range;
 
 import java.util.ArrayList;
@@ -21,7 +20,7 @@ public class Utils {
         return newRange;
     }
 
-    public float range_information_loss(Range<Float> actual, Range<Float> other) {
+    public float rangeInformationLoss(Range<Float> actual, Range<Float> other) {
         float diff_self = Math.abs(actual.getMaximum() - actual.getMinimum());
         float diff_other = Math.abs(other.getMaximum() - other.getMinimum());
         ;
@@ -31,7 +30,7 @@ public class Utils {
         return diff_self / diff_other;
     }
 
-    public float range_difference(Range<Float> range) {
+    public float rangeDifference(Range<Float> range) {
         /* Arg: Range Object with Floats
         Return: the maximum difference within Range object
          */
@@ -39,10 +38,10 @@ public class Utils {
     }
 
     // replacement for nonexistant python function np.random.choice()
-    public static <T> T random_choice(List<T> content) {
-        return random_choice(content, 1).get(0);
+    public static <T> T randomChoice(List<T> content) {
+        return randomChoice(content, 1).get(0);
     }
-    public static <T> List<T> random_choice(List<T> content, int size) {
+    public static <T> List<T> randomChoice(List<T> content, int size) {
         /* Arg: a List of Items
         Return: random Element in the List of Items
          */

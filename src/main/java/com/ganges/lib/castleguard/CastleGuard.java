@@ -77,7 +77,7 @@ public class CastleGuard {
             }
 
             // Calculate loss
-            float loss = sCluster.information_loss(globalRanges);
+            float loss = sCluster.informationLoss(globalRanges);
             recentLosses.add(loss);
             if (recentLosses.size() > config.getMu()) {
                 recentLosses.remove(0);
@@ -97,9 +97,9 @@ public class CastleGuard {
             tau = recentLosses.stream().reduce(0F, Float::sum);
         } else if (!bigGamma.isEmpty()) {
             int sampleSize = Math.min(bigGamma.size(), 5);
-            List<Cluster> chosen = Utils.random_choice(bigGamma, sampleSize);
+            List<Cluster> chosen = Utils.randomChoice(bigGamma, sampleSize);
 
-            float totalLoss = chosen.stream().map(c -> c.information_loss(globalRanges)).reduce(0F, Float::sum);
+            float totalLoss = chosen.stream().map(c -> c.informationLoss(globalRanges)).reduce(0F, Float::sum);
             tau = totalLoss / sampleSize;
         }
     }
@@ -110,7 +110,7 @@ public class CastleGuard {
             outputCluster(itemCluster);
             return;
         }
-        Optional<Cluster> randomCluster = this.bigOmega.stream().filter(c -> c.within_bounds(item)).findAny();
+        Optional<Cluster> randomCluster = this.bigOmega.stream().filter(c -> c.withinBounds(item)).findAny();
         if (randomCluster.isPresent()) {
             Item generalised = randomCluster.get().generalise(item);
             suppressItem(item);
@@ -181,7 +181,7 @@ public class CastleGuard {
         Set<Float> e = new HashSet<>();
 
         for (Cluster cluster : bigGamma) {
-            e.add(cluster.tuple_enlargement(item, globalRanges));
+            e.add(cluster.tupleEnlargement(item, globalRanges));
         }
 
         if (e.isEmpty()) {
@@ -193,7 +193,7 @@ public class CastleGuard {
         List<Cluster> setCmin = new ArrayList<>();
 
         for (Cluster cluster : bigGamma) {
-            if (cluster.tuple_enlargement(item, globalRanges) == minima) {
+            if (cluster.tupleEnlargement(item, globalRanges) == minima) {
                 setCmin.add(cluster);
             }
         }
@@ -201,7 +201,7 @@ public class CastleGuard {
         Set<Cluster> setCok = new HashSet<>();
 
         for (Cluster cluster : setCmin) {
-            double ilcj = cluster.information_loss_given_t(item, globalRanges);
+            double ilcj = cluster.informationLossGivenT(item, globalRanges);
             if (ilcj <= tau) {
                 setCok.add(cluster);
             }
@@ -297,7 +297,7 @@ public class CastleGuard {
         for (List<Item> bi : buckets.values()) {
             Random rand = new Random();
             Item ti = bi.get(rand.nextInt(bi.size()));
-            Cluster nearest = Collections.min(sc, Comparator.comparingDouble(cluster -> cluster.tuple_enlargement(ti, this.globalRanges)));
+            Cluster nearest = Collections.min(sc, Comparator.comparingDouble(cluster -> cluster.tupleEnlargement(ti, this.globalRanges)));
             for (Item t : bi) {
                 nearest.insert(t);
             }
@@ -351,7 +351,7 @@ public class CastleGuard {
                 List<Item> currentBucket = entry.getValue();
 
                 // Sort the bucket by the enlargement value of that cluster
-                currentBucket.sort(Comparator.comparingDouble(tuple -> c.tuple_enlargement(tuple, globalRanges)));
+                currentBucket.sort(Comparator.comparingDouble(tuple -> c.tupleEnlargement(tuple, globalRanges)));
 
                 // Count the number of tuples we have
                 int totalTuples = 0;
@@ -436,7 +436,7 @@ public class CastleGuard {
 
         while (c.getContents().size() < this.config.getK() || c.getDiversity().size() < this.config.getL()) {
             // Get the cluster with the lowest enlargement value
-            Cluster lowestEnlargementCluster = Collections.min(gamma_c, Comparator.comparingDouble(cl -> cl.cluster_enlargement(cl, this.globalRanges)));
+            Cluster lowestEnlargementCluster = Collections.min(gamma_c, Comparator.comparingDouble(cl -> cl.clusterEnlargement(cl, this.globalRanges)));
             List<Item> items = new ArrayList<>(lowestEnlargementCluster.getContents());
 
             for (Item t : items) {
