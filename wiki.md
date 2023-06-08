@@ -65,3 +65,42 @@ CASTLEGUARD is a data stream anonymization approach that provides a reliable gua
 | b  | maximum number of clusters that can be active | |
 | δ  | maximum number of tuples that can be active (delay constraint) | |
 | μ  |   |
+
+#### Description:
+
+- for tupel \$t$ in Stream \$S$:
+  - if \$random(0,1) > beta$ -> break (= supress \$t$) 
+  - else:
+     - Perturb tupel \$t$
+     - Cluster tupel \$t$: (in other words: look for cluster with most fitting generalization; same technique as delta-Doca Algorithm)
+          - Get set of cluster(s) \$C_{min}$ that has the minimum enlargement
+          - For each cluster \$c \in C_{min}$
+             - check if \$infoLoss(c, t)$ would be smaller than the average information loss \$\tau$
+             - if so -> add \$t$ to \$C_{best}$
+          - If \$C_{best}$ is empty:
+             - if _non-ks-cluster in Memory_ < _allowed non-ks-cluster in memory_ -> Create new cluster and add tuple \$t$
+             - Else -> add \$t$ to a cluster \$c_{min} \in C_{min}$ with the smallest size
+          - Else -> add \$t$ to a cluster \$c_{best} \in C_{best}$      
+     - Once a tupel \$t^{'}$ has reached time-step delta, cluster \$c_{t^{'}}$ are evaluated for publication:
+          - if \$c_{t^{'}}.size >= k$:
+             - output cluster* \$c$
+          - Else: check if tupel \$t^{'}$ is in an already _ks-anonymized_ cluster \$c_{ks-a}$ _(reuse strategy)_
+             - if so -> use generalization of \$c_{ks-a}$  
+          - Else check if cluster \$c_{t^{'}}$ is an outlier (= smaller than half if the _non-ks-anonymized cluster_)
+             - if so -> use the most used generalization
+          - Else check if merge with other Clusters is impossible (_Sum of size of each non-ks-cluster_ \$< k$)
+             - if so -> use the most used generalization
+          - Else 
+             - Merge Clusters
+                - check enlargement of cluster \$c_{t^{'}}$  after possible merge with _non-ks-cluster_
+                - choose cluster with minimum enlargement
+                - repeat until \$cluster_{merged} >= k$
+              - *Output merged Cluster:
+                - Check if Cluster can be split (by split_l()-function for k-anonymity and l-diversity) (\$C.size >= 2k$)
+                - Add (splitted) Clusters to \$SC$
+                - For each cluster \$sc$ in \$SC$:
+                    - Output all tuples \$t_{sc} in sc\$ with its generalization
+                    - Update \$\tau$ with \$infoLoss(sc)$
+                    - if \$infoLoss(sc, t_{sc})$ is smaller than \$\tau$ -> Add cluster to set of _ks-anonymized-Cluster_ _(for reuse strategy)_
+                    - else delete cluster \$sc$
+
