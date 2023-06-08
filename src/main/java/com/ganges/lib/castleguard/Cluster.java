@@ -66,7 +66,7 @@ public class Cluster {
     this.diversity = value;
   }
 
-  void insert(Item element) {
+  public void insert(Item element) {
     // Inserts a tuple into the cluster
     // Args:
     //            element (Item): The element to insert into the cluster
@@ -104,7 +104,7 @@ public class Cluster {
     }
   }
 
-  void remove(Item element) {
+  public void remove(Item element) {
     //  Removes a tuple from the cluster
     //  Args:
     //            element: The element to remove from the cluster
@@ -144,7 +144,7 @@ public class Cluster {
     return item;
   }
 
-  float tupleEnlargement(Item item, HashMap<String, Range<Float>> global_ranges) {
+  public float tupleEnlargement(Item item, HashMap<String, Range<Float>> global_ranges) {
     /*Calculates the enlargement value for adding <item> into this cluster
 
         Args:
@@ -158,7 +158,7 @@ public class Cluster {
     return (given - current) / this.ranges.size();
   }
 
-  float clusterEnlargement(Cluster cluster, HashMap<String, Range<Float>> global_ranges) {
+  public float clusterEnlargement(Cluster cluster, HashMap<String, Range<Float>> global_ranges) {
     /*Calculates the enlargement value for merging <cluster> into this cluster
 
     Args:
@@ -194,7 +194,7 @@ public class Cluster {
     return loss;
   }
 
-  float informationLossGivenC(Cluster cluster, HashMap<String, Range<Float>> global_ranges) {
+  public float informationLossGivenC(Cluster cluster, HashMap<String, Range<Float>> global_ranges) {
     /* Calculates the information loss upon merging <cluster> into this cluster
 
     Args:
@@ -220,7 +220,7 @@ public class Cluster {
     return loss;
   }
 
-  float informationLoss(HashMap<String, Range<Float>> global_ranges) {
+  public float informationLoss(HashMap<String, Range<Float>> global_ranges) {
     /*Calculates the information loss of this cluster
 
     Args:
@@ -238,7 +238,7 @@ public class Cluster {
     return loss;
   }
 
-  float distance(Item other) {
+  public float distance(Item other) {
     /*Calculates the distance from this tuple to another
 
     Args:
@@ -257,7 +257,7 @@ public class Cluster {
     return total_distance;
   }
 
-  boolean withinBounds(Item item) {
+  public boolean withinBounds(Item item) {
     /* Checks whether a tuple is within all the ranges of the
     cluster, e.g. would cause no information loss on being entered.
 
