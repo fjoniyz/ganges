@@ -34,9 +34,9 @@ public class Pipe {
         try (InputStream inputStream = Files.newInputStream(Paths.get(userDirectory + "/src/main/resources/config.properties"))) {
             Properties props = new Properties();
 
-            String inputTopic = "input-test";
+            final List<double[]>saved = new ArrayList<>();
+            String inputTopic = "input-1";
             String outputTopic = "output-test";
-            String storeTopic = "store-topic";
 
             props.load(inputStream);
             props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
@@ -45,47 +45,28 @@ public class Pipe {
 
             final StreamsBuilder streamsBuilder = new StreamsBuilder();
             KStream<String, String> src = streamsBuilder.stream(inputTopic);
-//            src.to(storeTopic);
+            src.mapValues(value -> {
+                String parsedValue = value.substring(1, value.length() - 1);
+                System.out.println("Parsed values: " + parsedValue);
+                String[] values = parsedValue.split(",");
+                List<String> strings = Arrays.asList(values);
+                List<Double> listOfDoubles = strings.stream().map(Double::valueOf).collect(Collectors.toList());
+                double[] arr = listOfDoubles.stream().mapToDouble(Double::doubleValue).toArray();
 
-            StoreBuilder<KeyValueStore<String, String>> storeBuilder = Stores.keyValueStoreBuilder(Stores.persistentKeyValueStore("values"), Serdes.String(), Serdes.String());
-            streamsBuilder.addGlobalStore(storeBuilder, outputTopic, Consumed.with(Serdes.String(), Serdes.String()), () -> new ProcessorImpl("values"));
-            src.process(() -> new ProcessorImpl("values"));
+                saved.add(arr);
+                double[][] input = new double[saved.size()][];
+                for(int i = 0; i < saved.size(); i++){
+                    input[i] = saved.get(i);
+                }
+                System.out.println("Input: " + input);
+                double[][] output = Doca.doca(input, 99999, 1000, 60, false);
+                System.out.println("Output: " + output);
+                String result = Arrays.deepToString(output);
+                System.out.println("Result: " + result);
+                return result;
+            }).to(outputTopic);
+
             Topology topology = streamsBuilder.build();
-            final KStream<String, String> finalStream = src.transformValues(() -> new ValueTransformer<String, String>() {
-                KeyValueStore<String, String> store;
-
-                @Override
-                public void init(ProcessorContext context) {
-                    this.store = context.getStateStore("values");
-                }
-
-                @Override
-                public String transform(String value) {
-                    String parsedValue = value.substring(1, value.length() - 1);
-                    System.out.println("Parsed values: " + parsedValue);
-                    System.out.println("Store: " + store);
-                    String[] values = parsedValue.split(",");
-                    String[] parsed = {values[values.length - 1]};
-                    System.out.println("Values: " + Arrays.toString(parsed));
-                    List<String> strings = Arrays.asList(values);
-                    List<Double> listOfDoubles = strings.stream().map(Double::valueOf).collect(Collectors.toList());
-                    double[] arr = listOfDoubles.stream().mapToDouble(Double::doubleValue).toArray();
-                    double[][] input = new double[][]{arr, arr};
-                    System.out.println("Input: " + input);
-                    double[][] output = Doca.doca(input, 100, 1000, 60, false);
-                    System.out.println("Output: " + output);
-                    String result = Arrays.deepToString(output);
-                    System.out.println("Result: " + result);
-                    return result;
-                }
-
-                @Override
-                public void close() {
-                    // No-op
-                }
-            });
-            finalStream.to(outputTopic);
-            src.process(() -> new ProcessorImpl("values"), "values");
 
             try (KafkaStreams streams = new KafkaStreams(topology, props)) {
                 final CountDownLatch latch = new CountDownLatch(1);

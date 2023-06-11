@@ -36,6 +36,9 @@ public class ProcessorImpl implements Processor<String, String, Void, Void> {
 
   @Override
   public void process(Record<String, String> record) {
-    this.stateStore.put(record.key(), record.value());
+    KeyValueIterator<String, String> iterator = this.stateStore.all();
+    while (iterator.hasNext()){
+      System.out.println("State store: " + iterator.next().value);
+    }
   }
 }
