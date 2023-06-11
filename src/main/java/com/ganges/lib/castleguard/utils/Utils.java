@@ -45,7 +45,6 @@ public class Utils {
     public float rangeInformationLoss(Range<Float> actual, Range<Float> other) {
         float diff_self = Math.abs(actual.getMaximum() - actual.getMinimum());
         float diff_other = Math.abs(other.getMaximum() - other.getMinimum());
-        ;
         if (diff_other == 0) {
             return 0F;
         }
