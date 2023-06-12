@@ -1,26 +1,22 @@
 package myapps;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.*;
-import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KStream;
-import org.apache.kafka.streams.kstream.ValueTransformer;
-import org.apache.kafka.streams.processor.ProcessorContext;
+import com.lambdaworks.redis.*;
 
 import java.util.*;
-
-import org.apache.kafka.streams.state.KeyValueIterator;
-import org.apache.kafka.streams.state.KeyValueStore;
-import org.apache.kafka.streams.state.StoreBuilder;
-import org.apache.kafka.streams.state.Stores;
 
 /**
  * In this example, we implement a simple Pipe program using the high-level Streams DSL that reads
@@ -29,13 +25,48 @@ import org.apache.kafka.streams.state.Stores;
  */
 public class Pipe {
 
+    public static List<String> getKeys(){
+        List<String> result = new ArrayList<>();
+        String userDirectory = System.getProperty("user.dir");
+        System.out.printf("Dir: " + userDirectory);
+        try {
+            Runtime r = Runtime.getRuntime();
+
+            Process p = r.exec(userDirectory + "/getKeys.sh");
+
+            BufferedReader in =
+                    new BufferedReader(new InputStreamReader(p.getInputStream()));
+            String inputLine;
+            while ((inputLine = in.readLine()) != null) {
+                System.out.println(inputLine);
+                result.add(inputLine);
+            }
+            in.close();
+
+        } catch (IOException e) {
+            System.out.println(e);
+        }
+        return result;
+    }
+
+    public static List<String> getValues(List<String> keys, RedisConnection<String, String> connection){
+        List<String> values = new ArrayList<>();
+        for(String key: keys){
+            values.add(connection.get(key));
+        }
+        return values;
+    }
+
     public static void main(final String[] args) {
         String userDirectory = System.getProperty("user.dir");
         try (InputStream inputStream = Files.newInputStream(Paths.get(userDirectory + "/src/main/resources/config.properties"))) {
             Properties props = new Properties();
+            RedisClient redisClient = new RedisClient(RedisURI.create("redis://localhost/"));
+            RedisConnection<String, String> connection = redisClient.connect();
 
-            final List<double[]>saved = new ArrayList<>();
-            String inputTopic = "input-1";
+
+            final List<double[]> saved = new ArrayList<>();
+            String inputTopic = "input-test";
             String outputTopic = "output-test";
 
             props.load(inputStream);
@@ -48,23 +79,38 @@ public class Pipe {
             src.mapValues(value -> {
                 String parsedValue = value.substring(1, value.length() - 1);
                 System.out.println("Parsed values: " + parsedValue);
-                String[] values = parsedValue.split(",");
-                List<String> strings = Arrays.asList(values);
-                List<Double> listOfDoubles = strings.stream().map(Double::valueOf).collect(Collectors.toList());
-                double[] arr = listOfDoubles.stream().mapToDouble(Double::doubleValue).toArray();
-
-                saved.add(arr);
-                double[][] input = new double[saved.size()][];
-                for(int i = 0; i < saved.size(); i++){
-                    input[i] = saved.get(i);
+                String key = Integer.toString(ThreadLocalRandom.current().nextInt(0, 1000 + 1));
+                connection.set(key, parsedValue);
+                List<String> keys = getKeys();
+                for (String k: keys
+                ) {
+                    System.out.println("key in: " + k);
                 }
-                System.out.println("Input: " + input);
+                List<String> valuesFromRedis = getValues(keys, connection);
+                for(String v: valuesFromRedis){
+                    System.out.println("Value from inside: " + v);
+                }
+                double[][] input = new double[valuesFromRedis.size()][];
+                for (int i = 0; i < valuesFromRedis.size(); i++) {
+                    String[] values = valuesFromRedis.get(i).split(",");
+                    double[] toDouble = Arrays.stream(values)
+                            .mapToDouble(Double::parseDouble)
+                            .toArray();
+                    input[i] = toDouble;
+                }
+                for(double[] element: input){
+                    for(double d : element){
+                        System.out.println("D: " + d);
+                    }
+                    System.out.println();
+                }
                 double[][] output = Doca.doca(input, 99999, 1000, 60, false);
                 System.out.println("Output: " + output);
                 String result = Arrays.deepToString(output);
                 System.out.println("Result: " + result);
                 return result;
             }).to(outputTopic);
+
 
             Topology topology = streamsBuilder.build();
 
