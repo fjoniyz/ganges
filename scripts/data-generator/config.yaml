@@ -1,3 +1,5 @@
 bootstrap_servers: ["localhost:9092"]
-dataset_topic: {"data/adult_train.csv": "input"}
-delay: 0
+# For streamable mode: 'sanierungsdata', 'mieterstromdata', 'electro-mobility' 
+dataset_topic: {"mieterstromdata": "energy-data", "sanierungsdata": 'sanierung-data'}
+streaming: true
+delay: 0.3
