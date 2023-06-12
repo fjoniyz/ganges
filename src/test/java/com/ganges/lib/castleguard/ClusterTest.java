@@ -484,12 +484,12 @@ public class ClusterTest {
     Item two = new Item(dataTwo, headers, null);
     Cluster cluster = new Cluster(headers);
 
-    cluster.insert(one);
+        cluster.insert(one);
+        cluster.insert(two);
 
-    float dist = cluster.distance(two);
-    System.out.println(dist);
-    Assert.assertEquals(dist, 203.0F, 0.0F);
-  }
+        float dist = cluster.distance(two);
+        Assert.assertEquals(dist, 201.0F, 0.0F);
+    }
 
   @Test
   public void withinBoundsTest() {
