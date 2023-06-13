@@ -34,27 +34,27 @@ public class ClusterManagement {
         this.sensitiveAttribute = sensitiveAttribute;
     }
 
-    public List<Cluster> getBigGamma() {
+    public List<Cluster> getNonAnonymizedClusters() {
         return bigGamma;
     }
 
-    public List<Cluster> getBigOmega() {
+    public List<Cluster> getAnonymizedClusters() {
         return bigOmega;
     }
 
-    public void addToBigGamma(Cluster c) {
+    public void addToNonAnonymizedClusters(Cluster c) {
         this.bigGamma.add(c);
     }
 
-    public void addToBigOmega(Cluster c) {
+    public void addToAnonymizedClusters(Cluster c) {
         this.bigOmega.add(c);
     }
 
-    public void removeFromBigGamma(Cluster c) {
+    public void removeFromNonAnonymizedClusters(Cluster c) {
         this.bigGamma.remove(c);
     }
 
-    public void removeFromBigOmega(Cluster c) {
+    public void removeFromAnonymizedClusters(Cluster c) {
         this.bigOmega.remove(c);
     }
 
@@ -117,7 +117,7 @@ public class ClusterManagement {
                 // Calculate the number of tuples we should take
                 int chosenCount = (int) Math.max(k * (currentBucket.size() / (double) totalTuples), 1);
                 // Get the subset of tuples
-                List<Item> subset = currentBucket.subList(0, chosenCount);
+                List<Item> subset = currentBucket.subList(0, Math.min(chosenCount, currentBucket.size()));
 
                 // Insert the top Tj tuples in a new cluster
                 for (Item item : subset) {
