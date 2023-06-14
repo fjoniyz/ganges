@@ -9,7 +9,6 @@ import java.nio.file.Paths;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.stream.Collectors;
 
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.*;
@@ -18,11 +17,6 @@ import com.lambdaworks.redis.*;
 
 import java.util.*;
 
-/**
- * In this example, we implement a simple Pipe program using the high-level Streams DSL that reads
- * from a source topic "streams-plaintext-input", where the values of messages represent lines of
- * text, and writes the messages as-is into a sink topic "streams-pipe-output".
- */
 public class Pipe {
 
     public static List<String> getKeys(){
@@ -66,7 +60,7 @@ public class Pipe {
 
 
             final List<double[]> saved = new ArrayList<>();
-            String inputTopic = "input-test";
+            String inputTopic = "input";
             String outputTopic = "output-test";
 
             props.load(inputStream);

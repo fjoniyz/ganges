@@ -1,3 +1,3 @@
 bootstrap_servers: ["localhost:9092"]
-dataset_topic: {"data/adult_train.csv": "input"}
+dataset_topic: {"data/adult_train.csv": "input-test"}
 delay: 0
