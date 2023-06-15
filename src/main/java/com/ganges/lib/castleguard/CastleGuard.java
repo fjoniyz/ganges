@@ -33,6 +33,10 @@ public class CastleGuard {
         this.clusterManagement = new ClusterManagement(this.config.getK(), this.config.getL(), this.config.getMu(), headers, sensitiveAttr);
     }
 
+    public HashMap<String, Range<Float>> getGlobalRanges() {
+        return globalRanges;
+    }
+
     public Optional<HashMap<String, Float>> tryGetOutputLine() {
         if (outputQueue.isEmpty()) {
             return Optional.empty();
