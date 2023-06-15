@@ -42,8 +42,9 @@ public class CastleGuard {
     }
 
     /**
-     * insert() in castle.py
-     * @param data value tuple
+     * Inserts a new piece of data into the algorithm and updates the
+        state, checking whether data needs to be output as well
+     * @param data: The element of data to insert into the algorithm
      */
     public void insertData(HashMap<String, Float> data) {
         Random rand = new Random();
@@ -110,7 +111,11 @@ public class CastleGuard {
         }
     }
 
-    private void delayConstraint(@NonNull Item item) {
+  /**
+   * Decides whether to suppress <item> or not
+   * @param item : The tuple to make decisions based on
+   */
+  private void delayConstraint(@NonNull Item item) {
         List<Cluster> nonAnonClusters = this.clusterManagement.getNonAnonymizedClusters();
         List<Cluster> anonClusters = this.clusterManagement.getAnonymizedClusters();
         
@@ -145,7 +150,12 @@ public class CastleGuard {
     private void outputItem(Item item) {
         outputQueue.push(item);
     }
-
+    /**
+     * Suppresses a tuple from being output and deletes it from the CASTLE
+     state. Removes it from the global tuple queue and also the cluster it
+     is being contained in
+     @param item: The tuple to suppress
+     */
     public void suppressItem(Item item) {
         List<Cluster> nonAnonClusters = this.clusterManagement.getNonAnonymizedClusters();
         this.items.remove(item);
@@ -157,10 +167,11 @@ public class CastleGuard {
         }
     }
 
-    /**
-     * fudge_tuple() in castle.py
-     */
-    private void perturb(Item item) {
+  /**
+   * Fudges a tuple based on laplace distribution
+   * @param item: The tuple to be perturbed
+   */
+  private void perturb(Item item) {
         HashMap<String, Float> data = item.getData();
 
         for (String header : this.headers) {
@@ -186,8 +197,11 @@ public class CastleGuard {
     }
 
     /**
-     * best_selection() in castle.py
-     * @return cluster or null
+     Finds the best matching cluster for <element>
+     @param item: The tuple to find the best cluster for
+
+     @return Either a cluster for item to be inserted into, or null if a new
+     cluster should be created
      */
     private Optional<Cluster> bestSelection(Item item) {
         List<Cluster> notAnonClusters = this.clusterManagement.getNonAnonymizedClusters();
