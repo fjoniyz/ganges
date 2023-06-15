@@ -1,6 +1,6 @@
 package com.ganges.lib.castleguard;
 
-class CGConfig {
+public class CGConfig {
     /**
      * Required number of tuples for a cluster to be complete
      */
