@@ -13,7 +13,7 @@ public class Item {
 
     public Item(HashMap<String, Float> data, List<String> headers, String sensitiveAttr) {
         this.data = data;
-        this.headers = headers;
+        this.headers = new ArrayList<>(headers);
         this.sensitiveAttr = data.get(sensitiveAttr);
     }
 
