@@ -61,14 +61,15 @@ public class ClusterManagement {
     /**
      * Group every tuple by the sensitive attribute
      * @param c
-     * @param sensitiveAttribute
+     * @param headers
+     * @param globalRanges
      * @return
      */
     public List<Cluster> splitL(Cluster c, List<String> headers,  HashMap<String, Range<Float>> globalRanges) {
         List<Cluster> sc = new ArrayList<>();
 
         // Group every tuple by the sensitive attribute
-        Map<Object, List<Item>> buckets = generateBuckets(c, this.sensitiveAttribute);
+        Map<Object, List<Item>> buckets = generateBuckets(c);
 
         // if number of buckets is less than l, cannot split
         if (buckets.size() < l) {
@@ -167,7 +168,13 @@ public class ClusterManagement {
         return sc;
     }
 
-    private Map<Object, List<Item>> generateBuckets(Cluster cluster, String sensitiveAttribute) {
+  /**
+   * Groups all tuples in the cluster by their sensitive attribute
+   * @param cluster: The cluster to generate the buckets for
+   * @return: A dictionary of attribute values to lists of items with those
+   *         values
+   */
+  private Map<Object, List<Item>> generateBuckets(Cluster cluster) {
         Map<Object, List<Item>> buckets = new HashMap<>();
 
         for (Item t : cluster.getContents()) {
@@ -187,6 +194,12 @@ public class ClusterManagement {
     }
 
 
+    /**
+     * Merges a cluster with other clusters in big_gamma until the size of the resulting cluster is larger than k
+     * @param c:  The cluster that needs to be merged
+     * @param globalRanges
+     * @return: A cluster with a size larger than or equal to k
+     */
     public Cluster mergeClusters(Cluster c, HashMap<String, Range<Float>> globalRanges) {
         List<Cluster> gamma_c = new ArrayList<>(this.bigGamma);
         gamma_c.remove(c);
@@ -207,6 +220,10 @@ public class ClusterManagement {
         return c;
     }
 
+    /**
+     * Updates the local value of tau, depending on what state the algorithm is currently in
+     * @param globalRanges
+     */
 
     public void updateTau(HashMap<String, Range<Float>> globalRanges) {
         this.tau = Double.POSITIVE_INFINITY;
@@ -221,6 +238,11 @@ public class ClusterManagement {
         }
     }
 
+    /**
+     * Updates the infomation loss
+     * @param c
+     * @param globalRanges
+     */
     public void updateLoss(Cluster c, HashMap<String, Range<Float>> globalRanges) {
         float loss = c.informationLoss(globalRanges);
         recentLosses.add(loss);

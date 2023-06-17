@@ -19,15 +19,18 @@ public class Utils {
         return newRange;
     }
 
-    // replacement for nonexistant python function np.random.choice()
+    /** Replacement for non-existant python function np.random.choice()
+     */
     public static <T> T randomChoice(List<T> content) {
         return randomChoice(content, 1).get(0);
     }
 
+    /**
+     * @param content: List of items
+     * @param size
+     * @return random Element in the List of Items
+     */
     public static <T> List<T> randomChoice(List<T> content, int size) {
-        /* Arg: a List of Items
-        Return: random Element in the List of Items
-         */
         List<T> sampled = new ArrayList<>();
         int i = 0;
         while(i < size) {
@@ -51,10 +54,11 @@ public class Utils {
         return diff_self / diff_other;
     }
 
+    /**
+     * @param range: Range Object with Floats
+     * @return: the maximum difference within Range object
+     */
     public float rangeDifference(Range<Float> range) {
-        /* Arg: Range Object with Floats
-        Return: the maximum difference within Range object
-         */
         return Math.abs(range.getMaximum() - range.getMinimum());
     }
 }
