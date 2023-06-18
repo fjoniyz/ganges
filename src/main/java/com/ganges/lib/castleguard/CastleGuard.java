@@ -36,6 +36,9 @@ public class CastleGuard {
     public HashMap<String, Range<Float>> getGlobalRanges() {
         return globalRanges;
     }
+    public ClusterManagement getClusterManagement() {
+        return clusterManagement;
+    }
 
     public Optional<HashMap<String, Float>> tryGetOutputLine() {
         if (outputQueue.isEmpty()) {
@@ -51,6 +54,7 @@ public class CastleGuard {
      */
     public void insertData(HashMap<String, Float> data) {
         Random rand = new Random();
+        System.out.println();
         if (config.isUseDiffPrivacy() && rand.nextDouble() > config.getBigBeta()) {
             logger.info("Suppressing the item");
             return;
