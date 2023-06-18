@@ -65,6 +65,7 @@ public class Cluster {
 
   /**
    * Inserts a tuple into the cluster
+   *
    * @param element The element to insert into the cluster
    */
   public void insert(Item element) {
@@ -102,9 +103,9 @@ public class Cluster {
 
   /**
    * Removes a tuple from the cluster
+   *
    * @param element: The element to remove from the cluster
    */
-
   public void remove(Item element) {
 
     this.contents.remove(element);
@@ -124,15 +125,14 @@ public class Cluster {
 
     for (Map.Entry<String, Range<Float>> header : this.ranges.entrySet()) {
       header.setValue(
-              Range.between(
-                      this.findMinimum(header.getKey()), this.findMaximum(header.getKey())));
+          Range.between(this.findMinimum(header.getKey()), this.findMaximum(header.getKey())));
     }
   }
 
   /**
    * Generalises a tuple based on the ranges for this cluster
-   * @param item: The tuple to be generalised
    *
+   * @param item: The tuple to be generalised
    * @return: A generalised version of the tuple based on the ranges for this cluster
    */
   // Note: Return value with only Item -> In Cluster.py return value (gen_tuple, item)
@@ -159,9 +159,9 @@ public class Cluster {
 
   /**
    * Calculates the enlargement value for adding <item> into this cluster
+   *
    * @param item: The tuple to calculate enlargement based on
    * @param globalRanges: The globally known ranges for each attribute
-   *
    * @return The information loss if we added item into this cluster
    */
   public float tupleEnlargement(Item item, HashMap<String, Range<Float>> globalRanges) {
@@ -178,14 +178,14 @@ public class Cluster {
 
   /**
    * Calculates the information loss upon adding <item> into this cluster
+   *
    * @param item: The tuple to calculate information loss based on
    * @param global_ranges: The globally known ranges for each attribute
-   *
    * @return: The information loss given that we insert item into this cluster
    */
   float informationLossGivenT(Item item, HashMap<String, Range<Float>> global_ranges) {
     float loss = 0F;
-    if (this.contents.isEmpty()){
+    if (this.contents.isEmpty()) {
       return 0.0F;
     }
     // For each range, check if <item> would extend it
@@ -203,17 +203,16 @@ public class Cluster {
 
   /**
    * Calculates the information loss upon merging <cluster> into this cluster
+   *
    * @param cluster: The cluster to calculate information loss based on
    * @param global_ranges: The globally known ranges for each attribute
-   *
    * @return: The information loss given that we merge cluster with this cluster
    */
-
   public float informationLossGivenC(Cluster cluster, HashMap<String, Range<Float>> global_ranges) {
     float loss = 0.0F;
-    if (this.contents.isEmpty()){
+    if (this.contents.isEmpty()) {
       return cluster.informationLoss(global_ranges);
-    }else if (cluster.contents.isEmpty()){
+    } else if (cluster.contents.isEmpty()) {
       return this.informationLoss(global_ranges);
     }
     // For each range, check if <item> would extend it
@@ -234,8 +233,8 @@ public class Cluster {
 
   /**
    * Calculates the information loss of this cluster
-   * @param global_ranges: The globally known ranges for each attribute
    *
+   * @param global_ranges: The globally known ranges for each attribute
    * @return: The current information loss of the cluster
    */
   public float informationLoss(HashMap<String, Range<Float>> global_ranges) {
@@ -252,8 +251,8 @@ public class Cluster {
 
   /**
    * Calculates the distance from this tuple to another
-   * @param other: The tuple to calculate the distance to
    *
+   * @param other: The tuple to calculate the distance to
    * @return: The tuple to calculate the distance to
    */
   public float distance(Item other) {
@@ -267,13 +266,12 @@ public class Cluster {
   }
 
   /**
-   * Checks whether a tuple is within all the ranges of the
-   *     cluster, e.g. would cause no information loss on being entered.
-   * @param item: The tuple to perform bounds checking on
+   * Checks whether a tuple is within all the ranges of the cluster, e.g. would cause no information
+   * loss on being entered.
    *
+   * @param item: The tuple to perform bounds checking on
    * @return: Whether the tuple is within the bounds of the cluster
    */
-
   public boolean withinBounds(Item item) {
     for (Map.Entry<String, Range<Float>> header : this.ranges.entrySet()) {
       if (!header.getValue().contains(item.getData().get(header.getKey()))) {
@@ -284,15 +282,15 @@ public class Cluster {
   }
 
   /**
-   *  Finds a minimum value for the range within a cluster for a given header
-   * @param header: Header as string
+   * Finds a minimum value for the range within a cluster for a given header
    *
+   * @param header: Header as string
    * @return: the minimum value
    */
-  public float findMinimum(String header){
+  public float findMinimum(String header) {
 
     float minValue = Float.MAX_VALUE;
-    for (Item item : this.getContents()){
+    for (Item item : this.getContents()) {
       float value = item.getData().get(header);
 
       if (value < minValue) {
@@ -304,15 +302,14 @@ public class Cluster {
 
   /**
    * Finds a maximum value for the range within a cluster for a given header
-   * @param header: Header as string
    *
+   * @param header: Header as string
    * @return: the maximum value
    */
-
-  public float findMaximum(String header){
+  public float findMaximum(String header) {
 
     float maxValue = Float.MIN_VALUE;
-    for (Item item : this.getContents()){
+    for (Item item : this.getContents()) {
       float value = item.getData().get(header);
 
       if (value > maxValue) {
