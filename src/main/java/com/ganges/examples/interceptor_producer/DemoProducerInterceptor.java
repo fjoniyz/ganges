@@ -1,4 +1,4 @@
-package interceptor_producer;
+package com.ganges.examples.interceptor_producer;
 
 import org.apache.kafka.clients.producer.ProducerInterceptor;
 import org.apache.kafka.clients.producer.ProducerRecord;
@@ -9,12 +9,10 @@ import java.util.Map;
 public class DemoProducerInterceptor implements ProducerInterceptor<String, String> {
   @Override
   public ProducerRecord<String, String> onSend(ProducerRecord<String, String> producerRecord) {
-    ProducerRecord<String, String> mutatedRecord =
-        new ProducerRecord<>(
-            producerRecord.topic(),
-            producerRecord.key(),
-            producerRecord.value().replaceAll("e", "3").replaceAll("o", "0") + " X");
-    return mutatedRecord;
+    return new ProducerRecord<>(
+        producerRecord.topic(),
+        producerRecord.key(),
+        producerRecord.value().replaceAll("e", "3").replaceAll("o", "0") + " X");
   }
 
   @Override

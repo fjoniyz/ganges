@@ -1,4 +1,4 @@
-package interceptor_consumer;
+package com.ganges.examples.interceptor_consumer;
 
 import org.apache.kafka.clients.consumer.ConsumerInterceptor;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
@@ -33,9 +33,8 @@ public class DemoConsumerInterceptor implements ConsumerInterceptor<String, Stri
       mutatedRecords.add(mutatedRecord);
     }
     records.put(topicpartition, mutatedRecords);
-    ConsumerRecords<String, String> result = new ConsumerRecords<>(records);
 
-    return result;
+    return new ConsumerRecords<>(records);
   }
 
   @Override

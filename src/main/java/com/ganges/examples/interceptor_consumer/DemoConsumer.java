@@ -1,5 +1,5 @@
 // package com.example.kafka;
-package interceptor_consumer;
+package com.ganges.examples.interceptor_consumer;
 
 import java.util.Properties;
 import java.util.Arrays;
