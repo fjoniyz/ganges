@@ -42,7 +42,11 @@ public class ConsoleApp {
             Optional<HashMap<String, Float>> anonData = anonymization.tryGetOutputLine();
             if (anonData.isPresent()) {
                 System.out.print("Anon data: ");
-                anonData.get().entrySet().forEach(entry -> System.out.print(entry.getKey() + ": " + entry.getValue() + " "));
+                anonData.get().forEach((key, value) -> {
+                    if (key.startsWith("spc")) {
+                        System.out.print(key.replace("spc", "") + ": " + value + " ");
+                    }
+                });
                 System.out.println();
             }
         }
