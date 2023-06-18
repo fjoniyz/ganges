@@ -5,34 +5,48 @@ import org.junit.Test;
 import org.apache.commons.lang3.Range;
 
 import java.util.*;
-import org.apache.commons.lang3.Range;
 
 public class ClusterTest {
 
+  /**
+   * Creates an item with given parameters
+   * @param headers
+   * @param timeseriesId
+   * @param secondsEnergyConsumption
+   * @param sensitiveAttribute
+   * @return
+   */
+  public Item createItem(List<String> headers, Float timeseriesId, Float secondsEnergyConsumption, String sensitiveAttribute){
+    HashMap<String, Float> data = new HashMap<>();
+    data.put("timeseries_id", timeseriesId);
+    data.put("Seconds_EnergyConsumption", secondsEnergyConsumption);
+    return new Item(data, headers, sensitiveAttribute);
+  }
+
+  /**
+   * Testing the insertion of an item into the cluster
+   */
   @Test
   public void insertTest() {
+    // create a cluster
     String[] array = {"timeseries_id", "Seconds_EnergyConsumption"};
     List<String> headers = Arrays.asList(array);
     Cluster testCluster = new Cluster(headers);
-    HashMap<String, Float> data = new HashMap<>();
-    data.put("pid", 3.0F);
-    data.put("timeseries_id", 1.0F);
-    data.put("Seconds_EnergyConsumption", 2.0F);
+
+    Item testItem = createItem(headers,1.0F, 2.0F, "Seconds_EnergyConsumption");
+
+    // create variables with expected values
     Map<String, Range<Float>> expectedRanges = new LinkedHashMap<>();
     headers.forEach(header -> expectedRanges.put(header, Range.between(0F, 0F)));
-
-    Item testItem = new Item(data, headers, "Seconds_EnergyConsumption");
+    List<Item> expectedContents = new ArrayList<Item>();
+    expectedContents.add(testItem);
+    Set<Float> expectedDiversity = new HashSet<Float>();
+    expectedDiversity.add(2.0F);
 
     testCluster.insert(testItem);
 
     List<Item> contents = testCluster.getContents();
     Set<Float> diversity = testCluster.getDiversity();
-
-    List<Item> expectedContents = new ArrayList<Item>();
-    expectedContents.add(testItem);
-
-    Set<Float> expectedDiversity = new HashSet<Float>();
-    expectedDiversity.add(2.0F);
 
     Assert.assertEquals(expectedContents, contents);
     Assert.assertEquals(expectedDiversity, diversity);
@@ -57,17 +71,13 @@ public class ClusterTest {
 
     // test adding another element to a non-empty cluster
 
-    HashMap<String, Float> data2 = new HashMap<>();
-    data2.put("pid", 4.0F);
-    data2.put("timeseries_id", 3.0F);
-    data2.put("Seconds_EnergyConsumption", 4.0F);
-
-    Item testItem2 = new Item(data2, headers, "Seconds_EnergyConsumption");
+    Item testItem2 = createItem(headers, 3.0F, 4.0F, "Seconds_EnergyConsumption");
 
     testCluster.insert(testItem2);
 
     expectedContents.add(testItem2);
     expectedDiversity.add(4.0F);
+
     for (Map.Entry<String, Range<Float>> header : expectedRanges.entrySet()) {
       header.setValue(
           Range.between(
@@ -80,33 +90,26 @@ public class ClusterTest {
     Assert.assertEquals(expectedRanges, testCluster.getRanges());
   }
 
+  /**
+   * Testing the removing of an item
+   */
   @Test
   public void removeTest() {
+    // create a cluster
     String[] array = {"timeseries_id", "Seconds_EnergyConsumption"};
     List<String> headers = Arrays.asList(array);
 
     Cluster testCluster = new Cluster(headers);
-    HashMap<String, Float> data = new HashMap<>();
-    data.put("timeseries_id", 1.0F);
-    data.put("Seconds_EnergyConsumption", 2.0F);
 
-    HashMap<String, Float> data2 = new HashMap<>();
-    data2.put("timeseries_id", 5.0F);
-    data2.put("Seconds_EnergyConsumption", 1.0F);
-
-    HashMap<String, Float> data3 = new HashMap<>();
-    data3.put("timeseries_id", 4.0F);
-    data3.put("Seconds_EnergyConsumption", 6.0F);
-
-    Item testItem = new Item(data, headers, "Seconds_EnergyConsumption");
-    Item testItem2 = new Item(data2, headers, "Seconds_EnergyConsumption");
-    Item testItem3 = new Item(data3, headers, "Seconds_EnergyConsumption");
+    Item testItem = createItem(headers, 1.0F, 2.0F, "Seconds_EnergyConsumption");
+    Item testItem2 = createItem(headers, 5.0F, 1.0F, "Seconds_EnergyConsumption");
+    Item testItem3 = createItem(headers, 4.0F, 6.0F, "Seconds_EnergyConsumption");
 
     testCluster.insert(testItem);
     testCluster.insert(testItem2);
     testCluster.insert(testItem3);
-    List<Item> contents = testCluster.getContents();
 
+    // create variables with expected values
     List<Item> expectedContents = new ArrayList<Item>();
     expectedContents.add(testItem);
     expectedContents.add(testItem2);
@@ -115,23 +118,23 @@ public class ClusterTest {
     expectedDiversity.add(1.0F);
     expectedDiversity.add(6.0F);
 
-    Assert.assertEquals(expectedContents, contents);
+    // check if everything correct after insertion
+    Assert.assertEquals(expectedContents, testCluster.getContents());
 
     testCluster.remove(testItem);
-    contents = testCluster.getContents();
-    Set<Float> diversity = testCluster.getDiversity();
     expectedContents.remove(testItem);
 
+    Assert.assertEquals(expectedContents, testCluster.getContents());
+    Assert.assertEquals(expectedDiversity, testCluster.getDiversity());
 
-    Assert.assertEquals(expectedContents, contents);
-    Assert.assertEquals(expectedDiversity, diversity);
-
+    // check the ranges
     Map<String, Range<Float>> expectedRanges = new LinkedHashMap<>();
     expectedRanges.put("timeseries_id", Range.between(4F, 5F));
     expectedRanges.put("Seconds_EnergyConsumption", Range.between(1F, 6F));
 
     Assert.assertEquals(expectedRanges, testCluster.getRanges());
 
+    // insert the item again and remove another one to check the ranges
     testCluster.insert(testItem);
     testCluster.remove(testItem2);
 
@@ -140,6 +143,7 @@ public class ClusterTest {
 
     Assert.assertEquals(expectedRanges, testCluster.getRanges());
 
+    // check the ranges with a different combination of items
     Cluster testCluster2 = new Cluster(headers);
 
     testCluster2.insert(testItem);
@@ -161,24 +165,18 @@ public class ClusterTest {
     return new Item(expectedData, headers, null);
   }
 
+  /**
+   * Testing the generalisation in the cluster
+   */
   @Test
   public void generaliseTest() {
     ArrayList<String> headers = new ArrayList<>();
     headers.add("timeseries_id");
     headers.add("Seconds_EnergyConsumption");
-
-    HashMap<String, Float> dataOne = new HashMap<>();
-    dataOne.put(headers.get(0), 1.0F);
-    dataOne.put(headers.get(1), 200.0F);
-
-    Item one = new Item(dataOne, headers, null);
-
-    HashMap<String, Float> dataTwo = new HashMap<>();
-    dataTwo.put(headers.get(0), 4.0F);
-    dataTwo.put(headers.get(1), 400.0F);
-
-    Item two = new Item(dataTwo, headers, null);
     Cluster cluster = new Cluster(headers);
+
+    Item one = createItem(headers, 1.0F, 200.0F, null);
+    Item two = createItem(headers, 4.0F, 400.0F, null);
 
     cluster.insert(one);
     cluster.insert(two);
@@ -205,28 +203,18 @@ public class ClusterTest {
             || result.getData().equals(expectedItemFour.getData()));
   }
 
+  /**
+   * Testing the tuple enlargement
+   */
   @Test
   public void tupleEnlargementTest() {
     String[] array = {"timeseries_id", "Seconds_EnergyConsumption"};
     List<String> headers = Arrays.asList(array);
     Cluster testCluster = new Cluster(headers);
-    HashMap<String, Float> data = new HashMap<>();
-    data.put("timeseries_id", 5.0F);
-    data.put("Seconds_EnergyConsumption", 300.0F);
 
-    Item testItem = new Item(data, headers, null);
-
-    HashMap<String, Float> data2 = new HashMap<>();
-    data2.put("timeseries_id", 4.0F);
-    data2.put("Seconds_EnergyConsumption", 200.0F);
-
-    Item testItem2 = new Item(data2, headers, null);
-
-    HashMap<String, Float> data3 = new HashMap<>();
-    data3.put("timeseries_id", 2.0F);
-    data3.put("Seconds_EnergyConsumption", 250.0F);
-
-    Item testItem3 = new Item(data3, headers, null);
+    Item testItem = createItem(headers, 5.0F, 300.0F, null);
+    Item testItem2 = createItem(headers, 4.0F, 200.0F, null);
+    Item testItem3 = createItem(headers, 2.0F, 250.0F, null);
 
     testCluster.insert(testItem);
     testCluster.insert(testItem2);
@@ -239,12 +227,7 @@ public class ClusterTest {
     Assert.assertEquals(0.01, tupleEnlargementValue, 0.001F);
 
     // the case when the enlargement is zero
-
-    HashMap<String, Float> data4 = new HashMap<>();
-    data4.put("timeseries_id", 2.0F);
-    data4.put("Seconds_EnergyConsumption", 200.0F);
-
-    Item testItem4 = new Item(data4, headers, null);
+    Item testItem4 = createItem(headers, 2.0F, 200.0F,  null);
 
     Cluster testCluster2 = new Cluster(headers);
     testCluster2.insert(testItem4);
@@ -254,9 +237,11 @@ public class ClusterTest {
     Assert.assertEquals(0, tupleEnlargementValue2, 0.01F);
   }
 
+  /**
+   * Testing the cluster enlargement
+   */
   @Test
   public void clusterEnlargementTest() {
-
     String[] array = {"timeseries_id", "Seconds_EnergyConsumption"};
     List<String> headers = Arrays.asList(array);
     Cluster testCluster = new Cluster(headers);
@@ -268,25 +253,10 @@ public class ClusterTest {
     globalRanges.put(headers.get(0), Range.between(0.0F, 100.0F));
     globalRanges.put(headers.get(1), Range.between(0.0F, 1000.0F));
 
-    HashMap<String, Float> data = new HashMap<>();
-    data.put("timeseries_id", 5.0F);
-    data.put("Seconds_EnergyConsumption", 300.0F);
-    Item testItem = new Item(data, headers, null);
-
-    HashMap<String, Float> data2 = new HashMap<>();
-    data2.put("timeseries_id", 4.0F);
-    data2.put("Seconds_EnergyConsumption", 200.0F);
-    Item testItem2 = new Item(data2, headers, null);
-
-    HashMap<String, Float> data3 = new HashMap<>();
-    data3.put("timeseries_id", 2.0F);
-    data3.put("Seconds_EnergyConsumption", 250.0F);
-    Item testItem3 = new Item(data3, headers, null);
-
-    HashMap<String, Float> data4 = new HashMap<>();
-    data4.put("timeseries_id", 1.0F);
-    data4.put("Seconds_EnergyConsumption", 500.0F);
-    Item testItem4 = new Item(data4, headers, null);
+    Item testItem = createItem(headers, 5.0F, 300.0F,  null);
+    Item testItem2 = createItem(headers, 4.0F, 200.0F, null);
+    Item testItem3 = createItem(headers, 2.0F, 250.0F, null);
+    Item testItem4 = createItem(headers, 1.0F, 500.0F, null);
 
     testCluster.insert(testItem);
     testCluster.insert(testItem2);
@@ -308,7 +278,6 @@ public class ClusterTest {
     testCluster4.insert(testItem2);
     testCluster4.insert(testItem3);
 
-
 //    System.out.println(testCluster3.getRanges()); //-> [1;5] , [300;500]
 //    System.out.println(testCluster4.getRanges()); //-> [2;4] , [200;250]
 
@@ -317,34 +286,22 @@ public class ClusterTest {
 
   }
 
+  /**
+   * Testing the information loss with a tuple
+   */
   @Test
   public void informationLossGivenTTest() {
-    ArrayList<String> headers = new ArrayList<>();
-    headers.add("timeseries_id");
-    headers.add("SecondsEnergyConsumption");
+    String[] array = {"timeseries_id", "Seconds_EnergyConsumption"};
+    List<String> headers = Arrays.asList(array);
     Cluster testCluster = new Cluster(headers);
 
     HashMap<String, Range<Float>> globalRanges = new HashMap<>();
     globalRanges.put(headers.get(0), Range.between(0.0F, 100.0F));
     globalRanges.put(headers.get(1), Range.between(0.0F, 1000.0F));
 
-    HashMap<String, Float> dataOne = new HashMap<>();
-    dataOne.put(headers.get(0), 1.0F);
-    dataOne.put(headers.get(1), 200.0F);
-
-    Item one = new Item(dataOne, headers, null);
-
-    HashMap<String, Float> dataTwo = new HashMap<>();
-    dataTwo.put(headers.get(0), 5.0F);
-    dataTwo.put(headers.get(1), 300.0F);
-
-    Item two = new Item(dataTwo, headers, null);
-
-    HashMap<String, Float> dataThree = new HashMap<>();
-    dataThree.put(headers.get(0), 2.0F);
-    dataThree.put(headers.get(1), 250.0F);
-
-    Item three = new Item(dataThree, headers, null);
+    Item one = createItem(headers, 1.0F, 200.0F, null);
+    Item two = createItem(headers, 5.0F, 300.0F, null);
+    Item three = createItem(headers, 2.0F, 250.0F, null);
 
     float loss1 = testCluster.informationLossGivenT(one, globalRanges);
     Assert.assertEquals(0.0F, loss1, 0.0F);
@@ -360,11 +317,13 @@ public class ClusterTest {
     Assert.assertEquals(0.14F, loss3, 0.0F);
   }
 
+  /**
+   * Testing the information loss with a cluster
+   */
   @Test
   public void informationLossGivenCTest() {
-    ArrayList<String> headers = new ArrayList<>();
-    headers.add("timeseries_id");
-    headers.add("SecondsEnergyConsumption");
+    String[] array = {"timeseries_id", "Seconds_EnergyConsumption"};
+    List<String> headers = Arrays.asList(array);
     Cluster testClusterOne = new Cluster(headers);
     Cluster testClusterTwo = new Cluster(headers);
 
@@ -372,29 +331,10 @@ public class ClusterTest {
     globalRanges.put(headers.get(0), Range.between(0.0F, 100.0F));
     globalRanges.put(headers.get(1), Range.between(0.0F, 1000.0F));
 
-    HashMap<String, Float> dataOne = new HashMap<>();
-    dataOne.put(headers.get(0), 1.0F);
-    dataOne.put(headers.get(1), 200.0F);
-
-    Item one = new Item(dataOne, headers, null);
-
-    HashMap<String, Float> dataTwo = new HashMap<>();
-    dataTwo.put(headers.get(0), 5.0F);
-    dataTwo.put(headers.get(1), 300.0F);
-
-    Item two = new Item(dataTwo, headers, null);
-
-    HashMap<String, Float> dataThree = new HashMap<>();
-    dataThree.put(headers.get(0), 2.0F);
-    dataThree.put(headers.get(1), 250.0F);
-
-    Item three = new Item(dataThree, headers, null);
-
-    HashMap<String, Float> dataFour = new HashMap<>();
-    dataFour.put(headers.get(0), 2.0F);
-    dataFour.put(headers.get(1), 100.0F);
-
-    Item four = new Item(dataFour, headers, null);
+    Item one = createItem(headers,1.0F, 200.0F,  null);
+    Item two = createItem(headers, 5.0F, 300.0F, null);
+    Item three = createItem(headers, 2.0F, 250.0F, null);
+    Item four = createItem(headers, 2.0F, 100.0F, null);
 
     float loss0 = testClusterOne.informationLossGivenC(testClusterTwo, globalRanges);
     Assert.assertEquals(0.0F, loss0, 0.0F);
@@ -413,41 +353,29 @@ public class ClusterTest {
 
     testClusterTwo.insert(four);
     float loss4 = testClusterOne.informationLossGivenC(testClusterTwo, globalRanges);
-    Assert.assertEquals(0.24F, loss4, 0.0F);
+    Assert.assertEquals(0.24F, loss4, 0.000001F);
   }
 
+  /**
+   * Testing the information loss
+   */
   @Test
   public void informationLossTest() {
     // EV_Usage from 100 to 1000 (according to the data generator)
     // number of overall 100 stations
     // Create a cluster with 3 items inside
 
-    ArrayList<String> headers = new ArrayList<>();
-    headers.add("timeseries_id");
-    headers.add("SecondsEnergyConsumption");
+    String[] array = {"timeseries_id", "Seconds_EnergyConsumption"};
+    List<String> headers = Arrays.asList(array);
     Cluster testCluster = new Cluster(headers);
 
     HashMap<String, Range<Float>> globalRanges = new HashMap<>();
     globalRanges.put(headers.get(0), Range.between(0.0F, 100.0F));
     globalRanges.put(headers.get(1), Range.between(0.0F, 1000.0F));
 
-    HashMap<String, Float> dataOne = new HashMap<>();
-    dataOne.put(headers.get(0), 1.0F);
-    dataOne.put(headers.get(1), 200.0F);
-
-    Item one = new Item(dataOne, headers, null);
-
-    HashMap<String, Float> dataTwo = new HashMap<>();
-    dataTwo.put(headers.get(0), 5.0F);
-    dataTwo.put(headers.get(1), 300.0F);
-
-    Item two = new Item(dataTwo, headers, null);
-
-    HashMap<String, Float> dataThree = new HashMap<>();
-    dataThree.put(headers.get(0), 2.0F);
-    dataThree.put(headers.get(1), 250.0F);
-
-    Item three = new Item(dataThree, headers, null);
+    Item one = createItem(headers, 1.0F, 200.0F, null);
+    Item two = createItem(headers, 5.0F, 300.0F, null);
+    Item three = createItem(headers, 2.0F, 250.0F, null);
 
     float loss0 = testCluster.informationLoss(globalRanges);
     Assert.assertEquals(0.0F, loss0, 0.0F);
@@ -465,50 +393,39 @@ public class ClusterTest {
     Assert.assertEquals(0.14F, loss3, 0.0F);
   }
 
+  /**
+   * Testing the distance
+   */
   @Test
   public void distanceTest() {
-    ArrayList<String> headers = new ArrayList<>();
-    headers.add("timeseries_id");
-    headers.add("Seconds_EnergyConsumption");
+    String[] array = {"timeseries_id", "Seconds_EnergyConsumption"};
+    List<String> headers = Arrays.asList(array);
 
-    HashMap<String, Float> dataOne = new HashMap<>();
-    dataOne.put(headers.get(0), 1.0F);
-    dataOne.put(headers.get(1), 200.0F);
+    Item one = createItem(headers, 1.0F, 200.0F, null);
+    Item two = createItem(headers, 4.0F, 400.0F, null);
 
-    Item one = new Item(dataOne, headers, null);
-
-    HashMap<String, Float> dataTwo = new HashMap<>();
-    dataTwo.put(headers.get(0), 4.0F);
-    dataTwo.put(headers.get(1), 400.0F);
-
-    Item two = new Item(dataTwo, headers, null);
     Cluster cluster = new Cluster(headers);
 
-        cluster.insert(one);
-        cluster.insert(two);
+    cluster.insert(one);
+    cluster.insert(two);
 
-        float dist = cluster.distance(two);
-        Assert.assertEquals(dist, 201.0F, 0.0F);
+    float dist = cluster.distance(two);
+    Assert.assertEquals(dist, 201.0F, 0.0F);
     }
 
+  /**
+   * Testing the without bounds method
+   */
   @Test
   public void withinBoundsTest() {
-    ArrayList<String> headers = new ArrayList<>();
-    headers.add("timeseries_id");
-    headers.add("Seconds_EnergyConsumption");
+    String[] array = {"timeseries_id", "Seconds_EnergyConsumption"};
+    List<String> headers = Arrays.asList(array);
 
-    HashMap<String, Float> dataOne = new HashMap<>();
-    dataOne.put(headers.get(0), 1.0F);
-    dataOne.put(headers.get(1), 200.0F);
+    Item one = createItem(headers, 1.0F, 200.0F, null);
+    Item two = createItem(headers, 4.0F, 400.0F, null);
 
-    Item one = new Item(dataOne, headers, null);
-
-    HashMap<String, Float> dataTwo = new HashMap<>();
-    dataTwo.put(headers.get(0), 4.0F);
-    dataTwo.put(headers.get(1), 400.0F);
-
-    Item two = new Item(dataTwo, headers, null);
     Cluster cluster = new Cluster(headers);
+
     Assert.assertFalse(cluster.withinBounds(one));
     cluster.insert(one);
     Assert.assertTrue(cluster.withinBounds(one));
