@@ -171,8 +171,8 @@ public class Cluster {
   }
 
   public float clusterEnlargement(Cluster cluster, HashMap<String, Range<Float>> globalRanges) {
-    Float given = this.informationLossGivenC(cluster, globalRanges);
-    Float current = this.informationLoss(globalRanges);
+    float given = this.informationLossGivenC(cluster, globalRanges);
+    float current = this.informationLoss(globalRanges);
     return (given - current) / this.ranges.size();
   }
 
