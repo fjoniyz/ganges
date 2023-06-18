@@ -31,7 +31,11 @@ public class Doca {
     return min;
   }
 
-  public static double[] div0(double[] a, double[] b) {
+  /**
+   * @param a,b arrays of double which need to get divided element by element(have to be the same length)
+   * @return an array which includes either 0 or a[i]/b[i]
+   * */
+  public static double[] divisionWith0(double[] a, double[] b) {
     double[] result = new double[a.length];
     for (int i = 0; i < a.length; i++) {
       result[i] = (b[i] != 0) ? a[i] / b[i] : 0;
@@ -126,7 +130,7 @@ public class Doca {
           double enl = enlargement[c];
           if (enl == min_enlarge) {
             min_clusters.add(c);
-            double overall_loss = (enl + getSumOfElementsInArray(div0(mx_c.get(c), dif))) / num_attributes;
+            double overall_loss = (enl + getSumOfElementsInArray(divisionWith0(mx_c.get(c), dif))) / num_attributes;
             if (overall_loss <= tau) {
               ok_clusters.add(c);
             }
@@ -181,7 +185,7 @@ public class Doca {
         for (int i = 0; i < num_attributes; i++) {
           dif_cluster[i] = mx_c.get(c)[i] - mn_c.get(c)[i];
         }
-        double loss = getSumOfElementsInArray(div0(dif_cluster, dif)) / num_attributes;
+        double loss = getSumOfElementsInArray(divisionWith0(dif_cluster, dif)) / num_attributes;
         losses.add(loss);
         clusters_final.add(clusters.get(c));
         clusters.remove(c);
