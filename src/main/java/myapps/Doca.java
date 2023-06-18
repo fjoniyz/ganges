@@ -39,7 +39,7 @@ public class Doca {
     return result;
   }
 
-  public static double getSum(double[] values) {
+  public static double getSumOfElementsInArray(double[] values) {
     double sum = 0;
     for (double value : values) {
       sum += value;
@@ -126,7 +126,7 @@ public class Doca {
           double enl = enlargement[c];
           if (enl == min_enlarge) {
             min_clusters.add(c);
-            double overall_loss = (enl + getSum(div0(mx_c.get(c), dif))) / num_attributes;
+            double overall_loss = (enl + getSumOfElementsInArray(div0(mx_c.get(c), dif))) / num_attributes;
             if (overall_loss <= tau) {
               ok_clusters.add(c);
             }
@@ -181,7 +181,7 @@ public class Doca {
         for (int i = 0; i < num_attributes; i++) {
           dif_cluster[i] = mx_c.get(c)[i] - mn_c.get(c)[i];
         }
-        double loss = getSum(div0(dif_cluster, dif)) / num_attributes;
+        double loss = getSumOfElementsInArray(div0(dif_cluster, dif)) / num_attributes;
         losses.add(loss);
         clusters_final.add(clusters.get(c));
         clusters.remove(c);
@@ -213,109 +213,5 @@ public class Doca {
     }
 
     return output;
-  }
-
-  public static void main(String[] args) {
-    List<Double[]> dataList = readCSVFile("./adult_train.csv");
-
-    List<String> columns =
-        Arrays.asList(
-            "age",
-            "education-num",
-            "marital-status",
-            "gender",
-            "capital-gain",
-            "hours-per-week",
-            "income");
-    Double[][] data = extractColumns(dataList, columns);
-
-    mapIncomeColumn(data);
-
-    double[][] normalizedData = normalizeDataFrame(data);
-
-    double[][] res = doca(normalizedData, 100, 1000, 50, false);
-
-    printResult(res);
-  }
-
-  private static Double[][] extractColumns(List<Double[]> dataList, List<String> columns) {
-    int numRows = dataList.size();
-    int numCols = columns.size();
-    Double[][] extractedData = new Double[numRows][numCols];
-    for (int i = 0; i < numRows; i++) {
-      Double[] row = dataList.get(i);
-      for (int j = 0; j < numCols; j++) {
-        extractedData[i][j] = row[columns.indexOf(columns.get(j))];
-      }
-    }
-    return extractedData;
-  }
-
-  private static List<Double[]> readCSVFile(String filePath) {
-    List<Double[]> dataList = new ArrayList<>();
-    try (CSVParser csvParser = CSVFormat.DEFAULT.withHeader().parse(new FileReader(filePath))) {
-      for (CSVRecord record : csvParser) {
-        Double[] row = new Double[record.size()];
-        for (int i = 0; i < record.size(); i++) {
-          row[i] = Double.parseDouble(record.get(i));
-        }
-        dataList.add(row);
-      }
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-    return dataList;
-  }
-
-  private static void mapIncomeColumn(Double[][] data) {
-    int incomeColIndex = 6; // Assuming 'income' is the last column (index 6)
-    for (int i = 0; i < data.length; i++) {
-      if (data[i][incomeColIndex] == 0) {
-        data[i][incomeColIndex] = 0.0;
-      } else {
-        data[i][incomeColIndex] = 1.0;
-      }
-    }
-  }
-
-  private static double[] extractColumns(Double[][] data, int index) {
-    double[] res = new double[data.length];
-    int k = 0;
-    for (Double[] rows : data) {
-      res[k] = rows[index];
-      k++;
-    }
-    return res;
-  }
-
-  private static double[][] normalizeDataFrame(Double[][] data) {
-    int numRows = data.length;
-    int numCols = data[0].length;
-    double[][] normalizedData = new double[numRows][numCols];
-    double[] columnStdDevs = new double[numCols];
-
-    for (int i = 0; i < numCols; i++) {
-      double[] columnData = extractColumns(data, i);
-      StandardDeviation std = new StandardDeviation();
-      columnStdDevs[i] = std.evaluate(columnData);
-    }
-    for (int i = 0; i < numRows; i++) {
-      for (int j = 0; j < numCols; j++) {
-        normalizedData[i][j] = data[i][j] / columnStdDevs[j];
-      }
-    }
-    return normalizedData;
-  }
-
-  private static void printResult(double[][] result) {
-    int k = 0;
-    for (double[] row : result) {
-      System.out.println("Line: " + k);
-      for (double value : row) {
-        System.out.print("Value: " + value + " ");
-      }
-      k++;
-      System.out.println();
-    }
   }
 }
