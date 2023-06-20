@@ -39,7 +39,9 @@ public class CastleGuard {
     public ClusterManagement getClusterManagement() {
         return clusterManagement;
     }
-
+    public Deque<Item> getItems() {
+        return items;
+    }
     public Optional<HashMap<String, Float>> tryGetOutputLine() {
         if (outputQueue.isEmpty()) {
             return Optional.empty();
@@ -155,13 +157,15 @@ public class CastleGuard {
     }
 
     public void suppressItem(Item item) {
-        List<Cluster> nonAnonClusters = this.clusterManagement.getNonAnonymizedClusters();
-        this.items.remove(item);
-        Cluster parentCluster = item.getCluster();
-        parentCluster.remove(item);
+        if (this.items.contains(item)) {
+            List<Cluster> nonAnonClusters = this.clusterManagement.getNonAnonymizedClusters();
+            this.items.remove(item);
+            Cluster parentCluster = item.getCluster();
+            parentCluster.remove(item);
 
-        if (parentCluster.getSize() == 0) {
-            nonAnonClusters.remove(parentCluster);
+            if (parentCluster.getSize() == 0) {
+                nonAnonClusters.remove(parentCluster);
+            }
         }
     }
 
