@@ -28,7 +28,10 @@ public class Cluster {
   }
 
   public void setContents(List<Item> value) {
-    this.contents = value;
+    //this.contents = value;
+    for (Item item : value) {
+      this.insert(item);
+    }
   }
 
   public int getSize() {
@@ -69,11 +72,9 @@ public class Cluster {
     //            element (Item): The element to insert into the cluster
 
     // checks for an empty cluster
-    boolean first_elem = false;
-    if (this.contents.isEmpty()) {
-      first_elem = true;
-    }
+    boolean firstElem = this.contents.isEmpty();
     this.contents.add(element);
+
     // Check whether the item is already in a cluster
     if (element.getCluster() != null) {
       // If it is, remove it so that we do not reach an invalid state
@@ -84,7 +85,7 @@ public class Cluster {
     element.setCluster(this);
 
     // in case of an empty Cluster the Ranges are set to the items values
-    if (first_elem) {
+    if (firstElem) {
       for (Map.Entry<String, Range<Float>> header : this.ranges.entrySet()) {
         header.setValue(
             Range.between(
@@ -100,12 +101,16 @@ public class Cluster {
       }
     }
   }
-
+// TODO: Range
   public void remove(Item element) {
     //  Removes a tuple from the cluster
     //  Args:
     //            element: The element to remove from the cluster
+
+
     this.contents.remove(element);
+
+    element.setCluster(null);
 
     boolean containsSensitiveAttr = false;
     for (Item e : this.contents) {
@@ -117,6 +122,12 @@ public class Cluster {
     if (!containsSensitiveAttr) {
       this.diversity.remove(element.getSensitiveAttr());
     }
+
+    for (Map.Entry<String, Range<Float>> header : this.ranges.entrySet()) {
+      header.setValue(
+              Range.between(
+                      this.findMinimum(header.getKey()), this.findMaximum(header.getKey())));
+    }
   }
 
   // Note: Return value with only Item -> In Cluster.py return value (gen_tuple, item)
@@ -126,6 +137,7 @@ public class Cluster {
         this.sampleValues.put(
             header.getKey(), this.utils.randomChoice(this.contents).getData().get(header.getKey()));
       }
+      item.removeHeaders("pid");
       item.getData().put("min" + header.getKey(), header.getValue().getMinimum());
       item.getData().put("spc" + header.getKey(), this.sampleValues.get(header.getKey()));
       item.getData().put("max" + header.getKey(), header.getValue().getMaximum());
@@ -136,35 +148,34 @@ public class Cluster {
 
       item.removeHeaders(header.getKey());
       item.removeData(header.getKey());
-      // item.removeHeaders("pid");
     }
     return item;
   }
 
-  public float tupleEnlargement(Item item, HashMap<String, Range<Float>> global_ranges) {
+  public float tupleEnlargement(Item item, HashMap<String, Range<Float>> globalRanges) {
     /*Calculates the enlargement value for adding <item> into this cluster
 
         Args:
             item: The tuple to calculate enlargement based on
-            global_ranges: The globally known ranges for each attribute
+            globalRanges: The globally known ranges for each attribute
 
     Returns: The information loss if we added item into this cluster
            */
-    Float given = this.informationLossGivenT(item, global_ranges);
-    Float current = this.informationLoss(global_ranges);
+    float given = this.informationLossGivenT(item, globalRanges);
+    float current = this.informationLoss(globalRanges);
     return (given - current) / this.ranges.size();
   }
 
-  public float clusterEnlargement(Cluster cluster, HashMap<String, Range<Float>> global_ranges) {
+  public float clusterEnlargement(Cluster cluster, HashMap<String, Range<Float>> globalRanges) {
     /*Calculates the enlargement value for merging <cluster> into this cluster
 
     Args:
     cluster: The cluster to calculate information loss for
-    global_ranges: The globally known ranges for each attribute
+    globalRanges: The globally known ranges for each attribute
 
     Returns: The information loss upon merging cluster with this cluster*/
-    Float given = this.informationLossGivenC(cluster, global_ranges);
-    Float current = this.informationLoss(global_ranges);
+    Float given = this.informationLossGivenC(cluster, globalRanges);
+    Float current = this.informationLoss(globalRanges);
     return (given - current) / this.ranges.size();
   }
 
@@ -177,7 +188,9 @@ public class Cluster {
 
     Returns: The information loss given that we insert item into this cluster*/
     float loss = 0F;
-
+    if (this.contents.isEmpty()){
+      return 0.0F;
+    }
     // For each range, check if <item> would extend it
     Range<Float> updated;
     for (Map.Entry<String, Range<Float>> header : this.ranges.entrySet()) {
@@ -199,8 +212,12 @@ public class Cluster {
         global_ranges: The globally known ranges for each attribute
 
     Returns: The information loss given that we merge cluster with this cluster*/
-    float loss = 0F;
-
+    float loss = 0.0F;
+    if (this.contents.isEmpty()){
+      return cluster.informationLoss(global_ranges);
+    }else if (cluster.contents.isEmpty()){
+      return this.informationLoss(global_ranges);
+    }
     // For each range, check if <item> would extend it
     Range<Float> updated;
     for (Map.Entry<String, Range<Float>> header : this.ranges.entrySet()) {
@@ -211,7 +228,7 @@ public class Cluster {
                   header.getValue().getMinimum(), cluster.ranges.get(header.getKey()).getMinimum()),
               Math.max(
                   header.getValue().getMaximum(),
-                  cluster.ranges.get(header.getKey()).getMinimum()));
+                  cluster.ranges.get(header.getKey()).getMaximum()));
       loss += this.utils.rangeInformationLoss(updated, global_range);
     }
     return loss;
@@ -244,12 +261,9 @@ public class Cluster {
     Returns: The distance to the other tuple*/
     float total_distance = 0;
     for (Map.Entry<String, Range<Float>> header : this.ranges.entrySet()) {
-      System.out.println(header);
       total_distance +=
           Math.abs(
               other.getData().get(header.getKey()) - this.utils.rangeDifference(header.getValue()));
-      System.out.println(header.getValue());
-      System.out.println(other.getData().get(header.getKey()));
     }
     return total_distance;
   }
@@ -268,5 +282,45 @@ public class Cluster {
       }
     }
     return true;
+  }
+
+  public float findMinimum(String header){
+
+    /* Finds a minimum value for the range within a cluster for a given header
+
+            Args:
+    header: Header as string
+
+    Returns: the minimum value*/
+
+    float minValue = Float.MAX_VALUE;
+    for (Item item : this.getContents()){
+      float value = item.getData().get(header);
+
+      if (value < minValue) {
+        minValue = value;
+      }
+    }
+    return minValue;
+  }
+
+  public float findMaximum(String header){
+
+    /* Finds a maximum value for the range within a cluster for a given header
+
+            Args:
+    header: Header as string
+
+    Returns: the maximum value*/
+
+    float maxValue = Float.MIN_VALUE;
+    for (Item item : this.getContents()){
+      float value = item.getData().get(header);
+
+      if (value > maxValue) {
+        maxValue = value;
+      }
+    }
+    return maxValue;
   }
 }

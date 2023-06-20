@@ -62,7 +62,8 @@ public class CastleGuard {
     public void outputCluster(Cluster cluster) {
         Set<Float> outputPids = new HashSet<>();
         Set<Float> outputDiversity = new HashSet<>();
-
+        
+        // TODO: Fix splittable if size >= 2k but should check if 2k individual pids
         boolean splittable = cluster.getSize() >= 2 * config.getK() && cluster.getDiversitySize() >= config.getL();
         List<Cluster> splitted = splittable ? this.clusterManagement.splitL(cluster, this.headers, this.globalRanges) : List.of(cluster);
         for (Cluster sCluster : splitted) {
@@ -128,9 +129,7 @@ public class CastleGuard {
         }
     }
 
-    /**
-     * fudge_tuple() in castle.py
-     */
+    
     private void perturb(Item item) {
         HashMap<String, Float> data = item.getData();
 
