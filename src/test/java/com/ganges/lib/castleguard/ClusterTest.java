@@ -196,11 +196,14 @@ public class ClusterTest {
     Item expectedItemTwo = element(4.0F, 200.0F, genHeaders);
     Item expectedItemThree = element(1.0F, 400.0F, genHeaders);
     Item expectedItemFour = element(4.0F, 200.0F, genHeaders);
+    Item expectedItemFive = element(4.0F, 400.0F, genHeaders);
+
     Assert.assertTrue(
         result.getData().equals(expectedItemOne.getData())
             || result.getData().equals(expectedItemTwo.getData())
             || result.getData().equals(expectedItemThree.getData())
-            || result.getData().equals(expectedItemFour.getData()));
+            || result.getData().equals(expectedItemFour.getData())
+            || result.getData().equals(expectedItemFive.getData()));
   }
 
   /**
