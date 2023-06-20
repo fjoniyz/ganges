@@ -83,31 +83,6 @@ public class CastleGuardTest {
         Assert.assertEquals(clusters.get(0).getContents().get(0).getData().get("station"), 5.0F, 0.0F);
     }
 
-   /* @Test
-    public void insertLastDataTest() {
-        preparation(3, 5, 5, 1, 5, 1, 100 * Math.log(2), false);
-
-        HashMap<String, Float> dataOne = createItem(Arrays.asList(1.0F, 200.0F, 5.0F));
-        HashMap<String, Float> dataTwo = createItem(Arrays.asList(2.0F, 300.0F, 5.0F));
-        HashMap<String, Float> dataThree = createItem(Arrays.asList(3.0F, 400.0F, 3.0F));
-        HashMap<String, Float> dataFour = createItem(Arrays.asList(4.0F, 500.0F, 2.0F));
-        HashMap<String, Float> dataFive = createItem(Arrays.asList(5.0F, 600.0F, 1.0F));
-        HashMap<String, Float> dataSix = createItem(Arrays.asList(6.0F, 700.0F, 0.0F));
-
-        ClusterManagement manage = this.castle.getClusterManagement();
-        castle.insertData(dataOne);
-        castle.insertData(dataTwo);
-        castle.insertData(dataThree);
-        castle.insertData(dataFour);
-        castle.insertData(dataFive);
-        castle.insertData(dataSix);
-
-        List<Cluster> clusters = manage.getNonAnonymizedClusters();
-        Assert.assertEquals(clusters.get(0).getContents().get(0).getData().get("timeseriesId"), 1.0F, 0.0F);
-        Assert.assertEquals(clusters.get(0).getContents().get(0).getData().get("SecondsEnergyConsumption"), 200.0F, 0.0F);
-        Assert.assertEquals(clusters.get(0).getContents().get(0).getData().get("station"), 5.0F, 0.0F);
-    }*/
-
     /**
      * trying with bigBeta = 0; (1 - bigBeta) is the probability to ignore tuple (only with Differential Privacy)
      */
