@@ -12,8 +12,9 @@ import seaborn as sns
 import numpy as np
 import json
 
-# Todo: should we get this from docker-compose or from the frontend?
-bootstrap_server = 'broker:9092'
+# Todo: should we get this rom docker-compose or from the frontend?
+# I tried broker:9092 and localhost:9092, neither worked.
+bootstrap_server = 'broker:29092'
 consumers = {}
 
 @app.route('/', methods=['GET', 'POST'])
@@ -23,7 +24,7 @@ def index():
         topic = request.form.get('topic', type=str, default='streams-input')
         num_messages = request.form.get('num_messages', type=int, default=100)
         conf = {
-            'bootstrap.servers': 'broker:9092',
+            'bootstrap.servers': bootstrap_server,
             'group.id': '1',
             'auto.offset.reset': 'earliest'  # Set offset reset policy
         }           
