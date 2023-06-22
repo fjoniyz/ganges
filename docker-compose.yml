@@ -41,4 +41,14 @@ services:
     depends_on:
       - broker
 
+  visualizer:
+    build: ./visualizer-flask/
+    hostname: visualizer
+    container_name: visualizer
+    volumes:
+      - ./visualizer-flask:/app
+    ports:
+      - "8080:80"
+    depends_on:
+      - streams
 

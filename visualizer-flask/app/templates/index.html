@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>KASD - Kafka Anonymized Streams Dashboard</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        
+    </script>
+</head>
+<body>
+
+    <h1>KASD - Kafka Anonymized Streams Dashboard</h1>
+
+    <h2>Configure Topic to be visualized</h2>
+    <form id="consumerForm" method="post">
+        <!-- Read in topic name-->
+        <input type="text" id="topic" name="topic" value="streams-input" placeholder="Topic name">
+        <!-- Read in number of messages to display-->
+        <input type="text" id="num_messages" name="num_messages" value="100" placeholder="Message window size">
+        <!-- Submit -->
+        <input type="submit" value="Submit">
+    </form>
+    {% if error != "" %}
+    <br>
+    <p id="error">Error: {{error}} </p>
+    <br>
+    {% endif %}
+    
+    <br>
+
+    {% if consumer_marker != "" %}
+    <img id="graph-image" alt="Graph">
+  
+    <script>
+        // Function to update the graph image
+        function updateGraph(topic, num_messages) {
+            console.log("Updating graph");
+
+            $.getJSON(`/graph?topic=${topic}?num_messages=${num_messages}`, function(data) {
+                // Update the src attribute of the <img> tag with the new graph URL
+                console.log(data.graph_url);
+                $('#graph-image').attr('src', 'data:image/png;base64,' + data.graph_url);
+            });
+        }
+        setInterval(updateGraph(topic={{ consumer_marker.topic }}, num_messages={{ consumer_marker.num_messages }}), 1000);
+
+        /*
+        document.getElementById('consumerForm').addEventListener('submit', function(event) {
+            event.preventDefault(); // Prevent the form from submitting
+
+            // You can also access form data using the FormData object
+            let formData = new FormData(event.target);
+            let topic = formData.get('topic');
+            let num_messages = formData.get('num_messages');
+            setInterval(updateGraph(topic, num_messages), 1000);
+
+
+            // Submit the form to the server
+            event.target.submit();
+        });
+        */
+    </script>
+    {% endif %}
+</body>
+</html>
