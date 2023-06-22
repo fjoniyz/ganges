@@ -13,17 +13,14 @@
 
     <h2>Configure Topic to be visualized</h2>
     <form id="consumerForm" method="post">
-        <!-- Read in topic name-->
         <input type="text" id="topic" name="topic" value="streams-input" placeholder="Topic name">
-        <!-- Read in number of messages to display-->
         <input type="text" id="num_messages" name="num_messages" value="100" placeholder="Message window size">
-        <!-- Submit -->
         <input type="submit" value="Submit">
     </form>
+
     {% if error != "" %}
     <br>
     <p id="error">Error: {{error}} </p>
-    <br>
     {% endif %}
     
     <br>
@@ -45,6 +42,7 @@
         setInterval(updateGraph(topic={{ consumer_marker.topic }}, num_messages={{ consumer_marker.num_messages }}), 1000);
 
         /*
+        TODO: We can trim jquery and use vanilla JS instead
         document.getElementById('consumerForm').addEventListener('submit', function(event) {
             event.preventDefault(); // Prevent the form from submitting
 
