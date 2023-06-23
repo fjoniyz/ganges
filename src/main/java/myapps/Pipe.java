@@ -1,19 +1,22 @@
 package myapps;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 
+import customSerdes.ChargingStationDeserializer;
+import customSerdes.ChargingStationMessage;
+import customSerdes.ChargingStationSerializer;
+import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.*;
+import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KStream;
 import com.lambdaworks.redis.*;
+import org.apache.kafka.streams.kstream.Produced;
 
 import java.util.*;
 
@@ -51,6 +54,63 @@ public class Pipe {
         return values;
     }
 
+    public static String[] getFieldsToAnonymize() throws IOException {
+        String userDirectory = System.getProperty("user.dir");
+        try(InputStream inputStream = Files.newInputStream(Paths.get(userDirectory + "/src/main/resources/doca.properties"))) {
+            Properties properties = new Properties();
+            properties.load(inputStream);
+            String docaFieldsString = properties.getProperty("doca_fields");
+            String[] docaFields = docaFieldsString.split(",");
+            for (String field : docaFields) {
+                System.out.println(field);
+            }
+            return docaFields;
+        }
+    }
+
+    public static double[] createValuesList(String[] fields, ChargingStationMessage chargingStationMessage){
+        List<Double> values = new ArrayList<>();
+        for (String field: fields) {
+            switch (field) {
+                case "urbanisation_level":
+                    System.out.println("urb level: " + chargingStationMessage.getUrbanisation_level());
+                    values.add((double) chargingStationMessage.getUrbanisation_level());
+                    break;
+                case "number_loading_stations":
+                    System.out.println("number load stat: " + chargingStationMessage.getNumber_loading_stations());
+                    values.add((double) chargingStationMessage.getNumber_loading_stations());
+                    break;
+                case "number_parking_spaces":
+                    System.out.println("parking spaces" + chargingStationMessage.getNumber_parking_spaces());
+                    values.add((double) chargingStationMessage.getNumber_parking_spaces());
+                    break;
+                case "start_time_loading":
+                    System.out.println("loading time start" + chargingStationMessage.getStart_time_loading());
+                    values.add((double) chargingStationMessage.getStart_time_loading());
+                    break;
+                case "end_time_loading":
+                    System.out.println("load time end" + chargingStationMessage.getEnd_time_loading());
+                    values.add((double) chargingStationMessage.getEnd_time_loading());
+                    break;
+                case "loading_time":
+                    System.out.println("loading time" + chargingStationMessage.getLoading_time());
+                    values.add((double) chargingStationMessage.getLoading_time());
+                    break;
+                case "kwh":
+                    System.out.println("kwh: " + chargingStationMessage.getKwh());
+                    values.add((double) chargingStationMessage.getKwh());
+                    break;
+                case "loading_potential":
+                    System.out.println("load potential " + chargingStationMessage.getLoading_potential());
+                    values.add((double) chargingStationMessage.getLoading_potential());
+                    break;
+                default:
+                    System.out.println("Invalid field in config file: " + field);
+            }
+        }
+        return values.stream().mapToDouble(d -> d).toArray();
+    }
+
     public static void main(final String[] args) {
         String userDirectory = System.getProperty("user.dir");
         try (InputStream inputStream = Files.newInputStream(Paths.get(userDirectory + "/src/main/resources/config.properties"))) {
@@ -58,20 +118,29 @@ public class Pipe {
             RedisClient redisClient = new RedisClient(RedisURI.create("redis://localhost/"));
             RedisConnection<String, String> connection = redisClient.connect();
 
-
-            final List<double[]> saved = new ArrayList<>();
-            String inputTopic = "input";
+            String inputTopic = "input-json2";
             String outputTopic = "output-test";
 
+            ChargingStationSerializer<ChargingStationMessage> chargingStationSerializer = new ChargingStationSerializer<>();
+            ChargingStationDeserializer<ChargingStationMessage> chargingStationDeserializer = new ChargingStationDeserializer<>(ChargingStationMessage.class);
+            Serde<ChargingStationMessage> chargingStationMessageSerde = Serdes.serdeFrom(chargingStationSerializer, chargingStationDeserializer);
+
             props.load(inputStream);
-            props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
-            props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
             props.put(StreamsConfig.METADATA_MAX_AGE_CONFIG, "1000"); // Needed to prevent timeouts during broker startup.
+            props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+            props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, chargingStationMessageSerde.getClass());
+
+            Produced<String, String> produced = Produced.with(Serdes.String(), Serdes.String());
 
             final StreamsBuilder streamsBuilder = new StreamsBuilder();
-            KStream<String, String> src = streamsBuilder.stream(inputTopic);
+            KStream<String, ChargingStationMessage> src = streamsBuilder.stream(inputTopic, Consumed.with(Serdes.String(), chargingStationMessageSerde));
+            String[] fields = getFieldsToAnonymize();
+            for(String s : fields){
+                System.out.println(s);
+            }
             src.mapValues(value -> {
-                String parsedValue = value.substring(1, value.length() - 1);
+                double[] valuesList = createValuesList(fields, value);
+                String parsedValue = Arrays.toString(valuesList).substring(1, Arrays.toString(valuesList).length() - 1);
                 System.out.println("Parsed values: " + parsedValue);
                 String key = Integer.toString(ThreadLocalRandom.current().nextInt(0, 1000 + 1));
                 connection.set(key, parsedValue);
@@ -98,12 +167,13 @@ public class Pipe {
                     }
                     System.out.println();
                 }
+
                 double[][] output = Doca.doca(input, 99999, 1000, 60, false);
                 System.out.println("Output: " + output);
                 String result = Arrays.deepToString(output);
                 System.out.println("Result: " + result);
                 return result;
-            }).to(outputTopic);
+            }).to(outputTopic, produced);
 
 
             Topology topology = streamsBuilder.build();
