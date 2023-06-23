@@ -20,8 +20,6 @@
                 <excludes>
                     <exclude>config.properties</exclude>
                 </excludes>
-#Fields that need to be anonymized in doca
-doca_fields: {"kwh", "loading_potential"}
             </resource>
         </resources>
     </build>
