@@ -42,32 +42,4 @@ public class DataRepository {
         }
         return values;
     }
-
-//    /**
-//     * Retrieve all keys of Redis entries using external script getKeys.sh
-//     * @return keys of Redis entries
-//     */
-//    private static List<String> getKeys(){
-//        List<String> result = new ArrayList<>();
-//        String userDirectory = System.getProperty("user.dir");
-//        System.out.printf("Dir: " + userDirectory);
-//        try {
-//            Runtime r = Runtime.getRuntime();
-//
-//            Process p = r.exec(userDirectory + "/getKeys.sh");
-//
-//            BufferedReader in =
-//                    new BufferedReader(new InputStreamReader(p.getInputStream()));
-//            String inputLine;
-//            while ((inputLine = in.readLine()) != null) {
-//                System.out.println(inputLine);
-//                result.add(inputLine);
-//            }
-//            in.close();
-//
-//        } catch (IOException e) {
-//            System.out.println(e);
-//        }
-//        return result;
-//    }
 }
