@@ -22,6 +22,7 @@ public class Pipe {
 
     public static StreamsBuilder getAnonymizationStream(String inputTopic, String outputTopic) {
       DataRepository dataRepository = new DataRepository();
+
       final StreamsBuilder streamsBuilder = new StreamsBuilder();
       KStream<String, String> src = streamsBuilder.stream(inputTopic);
       src.mapValues(value ->  value.substring(1, value.length() - 1))
@@ -75,6 +76,7 @@ public class Pipe {
             props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
             props.put(StreamsConfig.METADATA_MAX_AGE_CONFIG, "1000"); // Needed to prevent timeouts during broker startup.
 
+            // Create anonymization stream and use it with Kafka
             StreamsBuilder streamsBuilder = getAnonymizationStream(inputTopic, outputTopic);
             Topology topology = streamsBuilder.build();
 
