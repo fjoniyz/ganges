@@ -19,36 +19,33 @@ import org.apache.kafka.streams.kstream.Produced;
 import java.util.*;
 
 public class Pipe {
-    public static String processing(ChargingStationMessage value, DataRepository dataRepository, String[] fields) {
-            double[] valuesList = createValuesList(fields, value);
-            System.out.println("Parsed values: " + value);
-            // Retrieve non-anonymized data from cache
-            dataRepository.saveValue(Arrays.toString(valuesList));
-            List<String> allSavedValues = dataRepository.getValues();
+    public static String processing(ChargingStationMessage value, DataRepository dataRepository, String[] fields) throws IOException {
+        double[] valuesList = createValuesList(fields, value);
+        StringBuilder valueToSaveInRedis = new StringBuilder();
+        for (double d: valuesList
+        ) {
+            valueToSaveInRedis.append(d).append(",");
+        }
+        // Retrieve non-anonymized data from cache
+        dataRepository.saveValue(valueToSaveInRedis.toString());
+        List<String> allSavedValues = dataRepository.getValues();
 
-            // Parse cached strings into double arrays
-            double[][] input = new double[allSavedValues.size()][];
-            for (int i = 0; i < allSavedValues.size(); i++) {
-                String[] values = allSavedValues.get(i).split(",");
-                double[] toDouble =
-                        Arrays.stream(values).mapToDouble(Double::parseDouble).toArray();
-                input[i] = toDouble;
-            }
+        // Parse cached strings into double arrays
+        double[][] input = new double[allSavedValues.size()][];
 
-            // Log retrieved arrays
-            for (double[] element : input) {
-                System.out.print("Saved Value: ");
-                for (double d : element) {
-                    System.out.print(d + " ");
-                }
-                System.out.println();
-            }
+        for (int i = 0; i < allSavedValues.size(); i++) {
+            String[] values = allSavedValues.get(i).split(",");
+            double[] toDouble =
+                    Arrays.stream(values).mapToDouble(Double::parseDouble).toArray();
 
-            // Anonymization
-            double[][] output = Doca.doca(input, 99999, 1000, 60, false);
-            String result = Arrays.deepToString(output);
-            System.out.println("Result: " + result);
-            return result;
+            input[i] = toDouble;
+        }
+
+        // Anonymization
+        Doca docaInstance = new Doca();
+        double[][] output = docaInstance.anonymize(input);
+        String result = Arrays.deepToString(output);
+        return result;
     }
 
     public static String[] getFieldsToAnonymize() throws IOException {
@@ -112,7 +109,7 @@ public class Pipe {
         String userDirectory = System.getProperty("user.dir");
         try (InputStream inputStream = Files.newInputStream(Paths.get(userDirectory + "/src/main/resources/config.properties"))) {
             Properties props = new Properties();
-            String inputTopic = "input2";
+            String inputTopic = "input-t";
             String outputTopic = "output-test";
 
             ChargingStationSerializer<ChargingStationMessage> chargingStationSerializer = new ChargingStationSerializer<>();
@@ -130,7 +127,13 @@ public class Pipe {
             DataRepository dataRepository = new DataRepository();
             Produced<String, String> produced = Produced.with(Serdes.String(), Serdes.String());
             String[] fields = getFieldsToAnonymize();
-            src.mapValues(value -> processing(value, dataRepository, fields)).to(outputTopic, produced);
+            src.mapValues(value -> {
+                try {
+                    return processing(value, dataRepository, fields);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }).to(outputTopic, produced);
             Topology topology = streamsBuilder.build();
 
             try (KafkaStreams streams = new KafkaStreams(topology, props)) {
