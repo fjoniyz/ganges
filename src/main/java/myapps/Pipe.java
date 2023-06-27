@@ -42,10 +42,9 @@ public class Pipe {
         }
 
         // Anonymization
-        Doca docaInstance = new Doca();
-        double[][] output = docaInstance.anonymize(input);
-        String result = Arrays.deepToString(output);
-        return result;
+        AnonymizationAlgorithm doca = new Doca();
+        double[][] output = doca.anonymize(input);
+        return Arrays.deepToString(output);
     }
 
     public static String[] getFieldsToAnonymize() throws IOException {

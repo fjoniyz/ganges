@@ -1,2 +1,5 @@
-package myapps;public interface AnonymizationAlgorithm {
+package myapps;
+
+public interface AnonymizationAlgorithm {
+    double[][] anonymize(double[][] X);
 }

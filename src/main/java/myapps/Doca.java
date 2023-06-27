@@ -3,19 +3,12 @@ package myapps;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-
-import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
 
 import java.io.*;
 import java.util.Properties;
 
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVParser;
-import org.apache.commons.csv.CSVRecord;
-
-public class Doca {
+public class Doca implements AnonymizationAlgorithm{
 
     public static double getMax(double[][] X) {
         double max = Double.NEGATIVE_INFINITY;
@@ -73,7 +66,8 @@ public class Doca {
         }
     }
 
-    public static double[][] anonymize(
+    @Override
+    public double[][] anonymize(
             double[][] X) {
         String[] parameters = getParameters();
         double eps = Double.parseDouble(parameters[0]);
