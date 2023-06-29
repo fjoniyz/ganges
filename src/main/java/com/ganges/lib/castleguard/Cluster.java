@@ -47,6 +47,19 @@ public class Cluster {
 		return pids.size();
     }
 
+    /**
+     * Perturbs the cluster with header specific but constant noise
+     * @param noise List of noise for each Header
+     */
+    public void pertubeCluster(List<Float> noise) {
+        // Perturbs the cluster
+        for (Item item : this.contents) {
+            for (Map.Entry<String, Float> data : item.getData().entrySet()) {
+                data.setValue((float) data.getValue() + noise.get(Integer.parseInt(data.getKey())));
+            }
+        }
+    }
+
     public int getSize() {
         return this.contents.size();
     }
@@ -138,7 +151,7 @@ public class Cluster {
         if (!containsSensitiveAttr) {
             this.diversity.remove(element.getSensitiveAttr());
         }
-
+        //TODO: Test if this can be deleted
 //        for (Map.Entry<String, Range<Float>> header : this.ranges.entrySet()) {
 //            header.setValue(
 //                    Range.between(this.findMinimum(header.getKey()), this.findMaximum(header.getKey())));
