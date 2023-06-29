@@ -1,15 +1,14 @@
 package myapps;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 //TODO: Check if ranges have to be update manually
 import com.ganges.lib.castleguard.utils.Utils;
 import com.ganges.lib.castleguard.Cluster;
 import com.ganges.lib.castleguard.Item;
-import myapps.util.DocaUtil;
+import myapps.utils.DocaUtil;
 import org.apache.commons.lang3.Range;
-import myapps.util.GreenwaldKhannaQuantileEstimator;
+import myapps.utils.GreenwaldKhannaQuantileEstimator;
 
 public class Doca {
 

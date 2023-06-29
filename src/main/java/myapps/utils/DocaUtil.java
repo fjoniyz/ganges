@@ -1,4 +1,4 @@
-package myapps.util;
+package myapps.utils;
 
 import com.ganges.lib.castleguard.Item;
 import org.apache.commons.lang3.Range;

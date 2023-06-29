@@ -1,4 +1,4 @@
-package myapps.util;
+package myapps.utils;
 
 import org.junit.Test;
 
