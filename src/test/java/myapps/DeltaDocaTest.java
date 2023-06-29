@@ -53,14 +53,14 @@ public class DeltaDocaTest {
             this.randomHeader2[i] = temp2;
         }
 
-        this.doca = new Doca(0.01, 0.7, 50, 1, false);
+        this.doca = new Doca(0.5, 0.7, 50, 10, false);
     }
 
     @Test
     public void testAddFromNormalDistToDomain() {
 
         for (int i = 0; i < normalHeader1.length; i++) {
-            double[][] X = new double[][]{new double[]{1.0, normalHeader1[i]}, new double[]{2.0, normalHeader2[i]}};
+            double[][] X = new double[][]{new double[]{normalHeader1[i]}, new double[]{normalHeader2[i]}};
             doca.addToDomain(X);
         }
     }
@@ -68,7 +68,7 @@ public class DeltaDocaTest {
     @Test
     public void testAddFromRandomDistToDomain() {
         for (int i = 0; i < randomHeader1.length; i++) {
-            double[][] X = new double[][]{new double[]{1.0, randomHeader1[i]}, new double[]{2.0, randomHeader2[i]}};
+            double[][] X = new double[][]{new double[]{randomHeader1[i]}, new double[]{randomHeader2[i]}};
             doca.addToDomain(X);
         }
     }
@@ -76,7 +76,7 @@ public class DeltaDocaTest {
     @Test
     public void testAddFromRandomDistToDeltaDoca() {
         for (int i = 0; i < randomHeader1.length; i++) {
-            double[][] X = new double[][]{new double[]{1.0, randomHeader1[i]}, new double[]{2.0, randomHeader2[i]}};
+            double[][] X = new double[][]{new double[]{randomHeader1[i]}, new double[]{randomHeader2[i]}};
             doca.addTuple(X);
         }
     }
@@ -84,7 +84,7 @@ public class DeltaDocaTest {
     @Test
     public void testAddFromNormalDistToDeltaDoca() {
         for (int i = 0; i < randomHeader1.length; i++) {
-            double[][] X = new double[][]{new double[]{1.0, randomHeader1[i]}, new double[]{2.0, randomHeader2[i]}};
+            double[][] X = new double[][]{new double[]{randomHeader1[i]}, new double[]{randomHeader2[i]}};
             doca.addTuple(X);
         }
     }
