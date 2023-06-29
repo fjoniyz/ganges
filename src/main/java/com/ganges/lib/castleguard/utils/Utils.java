@@ -9,7 +9,7 @@ public class Utils {
   private static Random random;
 
   public Utils() {
-    random = new Random();
+    this.random = new Random();
   }
 
   public static Range<Float> updateRange(Range<Float> range, float newVal) {
