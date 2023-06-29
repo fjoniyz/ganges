@@ -1,6 +1,7 @@
 package myapps.util;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 
@@ -17,11 +18,13 @@ public class GreenwaldKhannaQuantileEstimator {
         private final double value; // Observation v[i]
         private int gap; // g[i] = rMin(v[i]) - rMin(v[i - 1])
         private int delta; // delta[i] = rMax(v[i]) - rMin(v[i])
+        private List<Double> item;
 
-        public Tuple(double value, int gap, int delta) {
+        public Tuple(double value, int gap, int delta, List<Double> item) {
             this.value = value;
             this.gap = gap;
             this.delta = delta;
+            this.item = item;
         }
 
         public double getValue() {
@@ -35,6 +38,10 @@ public class GreenwaldKhannaQuantileEstimator {
         public int getDelta() {
             return delta;
         }
+
+        public List<Double> getItem() {
+            return item;
+        }
     }
 
     private List<Tuple> tuples;
@@ -44,7 +51,8 @@ public class GreenwaldKhannaQuantileEstimator {
 
     /***
      *
-     * @param epsilon - the desired accuracy of the quantile estimation
+     * @param epsilon - desired accuracy of the quantile estimation, the smaller the epsilon,
+     *                the more accurate the estimation
      */
     public GreenwaldKhannaQuantileEstimator(double epsilon) {
         this.epsilon = epsilon;
@@ -53,8 +61,41 @@ public class GreenwaldKhannaQuantileEstimator {
         this.observedElements = 0;
     }
 
+    public List<Tuple> getTuples() {
+        return tuples;
+    }
+
+    public List<List<Double>> getDomain() {
+        List<List<Double>> domain = new ArrayList<>();
+        for (Tuple t : tuples) {
+            domain.add(t.getItem());
+        }
+        return domain;
+    }
+
+    public void add(double[] v, List<List<Double>> item) {
+        for (int i = 0; i < v.length; i++) {
+            add(v[i], item.get(i));
+        }
+    }
+
     public void add(double v) {
-        Tuple t = new Tuple(v, 1, (int) Math.floor(2.0 * this.epsilon * observedElements));
+        Tuple t = new Tuple(v, 1, (int) Math.floor(2.0 * this.epsilon * observedElements), null);
+        int i = getInsertIndex(t);
+        if (i == 0 || i == this.tuples.size()) {
+            t.delta = 0;
+        }
+
+        this.tuples.add(i, t);
+        this.observedElements++;
+
+        if (this.observedElements % this.compressingInterval == 0) {
+            compress();
+        }
+    }
+
+    public void add(double v, List<Double> item) {
+        Tuple t = new Tuple(v, 1, (int) Math.floor(2.0 * this.epsilon * observedElements), item);
         int i = getInsertIndex(t);
         if (i == 0 || i == this.tuples.size()) {
             t.delta = 0;
@@ -92,7 +133,7 @@ public class GreenwaldKhannaQuantileEstimator {
         return -(low + 1); // key not found
     }
 
-    public double getQuantile(double p) {
+    public List<Double> getQuantile(double p) {
         if (this.tuples.isEmpty()) {
             throw new IllegalStateException("Sequence contains no elements");
         }
@@ -119,7 +160,7 @@ public class GreenwaldKhannaQuantileEstimator {
             throw new IllegalStateException("Failed to find the requested quantile");
         }
 
-        return this.tuples.get(bestIndex).getValue();
+        return Arrays.asList(this.tuples.get(bestIndex).getValue(), (double) bestIndex);
     }
 
     public void compress() {
