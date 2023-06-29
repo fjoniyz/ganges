@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-
+from random import sample
+from numpy.random import normal
 @dataclass
 class TaskSimEvCharging:
     min_start: float
@@ -24,3 +25,12 @@ class EvChargingPlan:
         self.demand = demand
         self.mdemand = mdemand
         self.power = power
+
+class Normal:
+    # TODO: find configuration of Normal Distribution
+    def __init__(self, number_one: float, number_two: float) -> None:
+        self.distribution = normal(number_one, number_two)
+    
+    def sample(self, number: int) -> list:
+        return sample(self.distribution, number)
+        

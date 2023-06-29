@@ -1,8 +1,8 @@
 from pandas import Series, Timestamp, DataFrame, Timedelta, date_range
 from numpy import array, zeros, concatenate
-from random import seed, choices, sample
+from random import seed, choices
 from math import ceil
-from benchmarks.help_classes import TaskSimEvCharging, TaskStorage, EvChargingPlan
+from benchmarks.help_classes import TaskSimEvCharging, TaskStorage, EvChargingPlan, Normal
 
 class Prognose:
     def __init__(self) -> None:
