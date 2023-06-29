@@ -80,7 +80,7 @@ public class Doca {
                 this.doca(item, sensitivity, false);
             }
             // TODO: Output expiring clusters from doca output (async)
-            System.out.println("\n\n");
+            System.out.println("\n");
         }
     }
 
@@ -143,7 +143,7 @@ public class Doca {
 
                 this.Vinf = new ArrayList<>();
                 this.Vsup = new ArrayList<>();
-                this.GKQuantileEstimator = new GreenwaldKhannaQuantileEstimator(eps);
+                this.GKQuantileEstimator = new GreenwaldKhannaQuantileEstimator(this.GKQError);
                 return this.stableDomain;
             }
             // remove oldest tuple to remain size of stable domain
@@ -190,12 +190,8 @@ public class Doca {
      * @return List of expired clusters, the list is empty if no cluster expired
      */
     private Cluster onlineClustering(Item tuple) {
-        int numberOfHeaders = tuple.getHeaders().size();
-
-        List<Cluster> expiringClusterList = new ArrayList<>();
-
         // Find best cluster
-        Cluster best_cluster = this.findBestCluster(tuple, this.getAttributeDiff());
+        Cluster best_cluster = this.findBestCluster(tuple, DocaUtil.getAttributeDiff(this.rangeMap));
 
         if (best_cluster == null) {
             // Add new Cluster
@@ -219,7 +215,7 @@ public class Doca {
         }
 
         Cluster expiredCluster;
-        // add tuple to current allowed items
+        // add tuple to currently active items
         if (this.currentItems.size() <= this.delayConstraint) {
             currentItems.add(tuple);
             return null;
@@ -234,9 +230,9 @@ public class Doca {
     /**
      * Find the best cluster for a given data point
      *
-     * @param dataPoint
-     * @param dif
-     * @return
+     * @param dataPoint Data point to be clustered
+     * @param dif Difference of global ranges
+     * @return Best cluster for the data point or null if no fitting cluster was found
      */
     private Cluster findBestCluster(Item dataPoint, HashMap<String, Float> dif) {
         int best_cluster = -1;
@@ -257,6 +253,7 @@ public class Doca {
             enlargement.add(sum);
         }
 
+        // Find minimum enlargement
         double min_enlarge;
         if (enlargement.size() == 0) {
             min_enlarge = Double.POSITIVE_INFINITY;
@@ -264,9 +261,10 @@ public class Doca {
             min_enlarge = enlargement.stream().min(Double::compare).get();
         }
 
+        // Find clusters with minimum enlargement
+        // and Find acceptable clusters (with overall loss <= tau)
         List<Integer> ok_clusters = new ArrayList<>();
         List<Integer> min_clusters = new ArrayList<>();
-
         for (int c = 0; c < clusters.size(); c++) {
             double enl = enlargement.get(c);
             if (enl == min_enlarge) {
@@ -282,11 +280,12 @@ public class Doca {
                 }
             }
         }
-
+        // First try to find a cluster with minimum enlargement and acceptable loss
         if (!ok_clusters.isEmpty()) {
             best_cluster = ok_clusters.stream()
                     .min((c1, c2) -> Integer.compare(clusters.get(c1).getContents().size(), clusters.get(c2).getContents().size()))
                     .orElse(-1);
+        //If no new cluster is allowed, try to find a cluster with minimum enlargement
         } else if (clusters.size() >= beta) {
             best_cluster = min_clusters.stream()
                     .min((c1, c2) -> Integer.compare(clusters.get(c1).getContents().size(), clusters.get(c2).getContents().size()))
@@ -300,9 +299,15 @@ public class Doca {
         }
     }
 
+    /**
+     * Release an expired cluster after pertubation
+     * @param expiredCluster Cluster to be released
+     * @param sensitivity Sensitivity of the pertubation
+     * @return True if the cluster was released, false if not
+     */
     private boolean releaseExpiredCluster(Cluster expiredCluster, float sensitivity) {
         // update values
-        HashMap<String, Float> dif = getAttributeDiff();
+        HashMap<String, Float> dif = DocaUtil.getAttributeDiff(this.rangeMap);
         HashMap<String, Float> dif_cluster = new HashMap<>();
         for (Map.Entry<String, Range<Float>> clusterRange : expiredCluster.getRanges().entrySet()) {
             dif_cluster.put(clusterRange.getKey(), clusterRange.getValue().getMaximum() - clusterRange.getValue().getMinimum());
@@ -311,12 +316,10 @@ public class Doca {
         this.losses.add(loss);
         //TODO: tau should only be calculated from the last m losses
         this.tau = this.losses.stream().mapToDouble(Double::doubleValue).sum() / losses.size();
-
-        //TODO: Check if needed
-        Cluster tempCluster = expiredCluster;
+        // release cluster from list
         this.clusterList.remove(expiredCluster);
 
-        // pertube cluster
+        // pertube cluster items
         HashMap<String, Float> attr = new HashMap<>();
         for (Item item : expiredCluster.getContents()) {
             // Sum up each Attribute
@@ -364,14 +367,6 @@ public class Doca {
         System.out.println("");
 
         return true;
-    }
-
-    private HashMap<String, Float> getAttributeDiff() {
-        HashMap<String, Float> dif = new HashMap<>();
-        for (Map.Entry<String, Range<Float>> attributeRange : this.rangeMap.entrySet()) {
-            dif.put(attributeRange.getKey(), attributeRange.getValue().getMaximum() - attributeRange.getValue().getMinimum());
-        }
-        return dif;
     }
 
     public static double[][] doca(

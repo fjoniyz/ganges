@@ -1,6 +1,7 @@
 package myapps.util;
 
 import com.ganges.lib.castleguard.Item;
+import org.apache.commons.lang3.Range;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -120,6 +121,18 @@ public class DocaUtil {
         double meanOfSquaredDifferences = sumOfSquaredDifferences / size;
 
         return Math.sqrt(meanOfSquaredDifferences);
+    }
+
+    /**
+     * Get the difference between the minimum and maximum value of each attribute
+     * @return HashMap with the attribute name as key and the difference as value
+     */
+    public static HashMap<String, Float> getAttributeDiff(HashMap<String, Range<Float>> rangeMap) {
+        HashMap<String, Float> dif = new HashMap<>();
+        for (Map.Entry<String, Range<Float>> attributeRange : rangeMap.entrySet()) {
+            dif.put(attributeRange.getKey(), attributeRange.getValue().getMaximum() - attributeRange.getValue().getMinimum());
+        }
+        return dif;
     }
 
 
