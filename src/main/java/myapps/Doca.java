@@ -3,34 +3,41 @@ package myapps;
 import java.util.*;
 import java.util.stream.Collectors;
 
+//TODO: Check if ranges have to be update manually
 import com.ganges.lib.castleguard.utils.Utils;
 import com.ganges.lib.castleguard.Cluster;
 import com.ganges.lib.castleguard.Item;
+import myapps.util.DocaUtil;
 import org.apache.commons.lang3.Range;
 import myapps.util.GreenwaldKhannaQuantileEstimator;
 
 public class Doca {
 
-    private double eps;
-    private double delta;
-    private int beta;
-    private boolean inplace;
-    private List<Double> Vinf = new ArrayList<>();
-    private List<Double> Vsup = new ArrayList<>();
+    //-----------Attributes for DELTA Phase----------------//
+    private List<List<Double>> stableDomain;    // List of all items that are part of the stable domain
+    private GreenwaldKhannaQuantileEstimator GKQuantileEstimator;   // GK Quantile Estimator
+    private List<Double> Vinf = new ArrayList<>();  // List of all lower bounds for each attribute/header TODO: Check if ranges have to be correct implemented or change with ranges
+    private List<Double> Vsup = new ArrayList<>();  // List of all upper bounds for each attribute/header
+    private double delta;   // publishing rate [0,1], 0 means no publishing
 
-    // tolerance parameter for domain building
-    private final double LAMBDA = 0.15;
+    //-----------Attributes for DOCA Phase----------------//
+    private List<Cluster> clusterList;  // List of all current active clusters
+    private HashMap<String, Range<Float>> rangeMap = new HashMap<>();    // List of all ranges for each attribute/header
+    private List<Item> currentItems = new ArrayList<>();    // List of all current items (bound by delay constraint)
 
-    // number of tuples that have to be collected before a phase begins with checking the release requirements
-    private int delayConstraint;
-    private List<List<Double>> stableDomain;
-    private GreenwaldKhannaQuantileEstimator GKQuantileEstimator;
-    private final double GKQError = 0.02;
-
+    //-----------Parameters for DELTA Phase----------------//
+    private final double GKQError = 0.02;   // Error of the GK Quantile Estimator
     // could be potentially also just used as lower bound (if domains wont get stable)
-    private int sizeOfStableDomain = 200;
-    private double tau;
-    private List<Cluster> clusterList;
+    private int sizeOfStableDomain = 200;   // Size that has to be reached before release conditions for stable Domain are checked
+    private final double LAMBDA = 0.15;      // tolerance parameter for domain building
+
+    //-----------Parameters for DOCA Phase----------------//
+    private double eps; // privacy budget
+    private final int beta;   // maximum number of clusters that can be stored
+    private boolean inplace;
+    private final int delayConstraint;    // number of tuples that have to be collected before a phase begins with checking the release requirements
+    private double tau; // average loss of last M expired clusters
+    private List<Double> losses = new ArrayList<>();      // Losses to use when calculating tau
 
 
     public Doca(double eps, double delta, int delayConstraint, int beta, boolean inplace) {
@@ -45,45 +52,6 @@ public class Doca {
         this.clusterList = new ArrayList<>();
     }
 
-    public static double getMax(double[][] X) {
-        double max = Double.NEGATIVE_INFINITY;
-        for (double[] row : X) {
-            for (double value : row) {
-                max = Math.max(max, value);
-            }
-        }
-        return max;
-    }
-
-    public static double getMin(double[][] X) {
-        double min = Double.POSITIVE_INFINITY;
-        for (double[] row : X) {
-            for (double value : row) {
-                min = Math.min(min, value);
-            }
-        }
-        return min;
-    }
-
-    /**
-     * @param a,b arrays of double which need to get divided element by element(have to be the same length)
-     * @return an array which includes either 0 or a[i]/b[i]
-     */
-    public static double[] divisionWith0(double[] a, double[] b) {
-        double[] result = new double[a.length];
-        for (int i = 0; i < a.length; i++) {
-            result[i] = (b[i] != 0) ? a[i] / b[i] : 0;
-        }
-        return result;
-    }
-
-    public static double getSumOfElementsInArray(double[] values) {
-        double sum = 0;
-        for (double value : values) {
-            sum += value;
-        }
-        return sum;
-    }
 
     /**
      * Added Tuple gets either suppressed or released to the DOCA Phase
@@ -93,7 +61,7 @@ public class Doca {
     public void addTuple(double[][] X) {
         List<List<Double>> domain = this.addToDomain(X);
         if (domain != null) {
-            List<Item> itemList = dataPointsToItems(domain);
+            List<Item> itemList = DocaUtil.dataPointsToItems(domain);
 
             // calculate sensitivity
             List<Float> firstElem = new ArrayList<>(itemList.get(0).getData().values());
@@ -108,7 +76,10 @@ public class Doca {
             System.out.println("Sensitivity: " + sensitivity);
             System.out.println("Domain Size: " + itemList.size());
 
-            this.doca(itemList, sensitivity, false);
+            for (Item item : itemList) {
+                this.doca(item, sensitivity, false);
+            }
+            // TODO: Output expiring clusters from doca output (async)
             System.out.println("\n\n");
         }
     }
@@ -148,8 +119,8 @@ public class Doca {
         // Check if domain is big enough
         if (Vinf.size() == sizeOfStableDomain && Vsup.size() == sizeOfStableDomain) {
 
-            double stdVinf = calculateStandardDeviation(Vinf);
-            double stdVsup = calculateStandardDeviation(Vsup);
+            double stdVinf = DocaUtil.calculateStandardDeviation(Vinf);
+            double stdVsup = DocaUtil.calculateStandardDeviation(Vsup);
 
             double meanVinf = Vinf.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
             double meanVsup = Vsup.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
@@ -168,7 +139,7 @@ public class Doca {
 
                 List<List<Double>> domain = this.GKQuantileEstimator.getDomain();
                 this.stableDomain = domain.subList(estQuantilInf.get(1).intValue(), estQuantilSup.get(1).intValue());
-                ;
+
 
                 this.Vinf = new ArrayList<>();
                 this.Vsup = new ArrayList<>();
@@ -183,175 +154,81 @@ public class Doca {
     }
 
     /**
-     * Calculates the standard deviation of a list of numbers
+     * Adds a Tuple to the domain and checks if it is stable.
+     * if domain is stable, it will be released
      *
-     * @param numbers list of numbers from which the standard deviation should be calculated
-     * @return standard deviation of the list of numbers
+     * @param dataTuple   Tuple to be added
+     * @param sensitivity sensitivity of the tuple
+     * @return the domain if it is stable, otherwise null
      */
-    private double calculateStandardDeviation(List<Double> numbers) {
-        int size = numbers.size();
-        if (size == 0) {
-            throw new IllegalArgumentException("List cannot be empty.");
+    protected List<Item> doca(Item dataTuple, float sensitivity, boolean inplace) {
+
+        // Add tuple to best cluster and return expired clusters if any
+        Cluster expiringCluster = this.onlineClustering(dataTuple);
+
+        // Release Cluster if expired
+        if (expiringCluster != null) {
+            releaseExpiredCluster(expiringCluster, sensitivity);
         }
-
-        double mean = numbers.stream()
-                .mapToDouble(Double::doubleValue)
-                .average()
-                .orElse(0.0);
-
-        double sumOfSquaredDifferences = numbers.stream()
-                .mapToDouble(number -> Math.pow(number - mean, 2))
-                .sum();
-
-        double meanOfSquaredDifferences = sumOfSquaredDifferences / size;
-
-        return Math.sqrt(meanOfSquaredDifferences);
-    }
-
-    private List<Item> dataPointsToItems(List<List<Double>> dataSet) {
-        List<Item> items = new ArrayList<>();
-        int i = 0;
-        for (List<Double> dataPoint : dataSet) {
-            int attrIndex = 0;
-            HashMap<String, Float> attributeValue = new HashMap<>();
-            for (double attr : dataPoint) {
-                attributeValue.put(String.valueOf(attrIndex), (float) attr);
-                attrIndex++;
-            }
-            Item item = new Item(attributeValue, new ArrayList<>(attributeValue.keySet()), i);
-            items.add(item);
-            i++;
-        }
-        return items;
-    }
-
-    protected List<Item> doca(List<Item> dataArr, float sensitivity, boolean inplace) {
-        // Create Cluster
-        List<Cluster> expiringClusters = this.onlineClustering(dataArr);
-
-        int numAttributes = dataArr.get(0).getHeaders().size();
 
         // Create Output structure
         List<Item> output;
-        if (inplace) {
-            output = dataArr;
-        } else {
-            output = new ArrayList<>();
-        }
+        output = new ArrayList<>();
+        //if (inplace != null) {
+        //    output = inplace;
+        //} else {
+        //    output = new ArrayList<>();
+        //}
 
-
-        for (Cluster cluster : expiringClusters) {
-            float[] attr = new float[numAttributes];
-            for (Item item : cluster.getContents()) {
-                // add mean of item to sum
-                for (int i = 0; i < numAttributes; i++) {
-                    attr[i] += item.getData().get(Integer.toString(i));
-                }
-            }
-            float[] mean = new float[numAttributes];
-            for (int i = 0; i < numAttributes; i++) {
-                mean[i] = attr[i] / cluster.getContents().size();
-            }
-            double scale = (sensitivity / (cluster.getContents().size() * eps));
-            double[] laplace = new double[numAttributes];
-            for (int j = 0; j < numAttributes; j++) {
-                laplace[j] = Math.random() - 0.5;
-            }
-            List<Float> noise = new ArrayList<>();
-
-            for (int j = 0; j < numAttributes; j++) {
-                noise.add((float) (mean[j] + scale * laplace[j]));
-            }
-            cluster.pertubeCluster(noise);
-            output.addAll(cluster.getContents());
-        }
         return output;
     }
 
     /**
      * Online Clustering Algorithm
      *
-     * @param dataArr Data Set to be clustered
-     * @return
+     * @param tuple Data Tuple to be clustered
+     * @return List of expired clusters, the list is empty if no cluster expired
      */
-    private List<Cluster> onlineClustering(List<Item> dataArr) {
-        int numberOfHeaders = dataArr.get(0).getHeaders().size();
-        int numInstances = dataArr.size();
+    private Cluster onlineClustering(Item tuple) {
+        int numberOfHeaders = tuple.getHeaders().size();
 
-        List<Cluster> clusters = new ArrayList<>();
         List<Cluster> expiringClusterList = new ArrayList<>();
 
+        // Find best cluster
+        Cluster best_cluster = this.findBestCluster(tuple, this.getAttributeDiff());
 
-        // Global Attribute Minimum/Maximum
-        double[] mn = new double[numberOfHeaders];
-        double[] mx = new double[numberOfHeaders];
-        for (int i = 0; i < numberOfHeaders; i++) {
-            mn[i] = Double.POSITIVE_INFINITY;
-            mx[i] = Double.NEGATIVE_INFINITY;
+        if (best_cluster == null) {
+            // Add new Cluster
+            Cluster new_cluster = new Cluster(tuple.getHeaders());
+            new_cluster.insert(tuple);
+            this.clusterList.add(new_cluster);
+
+        } else {
+            // Add tuple to cluster
+            best_cluster.insert(tuple);
+
         }
 
-        // Losses saved for tau
-        List<Double> losses = new ArrayList<>();
-
-        int clock = 0;
-        for (Item dataPoint : dataArr) {
-            // Update min/max
-            // TODO: Potentially unsafe when entrySet shuffles -> use Map for max and mins
-            int header = 0;
-            for (Map.Entry<String, Float> entry : dataPoint.getData().entrySet()) {
-                mn[header] = Math.min(mn[header], entry.getValue());
-                mx[header] = Math.max(mx[header], entry.getValue());
-            }
-
-            double[] dif = new double[numberOfHeaders];
-            for (int i = 0; i < numberOfHeaders; i++) {
-                dif[i] = mx[i] - mn[i];
-            }
-
-            // Find best cluster
-            Cluster best_cluster = this.findBestCluster(dataPoint, dif);
-
-            if (best_cluster == null) {
-                //List<Range<Float>> newRange = dataPoint.getData().values().stream().map(Range::is).collect(Collectors.toList());
-
-                // Add new Cluster
-                Cluster new_cluster = new Cluster(dataPoint.getHeaders());
-                new_cluster.insert(dataPoint);
-                this.clusterList.add(new_cluster);
+        // update global ranges
+        for (String header : tuple.getHeaders()) {
+            if (this.rangeMap.containsKey(header)) {
+                Utils.updateRange(this.rangeMap.get(header), tuple.getData().get(header));
             } else {
-                // Add tuple to cluster
-                best_cluster.insert(dataPoint);
+                this.rangeMap.put(header, Range.is(tuple.getData().get(header)));
             }
-
-            //Check if cluster contains element that expires
-            for (Cluster cluster : this.clusterList) {
-                List<Float> timestamps = cluster.getContents().stream().map(Item::getPid).collect(Collectors.toList());
-                if (timestamps.contains(clock - (float) delayConstraint)) {
-                    expiringClusterList.add(cluster);
-                }
-            }
-
-            //assert expiringClusterList.size() <= 1
-            //        : "Every datapoint should only be able to be in one cluster!?";
-            for (Cluster expiringC : expiringClusterList) {
-                double[] dif_cluster = new double[numberOfHeaders];
-                for (int i = 0; i < numberOfHeaders; i++) {
-                    dif_cluster[i] = expiringC.getRanges().get(Integer.toString(i)).getMaximum() - expiringC.getRanges().get(Integer.toString(i)).getMinimum();
-                }
-                double loss = getSumOfElementsInArray(divisionWith0(dif_cluster, dif)) / numberOfHeaders;
-                losses.add(loss);
-                //TODO: tau should only be calculated from the last m losses
-                this.tau = losses.stream().mapToDouble(Double::doubleValue).sum() / losses.size();
-
-
-                this.clusterList.remove(expiringC);
-            }
-            clock++;
         }
 
-        System.out.println("Number of Clusters: " + expiringClusterList.size());
-        System.out.println("Number of Instances: " + numInstances);
-        return expiringClusterList;
+        Cluster expiredCluster;
+        // add tuple to current allowed items
+        if (this.currentItems.size() <= this.delayConstraint) {
+            currentItems.add(tuple);
+            return null;
+        } else {
+            Item expiredTuple = currentItems.remove(0);
+            currentItems.add(tuple);
+            expiredCluster = expiredTuple.getCluster();
+        }
+        return expiredCluster;
     }
 
     /**
@@ -361,7 +238,7 @@ public class Doca {
      * @param dif
      * @return
      */
-    private Cluster findBestCluster(Item dataPoint, double[] dif) {
+    private Cluster findBestCluster(Item dataPoint, HashMap<String, Float> dif) {
         int best_cluster = -1;
         int numAttributes = dataPoint.getHeaders().size();
         List<Cluster> clusters = this.clusterList;
@@ -369,17 +246,13 @@ public class Doca {
 
         // Calculate enlargement (the value is not yet divided by the number of attributes!)
         List<Double> enlargement = new ArrayList<>();
-        for (int c = 0; c < clusters.size(); c++) {
+        for (Cluster cluster : clusters) {
             double sum = 0;
-            //for (int i = 0; i < numAttributes; i++) {
-            //    sum += Math.max(0, dataPoint.getData().get(String.valueOf(i)) - clusters.get(i).getRanges().get(String.valueOf(i)).getMaximum()
-            //            - Math.min(0, dataPoint.getData().get(String.valueOf(i)) - clusters.get(i).getRanges().get(String.valueOf(i)).getMinimum()));
-            //}
             for (Map.Entry<String, Float> entry : dataPoint.getData().entrySet()) {
                 String key = entry.getKey();
                 Float value = entry.getValue();
-                sum += Math.max(0, value - clusters.get(c).getRanges().get(key).getMaximum())
-                        - Math.min(0, value - clusters.get(c).getRanges().get(key).getMinimum());
+                sum += Math.max(0, value - cluster.getRanges().get(key).getMaximum())
+                        - Math.min(0, value - cluster.getRanges().get(key).getMinimum());
             }
             enlargement.add(sum);
         }
@@ -399,13 +272,11 @@ public class Doca {
             if (enl == min_enlarge) {
                 min_clusters.add(c);
 
-                double[] dif_cluster = new double[clusters.get(c).getRanges().keySet().size()];
-                for (Range<Float> attrRange : clusters.get(c).getRanges().values()) {
-                    float upper = attrRange.getMaximum();
-                    float lower = attrRange.getMinimum();
-                    dif_cluster[c] = upper - lower;
+                HashMap<String, Float> dif_cluster = new HashMap<>();
+                for (Map.Entry<String, Range<Float>> clusterRange : clusters.get(c).getRanges().entrySet()) {
+                    dif_cluster.put(clusterRange.getKey(), clusterRange.getValue().getMaximum() - clusterRange.getValue().getMinimum());
                 }
-                double overall_loss = (enl + getSumOfElementsInArray(divisionWith0(dif_cluster, dif))) / numAttributes;
+                double overall_loss = (enl + DocaUtil.divisionWith0(dif_cluster, dif).values().stream().reduce(0f,Float::sum) / numAttributes);
                 if (overall_loss <= this.tau) {
                     ok_clusters.add(c);
                 }
@@ -429,12 +300,86 @@ public class Doca {
         }
     }
 
+    private boolean releaseExpiredCluster(Cluster expiredCluster, float sensitivity) {
+        // update values
+        HashMap<String, Float> dif = getAttributeDiff();
+        HashMap<String, Float> dif_cluster = new HashMap<>();
+        for (Map.Entry<String, Range<Float>> clusterRange : expiredCluster.getRanges().entrySet()) {
+            dif_cluster.put(clusterRange.getKey(), clusterRange.getValue().getMaximum() - clusterRange.getValue().getMinimum());
+        }
+        double loss = DocaUtil.divisionWith0(dif_cluster, dif).values().stream().reduce(0f,Float::sum) / (float) dif_cluster.keySet().size();
+        this.losses.add(loss);
+        //TODO: tau should only be calculated from the last m losses
+        this.tau = this.losses.stream().mapToDouble(Double::doubleValue).sum() / losses.size();
+
+        //TODO: Check if needed
+        Cluster tempCluster = expiredCluster;
+        this.clusterList.remove(expiredCluster);
+
+        // pertube cluster
+        HashMap<String, Float> attr = new HashMap<>();
+        for (Item item : expiredCluster.getContents()) {
+            // Sum up each Attribute
+            for (String header: item.getHeaders()) {
+                if (!attr.containsKey(header)) {
+                    attr.put(header, 0f);
+                }
+                attr.put(header, attr.get(header) + item.getData().get(header));
+            }
+        }
+        // Calculate mean of Attributes
+        HashMap<String, Float> mean = new HashMap<>();
+        for (Map.Entry<String, Float> attrEntry: attr.entrySet()) {
+            mean.put(attrEntry.getKey(), attrEntry.getValue() / expiredCluster.getContents().size());
+        }
+        double scale = (sensitivity / (expiredCluster.getContents().size() * eps));
+        HashMap<String, Float> laplace = new HashMap<>();
+        for (String attribute : mean.keySet()) {
+            laplace.put(attribute, (float) (Math.random() - 0.5));
+        }
+        List<Float> noise = new ArrayList<>();
+
+        for (String attribute : mean.keySet()) {
+            noise.add((float) (mean.get(attribute) + scale * laplace.get(attribute)));
+        }
+
+        List<Item> originalItems = new ArrayList<>(expiredCluster.getContents());
+        List<Float> originalValues = new ArrayList<>();
+        for (Item i : originalItems) {
+            for (Map.Entry<String, Float> e : i.getData().entrySet()) {
+                originalValues.add(e.getValue());
+            }
+        }
+
+        expiredCluster.pertubeCluster(noise);
+
+
+        int sda = 0;
+        for (Item item : expiredCluster.getContents()) {
+
+            System.out.println("Anonymized: (" + new ArrayList<>(item.getData().values()).get(0) + ", " + new ArrayList<>(item.getData().values()).get(1) + ")");
+            System.out.println( "Original: (" + originalValues.get(sda) + ", " + originalValues.get(sda + 1) + ")\n");
+            sda += 2;
+        }
+        System.out.println("");
+
+        return true;
+    }
+
+    private HashMap<String, Float> getAttributeDiff() {
+        HashMap<String, Float> dif = new HashMap<>();
+        for (Map.Entry<String, Range<Float>> attributeRange : this.rangeMap.entrySet()) {
+            dif.put(attributeRange.getKey(), attributeRange.getValue().getMaximum() - attributeRange.getValue().getMinimum());
+        }
+        return dif;
+    }
+
     public static double[][] doca(
             double[][] X, double eps, int delay_constraint, int beta, boolean inplace) {
         int num_instances = X.length;
         int num_attributes = X[0].length;
 
-        double sensitivity = Math.abs((getMax(X) - getMin(X)));
+        double sensitivity = Math.abs((DocaUtil.getMax(X) - DocaUtil.getMin(X)));
 
         List<List<Integer>> clusters = new ArrayList<>();
         List<List<Integer>> clusters_final = new ArrayList<>();
@@ -508,7 +453,7 @@ public class Doca {
                     double enl = enlargement[c];
                     if (enl == min_enlarge) {
                         min_clusters.add(c);
-                        double overall_loss = (enl + getSumOfElementsInArray(divisionWith0(mx_c.get(c), dif))) / num_attributes;
+                        double overall_loss = (enl + DocaUtil.getSumOfElementsInArray(DocaUtil.divisionWith0(mx_c.get(c), dif))) / num_attributes;
                         if (overall_loss <= tau) {
                             ok_clusters.add(c);
                         }
@@ -563,7 +508,7 @@ public class Doca {
                 for (int i = 0; i < num_attributes; i++) {
                     dif_cluster[i] = mx_c.get(c)[i] - mn_c.get(c)[i];
                 }
-                double loss = getSumOfElementsInArray(divisionWith0(dif_cluster, dif)) / num_attributes;
+                double loss = DocaUtil.getSumOfElementsInArray(DocaUtil.divisionWith0(dif_cluster, dif)) / num_attributes;
                 losses.add(loss);
                 clusters_final.add(clusters.get(c));
                 clusters.remove(c);
