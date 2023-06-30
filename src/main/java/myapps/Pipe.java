@@ -67,36 +67,36 @@ public class Pipe {
         for (String field : fields) {
             switch (field) {
                 case "urbanisation_level":
-                    System.out.println("urb level: " + chargingStationMessage.getUrbanisation_level());
-                    values.add((double) chargingStationMessage.getUrbanisation_level());
+                    System.out.println("urb level: " + chargingStationMessage.getUrbanisationLevel());
+                    values.add((double) chargingStationMessage.getUrbanisationLevel());
                     break;
                 case "number_loading_stations":
-                    System.out.println("number load stat: " + chargingStationMessage.getNumber_loading_stations());
-                    values.add((double) chargingStationMessage.getNumber_loading_stations());
+                    System.out.println("number load stat: " + chargingStationMessage.getNumberLoadingStations());
+                    values.add((double) chargingStationMessage.getNumberLoadingStations());
                     break;
                 case "number_parking_spaces":
-                    System.out.println("parking spaces" + chargingStationMessage.getNumber_parking_spaces());
-                    values.add((double) chargingStationMessage.getNumber_parking_spaces());
+                    System.out.println("parking spaces" + chargingStationMessage.getNumberParkingSpaces());
+                    values.add((double) chargingStationMessage.getNumberParkingSpaces());
                     break;
                 case "start_time_loading":
-                    System.out.println("loading time start" + chargingStationMessage.getStart_time_loading());
-                    values.add((double) chargingStationMessage.getStart_time_loading());
+                    System.out.println("loading time start" + chargingStationMessage.getStartTimeLoading());
+                    values.add((double) chargingStationMessage.getStartTimeLoading());
                     break;
                 case "end_time_loading":
-                    System.out.println("load time end" + chargingStationMessage.getEnd_time_loading());
-                    values.add((double) chargingStationMessage.getEnd_time_loading());
+                    System.out.println("load time end" + chargingStationMessage.getEndTimeLoading());
+                    values.add((double) chargingStationMessage.getEndTimeLoading());
                     break;
                 case "loading_time":
-                    System.out.println("loading time" + chargingStationMessage.getLoading_time());
-                    values.add((double) chargingStationMessage.getLoading_time());
+                    System.out.println("loading time" + chargingStationMessage.getLoadingTime());
+                    values.add((double) chargingStationMessage.getLoadingTime());
                     break;
                 case "kwh":
                     System.out.println("kwh: " + chargingStationMessage.getKwh());
                     values.add((double) chargingStationMessage.getKwh());
                     break;
                 case "loading_potential":
-                    System.out.println("load potential " + chargingStationMessage.getLoading_potential());
-                    values.add((double) chargingStationMessage.getLoading_potential());
+                    System.out.println("load potential " + chargingStationMessage.getLoadingPotential());
+                    values.add((double) chargingStationMessage.getLoadingPotential());
                     break;
                 default:
                     System.out.println("Invalid field in config file: " + field);

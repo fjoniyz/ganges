@@ -10,16 +10,16 @@ import lombok.Data;
 @JsonRootName("chargingStationMessage")
 @Data
 public class ChargingStationMessage implements Serializable {
-    private UUID ae_session_id;
+    private UUID aeSessionId;
     private String building_type;
-    private float urbanisation_level;
-    private int number_loading_stations;
-    private int number_parking_spaces;
-    private long start_time_loading;
-    private long end_time_loading;
-    private int loading_time;
+    private float urbanisationLevel;
+    private int numberLoadingStations;
+    private int numberParkingSpaces;
+    private long startTimeLoading;
+    private long endTimeLoading;
+    private int loadingTime;
     private float kwh;
-    private int loading_potential;
+    private int loadingPotential;
 
     @JsonCreator
     public ChargingStationMessage(@JsonProperty("ae_session_id")UUID ae_session_id, @JsonProperty("building_type") String building_type,
@@ -27,15 +27,15 @@ public class ChargingStationMessage implements Serializable {
                                   @JsonProperty("number_parking_spaces") int number_parking_spaces, @JsonProperty("start_time_loading")long start_time_loading,
                                   @JsonProperty("end_time_loading") long end_time_loading, @JsonProperty("loading_time") int loading_time,
                                   @JsonProperty("kwh") float kwh, @JsonProperty("loading_potential")int loading_potential){
-        this.ae_session_id = ae_session_id;
+        this.aeSessionId = ae_session_id;
         this.building_type = building_type;
-        this.urbanisation_level = urbanisation_level;
-        this.number_loading_stations = number_loading_stations;
-        this.number_parking_spaces = number_parking_spaces;
-        this.start_time_loading = start_time_loading;
-        this.end_time_loading = end_time_loading;
-        this.loading_time = loading_time;
+        this.urbanisationLevel = urbanisation_level;
+        this.numberLoadingStations = number_loading_stations;
+        this.numberParkingSpaces = number_parking_spaces;
+        this.startTimeLoading = start_time_loading;
+        this.endTimeLoading = end_time_loading;
+        this.loadingTime = loading_time;
         this.kwh = kwh;
-        this.loading_potential = loading_potential;
+        this.loadingPotential = loading_potential;
     }
 }
