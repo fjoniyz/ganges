@@ -1,13 +1,7 @@
 package myapps;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
-import java.io.*;
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVParser;
-import org.apache.commons.csv.CSVRecord;
 
 public class Doca {
 
