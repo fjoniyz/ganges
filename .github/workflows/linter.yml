@@ -13,3 +13,4 @@ jobs:
         uses: github/super-linter@v5
         env:
           VALIDATE_ALL_CODEBASE: true
+          JAVA_FILE_NAME: checkstyle_checks.xml
