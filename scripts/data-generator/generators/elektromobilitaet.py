@@ -9,6 +9,7 @@ from faker import Faker
 import datetime
 
 def generate_station_rows() -> Iterable:
+    fake = Faker()
     for station in range(100):
         ae_session_id = uuid.uuid4()
         building_type = random.choice(["Residental", 'Commercial', "Healthcare", "Educational"])
@@ -35,7 +36,6 @@ if __name__ == "__main__":
     """ Writes into a electromobilitydata.csv file with random secondly 
     Endery Consumption we added information about which apartment is affected"""
 
-    fake = Faker()
     with open(os.path.dirname(os.path.realpath(__file__)) + '/../data/emobilitydata.csv', 'w', newline='') as file:
         writer = csv.writer(file)
         field = get_fields_names()
