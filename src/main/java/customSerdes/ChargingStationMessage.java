@@ -11,7 +11,7 @@ import lombok.Data;
 @Data
 public class ChargingStationMessage implements Serializable {
     private UUID aeSessionId;
-    private String building_type;
+    private String buildingType;
     private float urbanisationLevel;
     private int numberLoadingStations;
     private int numberParkingSpaces;
@@ -28,7 +28,7 @@ public class ChargingStationMessage implements Serializable {
                                   @JsonProperty("end_time_loading") long end_time_loading, @JsonProperty("loading_time") int loading_time,
                                   @JsonProperty("kwh") float kwh, @JsonProperty("loading_potential")int loading_potential){
         this.aeSessionId = ae_session_id;
-        this.building_type = building_type;
+        this.buildingType = building_type;
         this.urbanisationLevel = urbanisation_level;
         this.numberLoadingStations = number_loading_stations;
         this.numberParkingSpaces = number_parking_spaces;
