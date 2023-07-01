@@ -14,3 +14,4 @@ jobs:
         env:
           VALIDATE_ALL_CODEBASE: true
           JAVA_FILE_NAME: checkstyle_checks.xml
+          GITHUB_TOKEN: ${{ secrets.token_secret }}
