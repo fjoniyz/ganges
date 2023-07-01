@@ -1,111 +1,139 @@
 package myapps;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ThreadLocalRandom;
 
+import customSerdes.ChargingStationDeserializer;
+import customSerdes.ChargingStationMessage;
+import customSerdes.ChargingStationSerializer;
+import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.*;
+import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KStream;
-import com.lambdaworks.redis.*;
+import org.apache.kafka.streams.kstream.Produced;
 
 import java.util.*;
 
 public class Pipe {
-
-    public static List<String> getKeys(){
-        List<String> result = new ArrayList<>();
-        String userDirectory = System.getProperty("user.dir");
-        System.out.printf("Dir: " + userDirectory);
-        try {
-            Runtime r = Runtime.getRuntime();
-
-            Process p = r.exec(userDirectory + "/getKeys.sh");
-
-            BufferedReader in =
-                    new BufferedReader(new InputStreamReader(p.getInputStream()));
-            String inputLine;
-            while ((inputLine = in.readLine()) != null) {
-                System.out.println(inputLine);
-                result.add(inputLine);
-            }
-            in.close();
-
-        } catch (IOException e) {
-            System.out.println(e);
+    public static String processing(ChargingStationMessage value, DataRepository dataRepository, String[] fields) throws IOException {
+        double[] valuesList = createValuesList(fields, value);
+        StringBuilder valueToSaveInRedis = new StringBuilder();
+        for (double d: valuesList
+        ) {
+            valueToSaveInRedis.append(d).append(",");
         }
+        // Retrieve non-anonymized data from cache
+        dataRepository.saveValue(valueToSaveInRedis.toString());
+        List<String> allSavedValues = dataRepository.getValues();
+
+        // Parse cached strings into double arrays
+        double[][] input = new double[allSavedValues.size()][];
+
+        for (int i = 0; i < allSavedValues.size(); i++) {
+            String[] values = allSavedValues.get(i).split(",");
+            double[] toDouble =
+                    Arrays.stream(values).mapToDouble(Double::parseDouble).toArray();
+
+            input[i] = toDouble;
+        }
+
+        // Anonymization
+        Doca docaInstance = new Doca();
+        double[][] output = docaInstance.anonymize(input);
+        String result = Arrays.deepToString(output);
         return result;
     }
 
-    public static List<String> getValues(List<String> keys, RedisConnection<String, String> connection){
-        List<String> values = new ArrayList<>();
-        for(String key: keys){
-            values.add(connection.get(key));
+    public static String[] getFieldsToAnonymize() throws IOException {
+        String userDirectory = System.getProperty("user.dir");
+        try (InputStream inputStream = Files.newInputStream(Paths.get(userDirectory + "/src/main/resources/doca.properties"))) {
+            Properties properties = new Properties();
+            properties.load(inputStream);
+            String docaFieldsString = properties.getProperty("doca_fields");
+            String[] docaFields = docaFieldsString.split(",");
+            for (String field : docaFields) {
+                System.out.println(field);
+            }
+            return docaFields;
         }
-        return values;
+    }
+
+    public static double[] createValuesList(String[] fields, ChargingStationMessage chargingStationMessage) {
+        List<Double> values = new ArrayList<>();
+        for (String field : fields) {
+            switch (field) {
+                case "urbanisation_level":
+                    System.out.println("urb level: " + chargingStationMessage.getUrbanisationLevel());
+                    values.add((double) chargingStationMessage.getUrbanisationLevel());
+                    break;
+                case "number_loading_stations":
+                    System.out.println("number load stat: " + chargingStationMessage.getNumberLoadingStations());
+                    values.add((double) chargingStationMessage.getNumberLoadingStations());
+                    break;
+                case "number_parking_spaces":
+                    System.out.println("parking spaces" + chargingStationMessage.getNumberParkingSpaces());
+                    values.add((double) chargingStationMessage.getNumberParkingSpaces());
+                    break;
+                case "start_time_loading":
+                    System.out.println("loading time start" + chargingStationMessage.getStartTimeLoading());
+                    values.add((double) chargingStationMessage.getStartTimeLoading());
+                    break;
+                case "end_time_loading":
+                    System.out.println("load time end" + chargingStationMessage.getEndTimeLoading());
+                    values.add((double) chargingStationMessage.getEndTimeLoading());
+                    break;
+                case "loading_time":
+                    System.out.println("loading time" + chargingStationMessage.getLoadingTime());
+                    values.add((double) chargingStationMessage.getLoadingTime());
+                    break;
+                case "kwh":
+                    System.out.println("kwh: " + chargingStationMessage.getKwh());
+                    values.add((double) chargingStationMessage.getKwh());
+                    break;
+                case "loading_potential":
+                    System.out.println("load potential " + chargingStationMessage.getLoadingPotential());
+                    values.add((double) chargingStationMessage.getLoadingPotential());
+                    break;
+                default:
+                    System.out.println("Invalid field in config file: " + field);
+            }
+        }
+        return values.stream().mapToDouble(d -> d).toArray();
     }
 
     public static void main(final String[] args) {
         String userDirectory = System.getProperty("user.dir");
         try (InputStream inputStream = Files.newInputStream(Paths.get(userDirectory + "/src/main/resources/config.properties"))) {
             Properties props = new Properties();
-            RedisClient redisClient = new RedisClient(RedisURI.create("redis://localhost/"));
-            RedisConnection<String, String> connection = redisClient.connect();
-
-
-            final List<double[]> saved = new ArrayList<>();
-            String inputTopic = "input";
+            String inputTopic = "input-t";
             String outputTopic = "output-test";
 
+            ChargingStationSerializer<ChargingStationMessage> chargingStationSerializer = new ChargingStationSerializer<>();
+            ChargingStationDeserializer<ChargingStationMessage> chargingStationDeserializer = new ChargingStationDeserializer<>(ChargingStationMessage.class);
+            Serde<ChargingStationMessage> chargingStationMessageSerde = Serdes.serdeFrom(chargingStationSerializer, chargingStationDeserializer);
+
             props.load(inputStream);
-            props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
-            props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, Serdes.String().getClass());
             props.put(StreamsConfig.METADATA_MAX_AGE_CONFIG, "1000"); // Needed to prevent timeouts during broker startup.
+            props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+            props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, chargingStationMessageSerde.getClass());
 
-            final StreamsBuilder streamsBuilder = new StreamsBuilder();
-            KStream<String, String> src = streamsBuilder.stream(inputTopic);
+            // Create anonymization stream and use it with Kafka
+            StreamsBuilder streamsBuilder = new StreamsBuilder();
+            KStream<String, ChargingStationMessage> src = streamsBuilder.stream(inputTopic, Consumed.with(Serdes.String(), chargingStationMessageSerde));
+            DataRepository dataRepository = new DataRepository();
+            Produced<String, String> produced = Produced.with(Serdes.String(), Serdes.String());
+            String[] fields = getFieldsToAnonymize();
             src.mapValues(value -> {
-                String parsedValue = value.substring(1, value.length() - 1);
-                System.out.println("Parsed values: " + parsedValue);
-                String key = Integer.toString(ThreadLocalRandom.current().nextInt(0, 1000 + 1));
-                connection.set(key, parsedValue);
-                List<String> keys = getKeys();
-                for (String k: keys
-                ) {
-                    System.out.println("key in: " + k);
+                try {
+                    return processing(value, dataRepository, fields);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
                 }
-                List<String> valuesFromRedis = getValues(keys, connection);
-                for(String v: valuesFromRedis){
-                    System.out.println("Value from inside: " + v);
-                }
-                double[][] input = new double[valuesFromRedis.size()][];
-                for (int i = 0; i < valuesFromRedis.size(); i++) {
-                    String[] values = valuesFromRedis.get(i).split(",");
-                    double[] toDouble = Arrays.stream(values)
-                            .mapToDouble(Double::parseDouble)
-                            .toArray();
-                    input[i] = toDouble;
-                }
-                for(double[] element: input){
-                    for(double d : element){
-                        System.out.println("D: " + d);
-                    }
-                    System.out.println();
-                }
-                double[][] output = Doca.doca(input, 99999, 1000, 60, false);
-                System.out.println("Output: " + output);
-                String result = Arrays.deepToString(output);
-                System.out.println("Result: " + result);
-                return result;
-            }).to(outputTopic);
-
-
+            }).to(outputTopic, produced);
             Topology topology = streamsBuilder.build();
 
             try (KafkaStreams streams = new KafkaStreams(topology, props)) {
