@@ -53,7 +53,7 @@ public class DeltaDocaTest {
             this.randomHeader2[i] = temp2;
         }
 
-        this.doca = new Doca(0.5, 0.7, 50, 10, false);
+        this.doca = new Doca(100, 0.7, 100, 60, false);
     }
 
     @Test

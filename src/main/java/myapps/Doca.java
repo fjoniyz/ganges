@@ -1,6 +1,7 @@
 package myapps;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 //TODO: Check if ranges have to be update manually
 import com.ganges.lib.castleguard.utils.Utils;
@@ -9,6 +10,8 @@ import com.ganges.lib.castleguard.Item;
 import myapps.utils.DocaUtil;
 import org.apache.commons.lang3.Range;
 import myapps.utils.GreenwaldKhannaQuantileEstimator;
+import org.apache.commons.math3.distribution.LaplaceDistribution;
+import org.apache.commons.math3.random.JDKRandomGenerator;
 
 public class Doca {
 
@@ -76,9 +79,13 @@ public class Doca {
             System.out.println("Domain Size: " + itemList.size());
 
             for (Item item : itemList) {
-                this.doca(item, sensitivity, false);
+                List<Item> returnItems = this.doca(item, sensitivity, false);
+                if (returnItems != null) {
+                    for (Item items : returnItems) {
+                        System.out.println(items.getData().values());
+                    }
+                }
             }
-            // TODO: Output expiring clusters from doca output (async)
             System.out.println("\n");
         }
     }
@@ -230,7 +237,7 @@ public class Doca {
      * Find the best cluster for a given data point
      *
      * @param dataPoint Data point to be clustered
-     * @param dif Difference of global ranges
+     * @param dif       Difference of global ranges
      * @return Best cluster for the data point or null if no fitting cluster was found
      */
     private Cluster findBestCluster(Item dataPoint, HashMap<String, Float> dif) {
@@ -273,7 +280,7 @@ public class Doca {
                 for (Map.Entry<String, Range<Float>> clusterRange : clusters.get(c).getRanges().entrySet()) {
                     dif_cluster.put(clusterRange.getKey(), clusterRange.getValue().getMaximum() - clusterRange.getValue().getMinimum());
                 }
-                double overall_loss = (enl + DocaUtil.divisionWith0(dif_cluster, dif).values().stream().reduce(0f,Float::sum) / numAttributes);
+                double overall_loss = (enl + DocaUtil.divisionWith0(dif_cluster, dif).values().stream().reduce(0f, Float::sum) / numAttributes);
                 if (overall_loss <= this.tau) {
                     ok_clusters.add(c);
                 }
@@ -284,7 +291,7 @@ public class Doca {
             best_cluster = ok_clusters.stream()
                     .min((c1, c2) -> Integer.compare(clusters.get(c1).getContents().size(), clusters.get(c2).getContents().size()))
                     .orElse(-1);
-        //If no new cluster is allowed, try to find a cluster with minimum enlargement
+            //If no new cluster is allowed, try to find a cluster with minimum enlargement
         } else if (clusters.size() >= beta) {
             best_cluster = min_clusters.stream()
                     .min((c1, c2) -> Integer.compare(clusters.get(c1).getContents().size(), clusters.get(c2).getContents().size()))
@@ -300,8 +307,9 @@ public class Doca {
 
     /**
      * Release an expired cluster after pertubation
+     *
      * @param expiredCluster Cluster to be released
-     * @param sensitivity Sensitivity of the pertubation
+     * @param sensitivity    Sensitivity of the pertubation
      * @return True if the cluster was released, false if not
      */
     private boolean releaseExpiredCluster(Cluster expiredCluster, float sensitivity) {
@@ -311,7 +319,7 @@ public class Doca {
         for (Map.Entry<String, Range<Float>> clusterRange : expiredCluster.getRanges().entrySet()) {
             dif_cluster.put(clusterRange.getKey(), clusterRange.getValue().getMaximum() - clusterRange.getValue().getMinimum());
         }
-        double loss = DocaUtil.divisionWith0(dif_cluster, dif).values().stream().reduce(0f,Float::sum) / (float) dif_cluster.keySet().size();
+        double loss = DocaUtil.divisionWith0(dif_cluster, dif).values().stream().reduce(0f, Float::sum) / (float) dif_cluster.keySet().size();
         this.losses.add(loss);
         //TODO: tau should only be calculated from the last m losses
         this.tau = this.losses.stream().mapToDouble(Double::doubleValue).sum() / losses.size();
@@ -322,7 +330,7 @@ public class Doca {
         HashMap<String, Float> attr = new HashMap<>();
         for (Item item : expiredCluster.getContents()) {
             // Sum up each Attribute
-            for (String header: item.getHeaders()) {
+            for (String header : item.getHeaders()) {
                 if (!attr.containsKey(header)) {
                     attr.put(header, 0f);
                 }
@@ -331,20 +339,35 @@ public class Doca {
         }
         // Calculate mean of Attributes
         HashMap<String, Float> mean = new HashMap<>();
-        for (Map.Entry<String, Float> attrEntry: attr.entrySet()) {
+        for (Map.Entry<String, Float> attrEntry : attr.entrySet()) {
             mean.put(attrEntry.getKey(), attrEntry.getValue() / expiredCluster.getContents().size());
         }
+
+        sensitivity = 100f;
         double scale = (sensitivity / (expiredCluster.getContents().size() * eps));
         HashMap<String, Float> laplace = new HashMap<>();
         for (String attribute : mean.keySet()) {
             laplace.put(attribute, (float) (Math.random() - 0.5));
+
+            JDKRandomGenerator rg = new JDKRandomGenerator();
+            LaplaceDistribution laplaceDistribution = new LaplaceDistribution(rg, 0, scale);
+            float noise = (float) laplaceDistribution.sample();
+            laplace.put(attribute, noise);
         }
         List<Float> noise = new ArrayList<>();
 
         for (String attribute : mean.keySet()) {
-            noise.add((float) (mean.get(attribute) + scale * laplace.get(attribute)));
+            noise.add((float) (scale * laplace.get(attribute)));
         }
 
+        //expiredCluster.getContents().stream().map(Item::getData).collect(Collectors.toList()).stream().filter(data. -> mean.get(item.));
+        for (Item i : expiredCluster.getContents()) {
+            for (Map.Entry<String, Float> entry : i.getData().entrySet()) {
+                entry.setValue(mean.get(entry.getKey()));
+            }
+        }
+
+        // Originale Values - Only for TESTING
         List<Item> originalItems = new ArrayList<>(expiredCluster.getContents());
         List<Float> originalValues = new ArrayList<>();
         for (Item i : originalItems) {
@@ -360,11 +383,12 @@ public class Doca {
         for (Item item : expiredCluster.getContents()) {
 
             System.out.println("Anonymized: (" + new ArrayList<>(item.getData().values()).get(0) + ", " + new ArrayList<>(item.getData().values()).get(1) + ")");
-            System.out.println( "Original: (" + originalValues.get(sda) + ", " + originalValues.get(sda + 1) + ")\n");
+            System.out.println("Original: (" + originalValues.get(sda) + ", " + originalValues.get(sda + 1) + ")\n");
             sda += 2;
         }
         System.out.println("");
 
+        // TODO: Output expiring clusters from doca output (async)
         return true;
     }
 
