@@ -1,15 +1,18 @@
 from pandas import Series, Timestamp, DataFrame, Timedelta, date_range
 from numpy import array, zeros, concatenate
-from random import seed, choices
+from numpy.random import seed
+from random import choices
 from math import ceil
 from benchmarks.help_classes import TaskSimEvCharging, TaskStorage, EvChargingPlan, Normal
+from chaospy import Normal
+from pydantic import BaseModel
 
 class Prognose:
     def __init__(self) -> None:
         self.root_now = 0
         self.sampling_time = 0
         self.df_list = []
-        self.cfg = TaskSimEvCharging(0, 0 , 0, 0, 0, 0, 0)
+        self.cfg = TaskSimEvCharging(BaseModel)
     
     def _export_data(self, df: DataFrame, ts_cfg: TaskStorage)-> None:
         """"
@@ -209,6 +212,7 @@ class Prognose:
             .merge(s3b.to_frame(), left_index=True, right_index=True)
         )
         # export time series
+        # TODO delte the export section?
         ndf = DataFrame()
         for column in df_f.columns:
             export = DataFrame(

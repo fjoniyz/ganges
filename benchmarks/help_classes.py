@@ -1,15 +1,51 @@
 from dataclasses import dataclass
 from random import sample
 from numpy.random import normal
-@dataclass
-class TaskSimEvCharging:
-    min_start: float
-    max_start: float
-    min_duration: float
-    max_duration: float
-    min_demand: float
-    max_demand: float
-    max_power: float
+from pydantic import BaseModel
+from typing import Literal
+
+class TaskSimEvCharging(BaseModel):
+    """
+    Configuration for generating EV events.
+    """
+
+    type: Literal["TaskSimEvCharging"] = "TaskSimEvCharging"
+
+    """type definition of class for fail save parsing"""
+
+    min_start: int = 300
+
+    """[minute] beginning minute of day for possible start"""
+
+    max_start: int = 1320
+
+    """minute] end minute of day of possible start"""
+
+    min_duration: int = 15
+
+    """[minutes] minimal charging duration"""
+
+    max_duration: int = 360
+
+    """[minutes] maximal charging duration"""
+
+    min_demand: int = 10
+
+    """[kWh] minimal charging demand"""
+
+    max_demand: int = 60
+
+    """[kWh] maximal charging demand"""
+
+    power: list[float] = [11.0, 22.0]
+
+    """[kW] list of power level for random choice."""
+
+    export_ts: dict[Literal["pipo", "demand", "power"], DepTsMath]
+
+    """mapping of dependency time series for values PlugIn PlugOff 'pipo', 'demand' and
+
+    'power'"""
 
 class TaskStorage:
     def __init__(self) -> None:
@@ -25,12 +61,3 @@ class EvChargingPlan:
         self.demand = demand
         self.mdemand = mdemand
         self.power = power
-
-class Normal:
-    # TODO: find configuration of Normal Distribution
-    def __init__(self, number_one: float, number_two: float) -> None:
-        self.distribution = normal(number_one, number_two)
-    
-    def sample(self, number: int) -> list:
-        return sample(self.distribution, number)
-        
