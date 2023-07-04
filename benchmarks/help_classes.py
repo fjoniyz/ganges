@@ -41,7 +41,7 @@ class TaskSimEvCharging(BaseModel):
 
     """[kW] list of power level for random choice."""
 
-    export_ts: dict[Literal["pipo", "demand", "power"], DepTsMath]
+    # export_ts: dict[Literal["pipo", "demand", "power"], DepTsMath]
 
     """mapping of dependency time series for values PlugIn PlugOff 'pipo', 'demand' and
 

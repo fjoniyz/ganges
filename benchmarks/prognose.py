@@ -6,14 +6,17 @@ from math import ceil
 from benchmarks.help_classes import TaskSimEvCharging, TaskStorage, EvChargingPlan, Normal
 from chaospy import Normal
 from pydantic import BaseModel
+import datetime
 
 class Prognose:
     def __init__(self) -> None:
-        self.root_now = 0
+        self.root_now = datetime.datetime.now()
+        # TODO: set to 15 Minutes
         self.sampling_time = 0
         self.df_list = []
         self.cfg = TaskSimEvCharging(BaseModel)
-    
+
+    # TODO: create own export function    
     def _export_data(self, df: DataFrame, ts_cfg: TaskStorage)-> None:
         """"
         :param df: 
@@ -212,7 +215,7 @@ class Prognose:
             .merge(s3b.to_frame(), left_index=True, right_index=True)
         )
         # export time series
-        # TODO delte the export section?
+        # TODO replace the export section?
         ndf = DataFrame()
         for column in df_f.columns:
             export = DataFrame(
