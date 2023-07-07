@@ -35,20 +35,35 @@ services:
     hostname: streams
     container_name: streams
     environment:
-      - BOOTSTRAP_SERVERS_CONFIG=broker:29092
-      - INPUT_TOPIC=streams-input
-      - OUTPUT_TOPIC=streams-output
+      BOOTSTRAP_SERVERS_CONFIG: "broker:29092"
+      INPUT_TOPIC: "streams-input"
+      OUTPUT_TOPIC: "streams-output"
     depends_on:
       - broker
 
-  visualizer:
-    build: ./visualizer-flask/
-    hostname: visualizer
-    container_name: visualizer
-    volumes:
-      - ./visualizer-flask:/app
+  rest-proxy:
+    image: confluentinc/cp-kafka-rest:7.3.0
     ports:
-      - "8080:80"
+      - 8082:8082
+    hostname: rest-proxy
+    container_name: rest-proxy
     depends_on:
       - streams
+    environment:
+      KAFKA_REST_HOST_NAME: rest-proxy
+      KAFKA_REST_LISTENERS: "http://0.0.0.0:8082"
+      KAFKA_REST_BOOTSTRAP_SERVERS: "broker:29092"
+      KAFKA_REST_ACCESS_CONTROL_ALLOW_ORIGIN: "*"
+      KAFKA_REST_ACCESS_CONTROL_ALLOW_METHODS: "GET,POST,PUT,DELETE"
+      KAFKA_REST_ACCESS_CONTROL_ALLOW_HEADERS: "origin,content-type,accept,authorization"
 
+#  visualizer:
+#    build: ./visualizer-flask/
+#    hostname: visualizer
+#    container_name: visualizer
+#    volumes:
+#      - ./visualizer-flask:/app
+#    ports:
+#      - "8080:80"
+#    depends_on:
+#      - streams

@@ -1,0 +1,128 @@
+import React, { useState } from 'react';
+import axios from 'axios';
+
+import Plt from './components/Plt';
+
+const App = () => {
+  const [topics, setTopics] = useState([]);
+  const [selectedTopic, setSelectedTopic] = useState('');
+  const [subscribedTopics, setsubscribedTopics] = useState([]);
+  const [restProxyUrl, setRestProxyUrl] = useState('');
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+  const fetchTopics = async (proxyUrl) => {
+    let retrievedTopics = [];
+    while (retrievedTopics.length === 0) {
+      try {
+        const response = await axios.get(`http://${proxyUrl}/topics`);
+        retrievedTopics = response.data;
+        setTopics(response.data);
+      } catch (error) {
+        console.error('Error fetching topics:', error);
+      }
+      await sleep(2000);
+    }
+  };
+
+  const handleUrlSubmit = (e) => {
+    e.preventDefault();
+    // Read the form data
+    const form = e.target;
+    const formData = new FormData(form);
+    const formJson = Object.fromEntries(formData.entries());
+    const proxyUrl = formJson.proxyUrl;
+    setRestProxyUrl(proxyUrl);
+    fetchTopics(proxyUrl);
+  };
+
+  const handleTopicSelect = (event) => {
+    setSelectedTopic(event.target.value);
+  };
+
+  // Check if consumer already exists
+  // If not, create a new consumer
+  const setConsumer = async (proxyUrl) => {
+    try {
+      const consumerGroup = 'frontend';
+      await axios.post(`http://${proxyUrl}/consumers/${consumerGroup}`, {
+        "name": "viz-react",
+        "format": "json",
+        "auto.offset.reset": "earliest",
+      },
+        {
+          headers: {
+            'Content-Type': 'application/vnd.kafka.v2+json',
+          },
+        });
+
+    } catch (error) {
+      console.error('Error fetching consumers:', error);
+    }
+  };
+
+
+
+  const handleSubscribe = async () => {
+    setConsumer(restProxyUrl);
+    setsubscribedTopics([...subscribedTopics, selectedTopic]);
+  };
+
+  return (
+    <div class="m-10">
+      <h1 class="mb-10 text-5xl">Kafka Topics</h1>
+      {!restProxyUrl && (
+        <form onSubmit={handleUrlSubmit}>
+          <label>REST Proxy URL:</label>
+          <br />
+          <input
+            type="text"
+            name="proxyUrl"
+            class="p-2 rounded mr-2"
+          />
+          <button type="submit">Submit</button>
+        </form>
+      )}
+      {restProxyUrl && topics.length === 0 && (
+        <p>Loading topics...</p>
+      )}
+      {topics.length > 0 && (
+        <>
+          <h2 class="text-2xl my-4">Available Topics:</h2>
+          <ul>
+            {topics.map((topic) => (
+              <li class="p-2"  key={topic}>· {topic}</li>
+            ))}
+          </ul>
+            <div>
+              <h2 class="text-2xl my-4">Subscribe to a Topic:</h2>
+              <select class="mr-3" value={selectedTopic} onChange={handleTopicSelect}>
+                <option value="">Select a topic</option>
+                {topics.map((topic) => (
+                  <option value={topic} key={topic}>
+                    {topic}
+                  </option>
+                ))}
+              </select>
+              <button onClick={handleSubscribe} disabled={!selectedTopic}>
+                Subscribe
+              </button>
+            </div>
+          {subscribedTopics.length > 0 && (
+            <>
+              <h2 class="text-2xl my-4">Subscribed Topics:</h2>
+              <ul>
+                {subscribedTopics.map((topic) => (
+                  <li class="w-[70vw] border rounded p-5">
+                    <Plt key={topic} topic={topic} restProxyUrl={restProxyUrl} />
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </>
+      )}
+    </div>
+  );
+};
+
+export default App;

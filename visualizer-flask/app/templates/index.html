@@ -1,15 +1,26 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>KASD - Kafka Anonymized Streams Dashboard</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script>
-        
-    </script>
 </head>
+
 <body>
 
     <h1>KASD - Kafka Anonymized Streams Dashboard</h1>
+
+    <h2>The following topics are available in the Kafka cluster:</h2>
+    {% if topics != "" %}
+    <ul>
+        {% for topic in topics %}
+        <li>{{topic}}</li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p>No topics found</p>
+    {% endif %}
+
 
     <h2>Configure Topic to be visualized</h2>
     <form id="consumerForm" method="post">
@@ -22,24 +33,33 @@
     <br>
     <p id="error">Error: {{error}} </p>
     {% endif %}
-    
+
     <br>
 
     {% if consumer_marker != "" %}
     <img id="graph-image" alt="Graph">
-  
+
     <script>
         // Function to update the graph image
-        function updateGraph(topic, num_messages) {
-            console.log("Updating graph");
+        function updateGraph(parameters) {
 
-            $.getJSON(`/graph?topic=${topic}?num_messages=${num_messages}`, function(data) {
+            $.getJSON('/graph', parameters, function (data) {
                 // Update the src attribute of the <img> tag with the new graph URL
-                console.log(data.graph_url);
-                $('#graph-image').attr('src', 'data:image/png;base64,' + data.graph_url);
+                // console.log(data.graph_url);
+                if (data.error) {
+                    console.log("Error: " + data.error);
+                    //$('#error').text("Error: " + data.error);
+                } else if (data.graph_url) {
+                    console.log("Updating graph");
+                    $('#graph-image').attr('src', 'data:image/png;base64,' + data.graph_url);
+                }
             });
         }
-        setInterval(updateGraph(topic={{ consumer_marker.topic }}, num_messages={{ consumer_marker.num_messages }}), 1000);
+        let parameters = {
+            topic: "{{ consumer_marker.topic }}",
+            num_messages: "{{ consumer_marker.num_messages }}"
+        }
+        setInterval(updateGraph, 2000, parameters);
 
         /*
         TODO: We can trim jquery and use vanilla JS instead
@@ -60,4 +80,5 @@
     </script>
     {% endif %}
 </body>
+
 </html>
