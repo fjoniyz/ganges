@@ -59,29 +59,6 @@ public class CastleGuard {
    *
    * @param data: The element of data to insert into the algorithm
    */
-  public void insertData(HashMap<String, Float> data) {
-    Random rand = new Random();
-    if (config.isUseDiffPrivacy() && rand.nextDouble() > config.getBigBeta()) {
-      logger.info("Suppressing the item");
-      return;
-    }
-    Item item = new Item(data, this.headers, this.sensitiveAttr);
-    updateGlobalRanges(item);
-
-    public Optional<HashMap<String, Float>> tryGetOutputLine() {
-        if (outputQueue.isEmpty()) {
-            return Optional.empty();
-        }
-        Item output = outputQueue.pop();
-        return Optional.of(output.getData());
-    }
-
-    /**
-     * Inserts a new piece of data into the algorithm and updates the state, checking whether data
-     * needs to be output as well
-     *
-     * @param data: The element of data to insert into the algorithm
-     */
     public void insertData(HashMap<String, Float> data) {
         Random rand = new Random();
         if (config.isUseDiffPrivacy() && rand.nextDouble() > config.getBigBeta()) {
@@ -193,14 +170,6 @@ public class CastleGuard {
     private void outputItem(Item item) {
         outputQueue.push(item);
     }
-    
-    Cluster merged = this.clusterManagement.mergeClusters(itemCluster, globalRanges);
-    checkAndOutputCluster(merged);
-  }
-
-  private void outputItem(Item item) {
-    outputQueue.push(item);
-  }
   
   /**
    * Suppresses a tuple from being output and deletes it from the CASTLE state. Removes it from the
@@ -249,8 +218,8 @@ public class CastleGuard {
         float perturbedValue = originalValue + noise;
         item.updateAttributes(header, perturbedValue);
       }
-      
     }
+  }
 
     /**
      * Finds the best matching cluster for <element>
