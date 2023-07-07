@@ -14,28 +14,59 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class CastleGuard {
-    private final CGConfig config;
-    private List<String> headers;
-    private String sensitiveAttr;
-    private Deque<Item> items = new ArrayDeque<>(); // a.k.a. global_tuples in castle.py
-    private HashMap<String, Range<Float>> globalRanges = new HashMap<>();
-    private double tau = Double.POSITIVE_INFINITY;
-    private ClusterManagement clusterManagement;
-    private Deque<Item> outputQueue = new ArrayDeque<>();
+  private final CGConfig config;
+  private List<String> headers;
+  private String sensitiveAttr;
+  private Deque<Item> items = new ArrayDeque<>(); // a.k.a. global_tuples in castle.py
+  private HashMap<String, Range<Float>> globalRanges = new HashMap<>();
+  private double tau = Double.POSITIVE_INFINITY;
+  private ClusterManagement clusterManagement;
+  private Deque<Item> outputQueue = new ArrayDeque<>();
 
-    private final Logger logger = LoggerFactory.getLogger(CastleGuard.class);
+  private final Logger logger = LoggerFactory.getLogger(CastleGuard.class);
 
-    public CastleGuard(CGConfig config, List<String> headers, String sensitiveAttr) {
-        this.config = config;
-        this.headers = headers;
-        this.sensitiveAttr = sensitiveAttr;
-        for (String header : headers) {
-            globalRanges.put(header, null);
-        }
-        this.clusterManagement =
-                new ClusterManagement(
-                        this.config.getK(), this.config.getL(), this.config.getMu(), headers, sensitiveAttr);
+  public CastleGuard(CGConfig config, List<String> headers, String sensitiveAttr) {
+    this.config = config;
+    this.headers = headers;
+    this.sensitiveAttr = sensitiveAttr;
+    for (String header : headers) {
+      globalRanges.put(header, null);
     }
+    this.clusterManagement =
+        new ClusterManagement(
+            this.config.getK(), this.config.getL(), this.config.getMu(), headers, sensitiveAttr);
+  }
+
+    public HashMap<String, Range<Float>> getGlobalRanges() {
+        return globalRanges;
+    }
+    public ClusterManagement getClusterManagement() {
+        return clusterManagement;
+    }
+    public Deque<Item> getItems() {
+        return items;
+    }
+    public Optional<HashMap<String, Float>> tryGetOutputLine() {
+        if (outputQueue.isEmpty()) {
+            return Optional.empty();
+        }
+        Item output = outputQueue.pop();
+        return Optional.of(output.getData());
+    }
+  /**
+   * Inserts a new piece of data into the algorithm and updates the state, checking whether data
+   * needs to be output as well
+   *
+   * @param data: The element of data to insert into the algorithm
+   */
+  public void insertData(HashMap<String, Float> data) {
+    Random rand = new Random();
+    if (config.isUseDiffPrivacy() && rand.nextDouble() > config.getBigBeta()) {
+      logger.info("Suppressing the item");
+      return;
+    }
+    Item item = new Item(data, this.headers, this.sensitiveAttr);
+    updateGlobalRanges(item);
 
     public Optional<HashMap<String, Float>> tryGetOutputLine() {
         if (outputQueue.isEmpty()) {
@@ -162,53 +193,63 @@ public class CastleGuard {
     private void outputItem(Item item) {
         outputQueue.push(item);
     }
+    
+    Cluster merged = this.clusterManagement.mergeClusters(itemCluster, globalRanges);
+    checkAndOutputCluster(merged);
+  }
 
-    /**
-     * Suppresses a tuple from being output and deletes it from the CASTLE state. Removes it from the
-     * global tuple queue and also the cluster it is being contained in
-     *
-     * @param item: The tuple to suppress
-     */
-    public void suppressItem(Item item) {
-        List<Cluster> nonAnonClusters = this.clusterManagement.getNonAnonymizedClusters();
-        this.items.remove(item);
-        Cluster parentCluster = item.getCluster();
-        parentCluster.remove(item);
+  private void outputItem(Item item) {
+    outputQueue.push(item);
+  }
+  
+  /**
+   * Suppresses a tuple from being output and deletes it from the CASTLE state. Removes it from the
+   * global tuple queue and also the cluster it is being contained in
+   *
+   * @param item: The tuple to suppress
+   */
+  public void suppressItem(Item item) {
+      if (this.items.contains(item)) {
+          List<Cluster> nonAnonClusters = this.clusterManagement.getNonAnonymizedClusters();
+          this.items.remove(item);
+          Cluster parentCluster = item.getCluster();
+          parentCluster.remove(item);
 
-        if (parentCluster.getSize() == 0) {
-            nonAnonClusters.remove(parentCluster);
-        }
-    }
+          if (parentCluster.getSize() == 0) {
+              nonAnonClusters.remove(parentCluster);
+          }
+      }
+  }
 
-    /**
-     * Fudges a tuple based on laplace distribution
-     *
-     * @param item: The tuple to be perturbed
-     */
-    private void perturb(Item item) {
-        HashMap<String, Float> data = item.getData();
+  /**
+   * Fudges a tuple based on laplace distribution
+   *
+   * @param item: The tuple to be perturbed
+   */
+  private void perturb(Item item) {
+    HashMap<String, Float> data = item.getData();
 
-        for (String header : this.headers) {
-            // Check if header has a range
-            if (this.globalRanges.get(header).getMinimum() != null
-                    || this.globalRanges.get(header).getMaximum() != null) {
-                double maxValue = this.globalRanges.get(header).getMaximum();
-                double minValue = this.globalRanges.get(header).getMinimum();
+    for (String header : this.headers) {
+      // Check if header has a range
+      if (this.globalRanges.get(header).getMinimum() != null
+          || this.globalRanges.get(header).getMaximum() != null) {
+        double max_value = this.globalRanges.get(header).getMaximum();
+        double min_value = this.globalRanges.get(header).getMinimum();
 
-                // Calaculate scale
-                double scale = Math.max((maxValue - minValue), 1) / this.config.getPhi();
+        // Calaculate scale
+        double scale = Math.max((max_value - min_value), 1) / this.config.getPhi();
 
-                // Draw random noise from Laplace distribution
-                JDKRandomGenerator rg = new JDKRandomGenerator();
-                LaplaceDistribution laplaceDistribution = new LaplaceDistribution(rg, 0, scale);
-                float noise = (float) laplaceDistribution.sample();
+        // Draw random noise from Laplace distribution
+        JDKRandomGenerator rg = new JDKRandomGenerator();
+        LaplaceDistribution laplaceDistribution = new LaplaceDistribution(rg, 0, scale);
+        float noise = (float) laplaceDistribution.sample();
 
-                // Add noise to original value
-                float originalValue = data.get(header);
-                float perturbedValue = originalValue + noise;
-                item.updateAttributes(header, perturbedValue);
-            }
-        }
+        // Add noise to original value
+        float originalValue = data.get(header);
+        float perturbedValue = originalValue + noise;
+        item.updateAttributes(header, perturbedValue);
+      }
+      
     }
 
     /**
