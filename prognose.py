@@ -54,19 +54,29 @@ def _simulate_ev_forecast(df: pd.DataFrame, cfg: TaskSimEvCharging) -> pd.DataFr
 
     root_now = 15
 
-    sampling_time = '20D'
+    sampling_time = '20D' #d means days. So in this case we have a sampling time of 20 days
 
+    #=====================All random dataframes=====================
     dec_start = pd.DataFrame(np.random.randint((cfg.max_start - cfg.min_start) * 0.15, cfg.min_start + (cfg.max_start - cfg.min_start) * 0.5, size=(100,4)), columns=list('ABCD'))
 
+    #This may be the noise that gets added to each entry
+    #This means that the noise is either 0,1 or 2
+
     noise = pd.DataFrame(np.random.randint(0,3,size=(100, 4)), columns=list('ABCD'))
+
+    # Why are these 2 variables calculated like this??
 
     dec_duration = pd.DataFrame(np.random.randint((cfg.max_duration - cfg.min_duration) * 0.15, cfg.min_duration + (cfg.max_duration - cfg.min_duration) * 0.5, size=(100, 4)), columns=list('ABCD'))
 
     dec_demand = pd.DataFrame(np.random.randint((cfg.max_duration - cfg.min_duration) * 0.15, cfg.min_duration + (cfg.max_duration - cfg.min_duration) * 0.5, size=(100, 4)), columns=list('ABCD'))
 
+    #================================================================
+
     # generate ev event for one charging points
 
     plans = []
+
+    #Number of unique days in the index
 
     nr_days = (
 
@@ -98,7 +108,7 @@ def _simulate_ev_forecast(df: pd.DataFrame, cfg: TaskSimEvCharging) -> pd.DataFr
 
     mduration_dec = noise.sample(nr_days)  # fore measurement
 
-    # how how much energy is needed
+    # how much energy is needed
 
     demand_dec = dec_demand.sample(nr_days)  # for forecast
 
@@ -111,30 +121,28 @@ def _simulate_ev_forecast(df: pd.DataFrame, cfg: TaskSimEvCharging) -> pd.DataFr
     # put decissions together in an event list
 
     for i in range(nr_days):
-
+        print(start_dec.get("A").first_valid_index())
         plans.append(
-
             EvChargingPlan(
+                charge=charge_dec.get("A").first_valid_index(),
 
-                charge=charge_dec.get(i),
+                start=int(start_dec.get("A").first_valid_index()) if charge_dec.get("A") is not None else -1,
 
-                start=int(start_dec.get(i)) if charge_dec.get(i) is not None else -1,
+                mstart=int(start_dec.get("A").first_valid_index() + mstart_dec.get("A").first_valid_index() * 30)
 
-                mstart=int(start_dec.get(i) + mstart_dec.get(i) * 30)
-
-                if charge_dec.get(i) is not None
+                if charge_dec.get("A").first_valid_index() is not None
 
                 else -1,
 
-                duration=int(duration_dec.get(i)) if charge_dec.get(i) is not None else -1,
+                duration=int(duration_dec.get("A").first_valid_index()) if charge_dec.get("A").first_valid_index() is not None else -1,
 
-                mduration=int(duration_dec.get(i) + mduration_dec.get(i) * 60) if charge_dec.get(i) is not None else -1,
+                mduration=int(duration_dec.get("A").first_valid_index() + mduration_dec.get("A").first_valid_index() * 60) if charge_dec.get("A") is not None else -1,
 
-                demand=demand_dec.get(i) if charge_dec.get(i) is not None else -1,
+                demand=demand_dec.get("A").first_valid_index() if charge_dec.get("A") is not None else -1,
 
-                mdemand=demand_dec.get(i) + mdemand_dec.get(i) * 5 if charge_dec.get(i) is not None else -1,
+                mdemand=demand_dec.get("A").first_valid_index() + mdemand_dec.get("A") * 5 if charge_dec.get("A") is not None else -1,
 
-                power=power_dec.get(i) if charge_dec.get(i) is not None else -1,
+                power=power_dec[i] if charge_dec.get("A") is not None else -1,
 
             )
 
@@ -180,7 +188,7 @@ def _simulate_ev_forecast(df: pd.DataFrame, cfg: TaskSimEvCharging) -> pd.DataFr
 
         d_mpower = np.zeros(36 * 60)
 
-        if item.charge:
+        if item.charge is not None:
 
             d_pipo[item.start - 1 : item.start - 1 + item.duration] = 1
 
@@ -194,7 +202,7 @@ def _simulate_ev_forecast(df: pd.DataFrame, cfg: TaskSimEvCharging) -> pd.DataFr
 
             d_mdemand[item.mstart - 1 : item.mstart - 1 + item.mduration] = (
 
-                item.mdemand / item.mduration
+                item.demand / item.mduration
 
             )
 
@@ -212,9 +220,13 @@ def _simulate_ev_forecast(df: pd.DataFrame, cfg: TaskSimEvCharging) -> pd.DataFr
 
             for k in range(item.mstart - 1, item.mstart - 1 + item.mduration):
 
-                np.seed(df.Timestamp.utcnow().dayofyear)
-
-                d_mpower[k] = item.power - abs(noise.sample(1)) * 0.1 * item.power
+                np.random.seed(pd.Timestamp.utcnow().dayofyear)
+                value = item.power - abs(noise.sample(1)) * 0.1 * item.power
+                print(type(value))
+                if value > d_mpower[1].iloc[-1]:
+                    d_mpower[k] = d_mpower["A"]
+                else:
+                    d_mpower[k] = item.power - abs(noise.sample(1)) * 0.1 * item.power
 
         # add history
 
