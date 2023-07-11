@@ -3,9 +3,16 @@ import axios from 'axios';
 
 import Plt from './components/Plt';
 
+import List from '@mui/material/List';
+import ListItem from '@mui/material/ListItem';
+import ListItemText from '@mui/material/ListItemText';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemButton from '@mui/material/ListItemButton';
+
+import LabelIcon from '@mui/icons-material/Label';
+
 const App = () => {
   const [topics, setTopics] = useState([]);
-  const [selectedTopic, setSelectedTopic] = useState('');
   const [subscribedTopics, setsubscribedTopics] = useState([]);
   const [restProxyUrl, setRestProxyUrl] = useState('');
   const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -35,13 +42,9 @@ const App = () => {
     fetchTopics(proxyUrl);
   };
 
-  const handleTopicSelect = (event) => {
-    setSelectedTopic(event.target.value);
-  };
-
-  // Check if consumer already exists
-  // If not, create a new consumer
   const setConsumer = async (proxyUrl) => {
+    // TODO: Check if consumer already exists
+    // If not, create a new consumer
     try {
       const consumerGroup = 'frontend';
       await axios.post(`http://${proxyUrl}/consumers/${consumerGroup}`, {
@@ -56,13 +59,11 @@ const App = () => {
         });
 
     } catch (error) {
-      console.error('Error fetching consumers:', error);
+      console.error('Error setting consumer:', error);
     }
   };
 
-
-
-  const handleSubscribe = async () => {
+  const handleSubscribe = async (selectedTopic) => {
     setConsumer(restProxyUrl);
     setsubscribedTopics([...subscribedTopics, selectedTopic]);
   };
@@ -88,31 +89,30 @@ const App = () => {
       {topics.length > 0 && (
         <>
           <h2 class="text-2xl my-4">Available Topics:</h2>
-          <ul>
+          <List>
             {topics.map((topic) => (
-              <li class="p-2"  key={topic}>· {topic}</li>
+              <ListItem disablePadding rounded>
+                <ListItemButton
+                  onClick={() => handleSubscribe(topic)}
+                  // if topic in subscribedTopics, disable button
+                  disabled={subscribedTopics.includes(topic)}
+                >
+                  <ListItemIcon>
+                    <LabelIcon />
+                  </ListItemIcon>
+                  <ListItemText
+                    primary={topic}
+                  />
+                </ListItemButton>
+              </ListItem>
             ))}
-          </ul>
-            <div>
-              <h2 class="text-2xl my-4">Subscribe to a Topic:</h2>
-              <select class="mr-3" value={selectedTopic} onChange={handleTopicSelect}>
-                <option value="">Select a topic</option>
-                {topics.map((topic) => (
-                  <option value={topic} key={topic}>
-                    {topic}
-                  </option>
-                ))}
-              </select>
-              <button onClick={handleSubscribe} disabled={!selectedTopic}>
-                Subscribe
-              </button>
-            </div>
+          </List>
           {subscribedTopics.length > 0 && (
             <>
               <h2 class="text-2xl my-4">Subscribed Topics:</h2>
               <ul>
                 {subscribedTopics.map((topic) => (
-                  <li class="w-[70vw] border rounded p-5">
+                  <li class="w-[90vw] border rounded p-5">
                     <Plt key={topic} topic={topic} restProxyUrl={restProxyUrl} />
                   </li>
                 ))}
