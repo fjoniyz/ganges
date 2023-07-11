@@ -48,17 +48,23 @@ public class Pipe {
         return result;
     }
 
-    public static String[] getFieldsToAnonymize() throws IOException {
+    public static String processingWithDelta(ChargingStationMessage value){
+        //TODO: Implement Doca with delta(a.k.a suppression)
+        return "";
+    }
+
+    public static PropertiesToReturn getFieldsToAnonymize() throws IOException {
         String userDirectory = System.getProperty("user.dir");
         try (InputStream inputStream = Files.newInputStream(Paths.get(userDirectory + "/src/main/resources/doca.properties"))) {
             Properties properties = new Properties();
             properties.load(inputStream);
             String docaFieldsString = properties.getProperty("doca_fields");
+            boolean isDeltaWanted = Boolean.getBoolean(properties.getProperty("delta"));
             String[] docaFields = docaFieldsString.split(",");
             for (String field : docaFields) {
                 System.out.println(field);
             }
-            return docaFields;
+            return new PropertiesToReturn(isDeltaWanted, docaFields);
         }
     }
 
@@ -109,7 +115,7 @@ public class Pipe {
         String userDirectory = System.getProperty("user.dir");
         try (InputStream inputStream = Files.newInputStream(Paths.get(userDirectory + "/src/main/resources/config.properties"))) {
             Properties props = new Properties();
-            String inputTopic = "input-t";
+            String inputTopic = "input-test3";
             String outputTopic = "output-test";
 
             ChargingStationSerializer<ChargingStationMessage> chargingStationSerializer = new ChargingStationSerializer<>();
@@ -126,14 +132,21 @@ public class Pipe {
             KStream<String, ChargingStationMessage> src = streamsBuilder.stream(inputTopic, Consumed.with(Serdes.String(), chargingStationMessageSerde));
             DataRepository dataRepository = new DataRepository();
             Produced<String, String> produced = Produced.with(Serdes.String(), Serdes.String());
-            String[] fields = getFieldsToAnonymize();
-            src.mapValues(value -> {
-                try {
-                    return processing(value, dataRepository, fields);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            }).to(outputTopic, produced);
+            PropertiesToReturn propertiesToReturn = getFieldsToAnonymize();
+            String[] fields = propertiesToReturn.docaFields;
+
+            if(!propertiesToReturn.isDeltaWanted){
+                src.mapValues(value -> {
+                    try {
+                        return processing(value, dataRepository, fields);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                }).to(outputTopic, produced);
+            } else {
+                src.mapValues(Pipe::processingWithDelta).to(outputTopic, produced);
+            }
+
             Topology topology = streamsBuilder.build();
 
             try (KafkaStreams streams = new KafkaStreams(topology, props)) {
