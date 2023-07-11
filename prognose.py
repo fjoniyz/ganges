@@ -49,26 +49,31 @@ def _simulate_ev_forecast(df: pd.DataFrame, cfg: TaskSimEvCharging) -> pd.DataFr
 
     # decission variables through specificly configured normal distributions
 
+    random.seed(
+
+        pd.Timestamp.utcnow().dayofyear
+
+    )  # initialization of seed by day number of year
+    dec_charge = pd.DataFrame(np.random.randint(0,2,size=(4, 4)), columns=list('ABCD'))
     # dec_charge = np.random.normal(0.5, 0.1)
-    dec_charge = pd.DataFrame(np.random.randint(0,2,size=(100, 4)), columns=list('ABCD'))
 
     root_now = 15
 
     sampling_time = '20D' #d means days. So in this case we have a sampling time of 20 days
 
     #=====================All random dataframes=====================
-    dec_start = pd.DataFrame(np.random.randint((cfg.max_start - cfg.min_start) * 0.15, cfg.min_start + (cfg.max_start - cfg.min_start) * 0.5, size=(100,4)), columns=list('ABCD'))
+    dec_start = pd.DataFrame(np.random.normal((cfg.max_start - cfg.min_start) * 0.15, cfg.min_start + (cfg.max_start - cfg.min_start) * 0.5, size=(100,4)), columns=list('ABCD'))
 
     #This may be the noise that gets added to each entry
     #This means that the noise is either 0,1 or 2
 
-    noise = pd.DataFrame(np.random.randint(0,3,size=(100, 4)), columns=list('ABCD'))
+    noise = pd.DataFrame(np.random.normal(0,3,size=(100, 4)), columns=list('ABCD'))
 
     # Why are these 2 variables calculated like this??
 
-    dec_duration = pd.DataFrame(np.random.randint((cfg.max_duration - cfg.min_duration) * 0.15, cfg.min_duration + (cfg.max_duration - cfg.min_duration) * 0.5, size=(100, 4)), columns=list('ABCD'))
+    dec_duration = pd.DataFrame(np.random.normal((cfg.max_duration - cfg.min_duration) * 0.15, cfg.min_duration + (cfg.max_duration - cfg.min_duration) * 0.5, size=(100, 4)), columns=list('ABCD'))
 
-    dec_demand = pd.DataFrame(np.random.randint((cfg.max_duration - cfg.min_duration) * 0.15, cfg.min_duration + (cfg.max_duration - cfg.min_duration) * 0.5, size=(100, 4)), columns=list('ABCD'))
+    dec_demand = pd.DataFrame(np.random.normal((cfg.max_duration - cfg.min_duration) * 0.15, cfg.min_duration + (cfg.max_duration - cfg.min_duration) * 0.5, size=(100, 4)), columns=list('ABCD'))
 
     #================================================================
 
@@ -84,11 +89,7 @@ def _simulate_ev_forecast(df: pd.DataFrame, cfg: TaskSimEvCharging) -> pd.DataFr
 
     )  # get number of day's indirect over input time series index
 
-    random.seed(
-
-        pd.Timestamp.utcnow().dayofyear
-
-    )  # initialization of seed by day number of year
+    print("Nr days", nr_days)
 
     # make decisions for each day
 
@@ -218,13 +219,13 @@ def _simulate_ev_forecast(df: pd.DataFrame, cfg: TaskSimEvCharging) -> pd.DataFr
 
             # measured power
 
-            for k in range(item.mstart - 1, item.mstart - 1 + item.mduration):
+            for k in range(item.mstart - 1, 2160):
 
                 np.random.seed(pd.Timestamp.utcnow().dayofyear)
                 value = item.power - abs(noise.sample(1)) * 0.1 * item.power
                 print(type(value))
-                if value > d_mpower[1].iloc[-1]:
-                    d_mpower[k] = d_mpower["A"]
+                if value.get("A").first_valid_index() > d_mpower[1]:
+                    d_mpower[k] = value.get("A").first_valid_index()
                 else:
                     d_mpower[k] = item.power - abs(noise.sample(1)) * 0.1 * item.power
 
@@ -404,12 +405,13 @@ def _simulate_ev_forecast(df: pd.DataFrame, cfg: TaskSimEvCharging) -> pd.DataFr
 
     return df_m, df_f
 
-d = {'col1': [1, 2], 'col2': [3, 4238493]}
+d = {'col1': [323, 21,32], 'col2': [3, 4, 732], 'col3': [5,6, 8]}
 power = []
 i = 0
 while (i < 4):
     power.append(random.randint(0, 14))
     i += 1
+print(power)
 task_instance = TaskSimEvCharging(10, 60, 5, 50, 0, 100, power)
 df = pd.DataFrame(data=d)
 print(_simulate_ev_forecast(df, task_instance))
