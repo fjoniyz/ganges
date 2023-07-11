@@ -41,3 +41,7 @@ build/
 .vscode
 /target
 __pycache__/
+
+
+### NodeJS ###
+node_modules/
