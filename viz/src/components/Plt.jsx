@@ -54,16 +54,23 @@ const Plt = ({ restProxyUrl, topic }) => {
     }
   };
 
-
-  // Poll for new messages
-  useEffect(() => {
-    const intervalId = setInterval(fetchMessages, 1000);
-    subscribeToTopic();
-
-    return () => {
-      clearInterval(intervalId);
-    };
-  }, []);
+  const handleKeySubmit = (e) => {
+    e.preventDefault();
+    // Read the form data
+    const form = e.target;
+    const formData = new FormData(form);
+    const formJson = Object.fromEntries(formData.entries());
+    const vizKey = formJson.vizKey;
+    setVizKey(vizKey);
+    
+    // Reset charts
+    if (chartRef.current) {
+      chartRef.current = null;
+    }
+    if (distributionChartRef.current) {
+      distributionChartRef.current = null;
+    }
+  };
 
   const createGraphs = () => {
     try {
@@ -181,15 +188,15 @@ const Plt = ({ restProxyUrl, topic }) => {
     return { labels, values: binCounts };
   };
 
-  const handleKeySubmit = (e) => {
-    e.preventDefault();
-    // Read the form data
-    const form = e.target;
-    const formData = new FormData(form);
-    const formJson = Object.fromEntries(formData.entries());
-    const vizKey = formJson.vizKey;
-    setVizKey(vizKey);
-  };
+  // Poll for new messages
+  useEffect(() => {
+    const intervalId = setInterval(fetchMessages, 1000);
+    subscribeToTopic();
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, []);
 
   return (
     <div>
