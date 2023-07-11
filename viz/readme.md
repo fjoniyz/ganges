@@ -8,6 +8,6 @@ Currently only displays values and the distribution.
 
 ## Start
 
-    npm dev
+    npm run dev
 
 Then go to `http://localhost:5173/`
