@@ -1,6 +1,8 @@
 package myapps;
 
+import customSerdes.ChargingStationSerde;
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Properties;
@@ -11,6 +13,7 @@ import customSerdes.ChargingStationMessage;
 import customSerdes.ChargingStationSerializer;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
+import org.apache.kafka.common.serialization.Serializer;
 import org.apache.kafka.streams.*;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KStream;
@@ -19,7 +22,7 @@ import org.apache.kafka.streams.kstream.Produced;
 import java.util.*;
 
 public class Pipe {
-    public static String processing(ChargingStationMessage value, DataRepository dataRepository, String[] fields) throws IOException {
+    public static String processing(ChargingStationMessage value, String[] fields) throws IOException {
         double[] valuesList = createValuesList(fields, value);
         StringBuilder valueToSaveInRedis = new StringBuilder();
         for (double d: valuesList
@@ -27,25 +30,32 @@ public class Pipe {
             valueToSaveInRedis.append(d).append(",");
         }
         // Retrieve non-anonymized data from cache
-        dataRepository.saveValue(valueToSaveInRedis.toString());
-        List<String> allSavedValues = dataRepository.getValues();
+//        dataRepository.saveValue(valueToSaveInRedis.toString());
+//        List<String> allSavedValues = dataRepository.getValues();
 
         // Parse cached strings into double arrays
-        double[][] input = new double[allSavedValues.size()][];
+        double[][] input = new double[10][];
 
-        for (int i = 0; i < allSavedValues.size(); i++) {
-            String[] values = allSavedValues.get(i).split(",");
-            double[] toDouble =
-                    Arrays.stream(values).mapToDouble(Double::parseDouble).toArray();
-
-            input[i] = toDouble;
-        }
+//        for (int i = 0; i < allSavedValues.size(); i++) {
+//            String[] values = allSavedValues.get(i).split(",");
+//            double[] toDouble =
+//                    Arrays.stream(values).mapToDouble(Double::parseDouble).toArray();
+//
+//            input[i] = toDouble;
+//        }
 
         // Anonymization
         Doca docaInstance = new Doca();
         double[][] output = docaInstance.anonymize(input);
-        String result = Arrays.deepToString(output);
-        return result;
+        double[] lastItem = output[output.length-1];
+        float kwh = (float)lastItem[0];
+        int load_potential = (int) lastItem[1];
+        value.setKwh(kwh);
+        value.setLoadingPotential(load_potential);
+//        String result = Arrays.deepToString(output);
+        Serializer<ChargingStationMessage> serializer = new ChargingStationSerializer<>();
+        byte[] json = serializer.serialize("output-test", value);
+        return new String(json, StandardCharsets.UTF_8);
     }
 
     public static String[] getFieldsToAnonymize() throws IOException {
@@ -109,8 +119,8 @@ public class Pipe {
         String userDirectory = System.getProperty("user.dir");
         try (InputStream inputStream = Files.newInputStream(Paths.get(userDirectory + "/src/main/resources/config.properties"))) {
             Properties props = new Properties();
-            String inputTopic = "input-t";
-            String outputTopic = "output-test";
+            String inputTopic = "input-test3";
+            String outputTopic = "output";
 
             ChargingStationSerializer<ChargingStationMessage> chargingStationSerializer = new ChargingStationSerializer<>();
             ChargingStationDeserializer<ChargingStationMessage> chargingStationDeserializer = new ChargingStationDeserializer<>(ChargingStationMessage.class);
@@ -124,12 +134,12 @@ public class Pipe {
             // Create anonymization stream and use it with Kafka
             StreamsBuilder streamsBuilder = new StreamsBuilder();
             KStream<String, ChargingStationMessage> src = streamsBuilder.stream(inputTopic, Consumed.with(Serdes.String(), chargingStationMessageSerde));
-            DataRepository dataRepository = new DataRepository();
+//            DataRepository dataRepository = new DataRepository();
             Produced<String, String> produced = Produced.with(Serdes.String(), Serdes.String());
             String[] fields = getFieldsToAnonymize();
             src.mapValues(value -> {
                 try {
-                    return processing(value, dataRepository, fields);
+                    return processing(value, fields);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }

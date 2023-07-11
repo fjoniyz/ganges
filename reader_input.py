@@ -1,5 +1,4 @@
 from confluent_kafka import Consumer, KafkaError
-from datetime import datetime
 import json
 import time
 import prognose
