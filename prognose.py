@@ -138,27 +138,27 @@ def simulate_ev_forecast(df: DataFrame, cfg: TaskSimEvCharging) -> DataFrame:
 
                 charge=charge_dec[i],
 
-                start=int(start_dec[i]) if charge_dec[i] else -1,
+                start=int(start_dec[i]) if charge_dec[i] else 0,
 
                 mstart=int(start_dec[i] + mstart_dec[i] * 30)
 
                 if charge_dec[i]
 
-                else -1,
+                else 0,
 
-                duration=int(duration_dec[i]) if charge_dec[i] else -1,
+                duration=int(duration_dec[i]) if charge_dec[i] else 0,
 
                 mduration=int(duration_dec[i] + mduration_dec[i] * 60)
 
                 if charge_dec[i]
 
-                else -1,
+                else 0,
 
-                demand=demand_dec[i] if charge_dec[i] else -1,
+                demand=demand_dec[i] if charge_dec[i] else 0,
 
-                mdemand=demand_dec[i] + mdemand_dec[i] * 5 if charge_dec[i] else -1,
+                mdemand=demand_dec[i] + mdemand_dec[i] * 5 if charge_dec[i] else 0,
 
-                power=power_dec[i] if charge_dec[i] else -1,
+                power=power_dec[i] if charge_dec[i] else 0,
 
             )
 
@@ -225,6 +225,9 @@ def simulate_ev_forecast(df: DataFrame, cfg: TaskSimEvCharging) -> DataFrame:
             # power shuts down, after demand is full filled (in minute steps)
 
             duration = ceil(item.demand / item.power * 60)
+            print(item.demand)
+            print(item.power)
+            print(duration)
 
             if item.duration < duration:
                 duration = item.duration

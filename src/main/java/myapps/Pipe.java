@@ -68,7 +68,7 @@ public class Pipe {
         try (InputStream inputStream = Files.newInputStream(Paths.get(userDirectory + "/src/main/resources/config.properties"))) {
             Properties props = new Properties();
 
-            String inputTopic = "input";
+            String inputTopic = "input-test3";
             String outputTopic = "output-test";
 
             props.load(inputStream);
