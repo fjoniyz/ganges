@@ -109,7 +109,8 @@ public class Pipe {
         String userDirectory = System.getProperty("user.dir");
         try (InputStream inputStream = Files.newInputStream(Paths.get(userDirectory + "/src/main/resources/config.properties"))) {
             Properties props = new Properties();
-            String inputTopic = "input-t";
+
+            String inputTopic = "input";
             String outputTopic = "output-test";
 
             ChargingStationSerializer<ChargingStationMessage> chargingStationSerializer = new ChargingStationSerializer<>();
@@ -136,19 +137,19 @@ public class Pipe {
             }).to(outputTopic, produced);
             Topology topology = streamsBuilder.build();
 
-            try (KafkaStreams streams = new KafkaStreams(topology, props)) {
-                final CountDownLatch latch = new CountDownLatch(1);
+        try (KafkaStreams streams = new KafkaStreams(topology, props)) {
+          final CountDownLatch latch = new CountDownLatch(1);
+          try {
+            streams.start();
+            latch.await();
+          } catch (Throwable e) {
+            System.exit(1);
+          }
+        }
+        System.exit(0);
 
-                try {
-                    streams.start();
-                    latch.await();
-                } catch (Throwable e) {
-                    System.exit(1);
-                }
-            }
-            System.exit(0);
         } catch (IOException e) {
-            throw new RuntimeException(e);
+          throw new RuntimeException(e);
         }
     }
 }
