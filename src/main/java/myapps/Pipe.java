@@ -35,6 +35,7 @@ public class Pipe {
 
         // Parse cached strings into double arrays
         double[][] input = new double[10][];
+        input[0] = valuesList;
 
 //        for (int i = 0; i < allSavedValues.size(); i++) {
 //            String[] values = allSavedValues.get(i).split(",");
@@ -45,14 +46,14 @@ public class Pipe {
 //        }
 
         // Anonymization
+
         Doca docaInstance = new Doca();
         double[][] output = docaInstance.anonymize(input);
         double[] lastItem = output[output.length-1];
         float kwh = (float)lastItem[0];
-        int load_potential = (int) lastItem[1];
+        float load_potential = (float)lastItem[1];
         value.setKwh(kwh);
         value.setLoadingPotential(load_potential);
-//        String result = Arrays.deepToString(output);
         Serializer<ChargingStationMessage> serializer = new ChargingStationSerializer<>();
         byte[] json = serializer.serialize("output-test", value);
         return new String(json, StandardCharsets.UTF_8);

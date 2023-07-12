@@ -19,14 +19,14 @@ public class ChargingStationMessage implements Serializable {
     private long endTimeLoading;
     private int loadingTime;
     private float kwh;
-    private int loadingPotential;
+    private float loadingPotential;
 
     @JsonCreator
     public ChargingStationMessage(@JsonProperty("ae_session_id")UUID ae_session_id, @JsonProperty("building_type") String building_type,
                                   @JsonProperty("urbanisation_level") float urbanisation_level, @JsonProperty("number_loading_stations") int number_loading_stations,
                                   @JsonProperty("number_parking_spaces") int number_parking_spaces, @JsonProperty("start_time_loading")long start_time_loading,
                                   @JsonProperty("end_time_loading") long end_time_loading, @JsonProperty("loading_time") int loading_time,
-                                  @JsonProperty("kwh") float kwh, @JsonProperty("loading_potential")int loading_potential){
+                                  @JsonProperty("kwh") float kwh, @JsonProperty("loading_potential")float loading_potential){
         this.aeSessionId = ae_session_id;
         this.buildingType = building_type;
         this.urbanisationLevel = urbanisation_level;
