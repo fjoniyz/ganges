@@ -417,7 +417,7 @@ def simulate_ev_forecast(df: DataFrame, cfg: TaskSimEvCharging) -> DataFrame:
 
     # return only pipo
 
-    return df_f, df_m
+    return df_f
 
 # d = {'col1': [323, 21,32], 'col2': [3, 4, 732], 'col3': [5,6, 8]}
 # random.seed(pd.Timestamp.utcnow().dayofyear)

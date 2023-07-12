@@ -33,8 +33,7 @@ public class Pipe {
 //        dataRepository.saveValue(valueToSaveInRedis.toString());
 //        List<String> allSavedValues = dataRepository.getValues();
 
-        // Parse cached strings into double arrays
-        double[][] input = new double[10][];
+        double[][] input = new double[1][];
         input[0] = valuesList;
 
 //        for (int i = 0; i < allSavedValues.size(); i++) {
