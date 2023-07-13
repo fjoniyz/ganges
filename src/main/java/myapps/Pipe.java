@@ -43,9 +43,11 @@ public class Pipe {
 
         // Anonymization
         Doca docaInstance = new Doca();
-        double[][] output = docaInstance.anonymize(input);
-        String result = Arrays.deepToString(output);
-        return result;
+        double[][] output = docaInstance.addData(input);
+        if (output.length == 0 || output[0].length == 0) {
+            return null;
+        }
+        return Arrays.deepToString(output);
     }
 
     public static String processingWithDelta(ChargingStationMessage value){
@@ -135,6 +137,7 @@ public class Pipe {
             PropertiesToReturn propertiesToReturn = getFieldsToAnonymize();
             String[] fields = propertiesToReturn.docaFields;
 
+            /*
             if(!propertiesToReturn.isDeltaWanted){
                 src.mapValues(value -> {
                     try {
@@ -145,7 +148,18 @@ public class Pipe {
                 }).to(outputTopic, produced);
             } else {
                 src.mapValues(Pipe::processingWithDelta).to(outputTopic, produced);
-            }
+            }*/
+            src.mapValues(value -> {
+                try {
+                    String res = processing(value, dataRepository, fields);
+                    if (res != null) {
+                        return res;
+                    } else
+                        return null;
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }).to(outputTopic, produced);
 
             Topology topology = streamsBuilder.build();
 
