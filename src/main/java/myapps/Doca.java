@@ -1,7 +1,10 @@
 package myapps;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
-import java.util.stream.Collectors;
 
 //TODO: Check if ranges have to be update manually
 import com.ganges.lib.castleguard.utils.Utils;
@@ -42,12 +45,13 @@ public class Doca {
     private List<Double> losses = new ArrayList<>();      // Losses to use when calculating tau
 
 
-    public Doca(double eps, double delta, int delayConstraint, int beta, boolean inplace) {
-        this.eps = eps;
-        this.delta = delta;
-        this.delayConstraint = delayConstraint;
-        this.beta = beta;
-        this.inplace = inplace;
+    public Doca() {
+        String[] parameters = getParameters();
+        this.eps = Double.parseDouble(parameters[0]);
+        this.delayConstraint = Integer.parseInt(parameters[1]);
+        this.beta = Integer.parseInt(parameters[2]);
+        this.inplace = Boolean.parseBoolean(parameters[3]);
+        this.delta = Double.parseDouble(parameters[4]);
         this.stableDomain = new ArrayList<>();
         this.GKQuantileEstimator = new GreenwaldKhannaQuantileEstimator(GKQError);
         this.tau = 0;
@@ -60,34 +64,69 @@ public class Doca {
      *
      * @param X Input Tuple
      */
-    public void addTuple(double[][] X) {
-        List<List<Double>> domain = this.addToDomain(X);
+    public double[][] addData(double[][] X) {
+        List<List<Double>> domain = new ArrayList<>();
+        List<Double> convDataPoint = new ArrayList<>();
+        for (double[] l : X) {
+            for (double v : l) {
+                convDataPoint.add(v);
+            }
+        }
+        // If delta is 0 only add current tuple(s) to domain to skip domain bounding
+        if (this.delta != 0) {
+            domain = this.addToDomain(convDataPoint);
+        } else {
+            domain.add(convDataPoint);
+        }
+
+        double[][] output = new double[0][0];
+        // Check if domain is ready - If Domain is not ready "addToDomain" returns null
         if (domain != null) {
             List<Item> itemList = DocaUtil.dataPointsToItems(domain);
 
-            // calculate sensitivity
-            List<Float> firstElem = new ArrayList<>(itemList.get(0).getData().values());
-            List<Float> lastElem = new ArrayList<>(itemList.get(itemList.size() - 1).getData().values());
+            // TODO: Is this a good way to calculate the sensitivity??
+            double sensitivity = Math.abs(DocaUtil.getMax(X) - DocaUtil.getMin(X));
+            if (delta != 0) {
+                // calculate sensitivity
+                List<Float> firstElem = new ArrayList<>(itemList.get(0).getData().values());
+                List<Float> lastElem = new ArrayList<>(itemList.get(itemList.size() - 1).getData().values());
 
-            float ac = Math.abs(firstElem.get(1) - lastElem.get(1));
-            float cb = Math.abs(firstElem.get(0) - lastElem.get(0));
+                float ac = Math.abs(firstElem.get(1) - lastElem.get(1));
+                float cb = Math.abs(firstElem.get(0) - lastElem.get(0));
 
 
-            float sensitivity = (float) Math.hypot(ac, cb);
+                sensitivity = (float) Math.hypot(ac, cb);
 
-            System.out.println("Sensitivity: " + sensitivity);
-            System.out.println("Domain Size: " + itemList.size());
-
+                System.out.println("Sensitivity: " + sensitivity);
+                System.out.println("Domain Size: " + itemList.size());
+            }
+            List<Item> pertubedItems = new ArrayList<>();
             for (Item item : itemList) {
                 List<Item> returnItems = this.doca(item, sensitivity, false);
+                pertubedItems.addAll(returnItems);
+                /*
                 if (returnItems != null) {
                     for (Item items : returnItems) {
                         System.out.println(items.getData().values());
                     }
+                }*/
+            }
+
+            // create output tuple
+            int rows = itemList.size();
+            int cols = itemList.get(0).getData().size();
+            output = new double[rows][cols];
+
+            for (int i = 0; i < rows; i++) {
+                Map<String, Float> attributes = itemList.get(i).getData();
+                int j = 0;
+                for (float value : attributes.values()) {
+                    output[i][j] = value;
+                    j++;
                 }
             }
-            System.out.println("\n");
         }
+        return output;
     }
 
     /**
@@ -97,22 +136,16 @@ public class Doca {
      * @param X Tuple to be added
      * @return the domain if it is stable, otherwise null
      */
-    protected List<List<Double>> addToDomain(double[][] X) {
+    protected List<List<Double>> addToDomain(List<Double> X) {
         double tolerance = this.LAMBDA;
-        // Add new Tuples to Domain D
-        List<Double> convData = new ArrayList<>();
-        for (double[] l : X) {
-            for (double v : l) {
-                convData.add(v);
-            }
-        }
 
-        double sum = convData.stream().reduce(0.0, Double::sum);
+        // EXPERIMENTAL: Use mean of tuple as value for GK
+        // Get mean value of data point
+        double sum = X.stream().reduce(0.0, Double::sum);
+        double mean = sum / X.size();
 
         // Add tuple to GKQEstimator
-        // EXPERIMENTAL: Use mean of tuple as value for GK
-        double mean = sum / convData.size();
-        this.GKQuantileEstimator.add(mean, convData);
+        this.GKQuantileEstimator.add(mean, X);
 
         // Add Quantile to Vinf and Vsup
         // (1) quantile , (2) index of quantile
@@ -137,11 +170,6 @@ public class Doca {
 
             // check if domain is stable
             if (cvVinf < tolerance && cvVsup < tolerance) {
-                //System.out.println("Domain is stable");
-                //System.out.println("Coefficient of variation Sup: " + cvVsup);
-                //System.out.println("V-Inf: " + this.Vinf);
-                //System.out.println("V-Sup: " + this.Vsup);
-                //System.out.println("Coefficient of variation Inf: " + cvVinf);
 
                 List<List<Double>> domain = this.GKQuantileEstimator.getDomain();
                 this.stableDomain = domain.subList(estQuantilInf.get(1).intValue(), estQuantilSup.get(1).intValue());
@@ -167,21 +195,22 @@ public class Doca {
      * @param sensitivity sensitivity of the tuple
      * @return the domain if it is stable, otherwise null
      */
-    protected List<Item> doca(Item dataTuple, float sensitivity, boolean inplace) {
+    protected List<Item> doca(Item dataTuple, double sensitivity, boolean inplace) {
 
         // Add tuple to best cluster and return expired clusters if any
         Cluster expiringCluster = this.onlineClustering(dataTuple);
 
+        List<Item> releasedItems = new ArrayList<>();
         // Release Cluster if expired
         if (expiringCluster != null) {
-            releaseExpiredCluster(expiringCluster, sensitivity);
+            releasedItems.addAll(releaseExpiredCluster(expiringCluster, (float) sensitivity));
         }
 
         // Create Output structure
-        List<Item> output;
-        output = new ArrayList<>();
-        //if (inplace != null) {
-        //    output = inplace;
+        List<Item> output = releasedItems;
+        //TODO: what is this used for?
+        //if (this.inplace != null) {
+        //    output = this.inplace;
         //} else {
         //    output = new ArrayList<>();
         //}
@@ -208,7 +237,6 @@ public class Doca {
         } else {
             // Add tuple to cluster
             best_cluster.insert(tuple);
-
         }
 
         // update global ranges
@@ -312,7 +340,7 @@ public class Doca {
      * @param sensitivity    Sensitivity of the pertubation
      * @return True if the cluster was released, false if not
      */
-    private boolean releaseExpiredCluster(Cluster expiredCluster, float sensitivity) {
+    private List<Item> releaseExpiredCluster(Cluster expiredCluster, float sensitivity) {
         // update values
         HashMap<String, Float> dif = DocaUtil.getAttributeDiff(this.rangeMap);
         HashMap<String, Float> dif_cluster = new HashMap<>();
@@ -342,7 +370,6 @@ public class Doca {
         for (Map.Entry<String, Float> attrEntry : attr.entrySet()) {
             mean.put(attrEntry.getKey(), attrEntry.getValue() / expiredCluster.getContents().size());
         }
-
         sensitivity = 100f;
         double scale = (sensitivity / (expiredCluster.getContents().size() * eps));
         HashMap<String, Float> laplace = new HashMap<>();
@@ -378,7 +405,7 @@ public class Doca {
 
         expiredCluster.pertubeCluster(noise);
 
-
+        /*
         int sda = 0;
         for (Item item : expiredCluster.getContents()) {
 
@@ -387,13 +414,38 @@ public class Doca {
             sda += 2;
         }
         System.out.println("");
+        */
 
         // TODO: Output expiring clusters from doca output (async)
-        return true;
+        return expiredCluster.getContents();
     }
 
-    public static double[][] doca(
-            double[][] X, double eps, int delay_constraint, int beta, boolean inplace) {
+    public static String[] getParameters() {
+        String[] result = new String[5];
+        String userDirectory = System.getProperty("user.dir");
+        try(InputStream inputStream = Files.newInputStream(Paths.get(userDirectory+"/src/main/resources/doca.properties"))){
+            Properties properties = new Properties();
+            properties.load(inputStream);
+            result[0] = properties.getProperty("eps");
+            result[1] = properties.getProperty("delay_constraint");
+            result[2] = properties.getProperty("beta");
+            result[3] = properties.getProperty("inplace");
+            result[4] = properties.getProperty("delta");
+            return result;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+
+    public static double[][] anonymize(
+            double[][] X) {
+        String[] parameters = getParameters();
+        double eps = Double.parseDouble(parameters[0]);
+        int delay_constraint = Integer.parseInt(parameters[1]);
+        int beta = Integer.parseInt(parameters[2]);
+        boolean inplace = Boolean.parseBoolean(parameters[3]);
+        double delta = Double.parseDouble(parameters[4]);
         int num_instances = X.length;
         int num_attributes = X[0].length;
 
