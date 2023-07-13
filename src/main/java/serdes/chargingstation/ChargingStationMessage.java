@@ -1,4 +1,4 @@
-package customSerdes;
+package serdes.chargingstation;
 import java.io.Serializable;
 import java.util.UUID;
 
@@ -6,10 +6,11 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonRootName;
 import lombok.Data;
+import serdes.AnonymizedMessage;
 
 @JsonRootName("chargingStationMessage")
 @Data
-public class ChargingStationMessage implements Serializable {
+public class ChargingStationMessage implements Serializable, AnonymizedMessage {
     private UUID aeSessionId;
     private String buildingType;
     private float urbanisationLevel;
@@ -37,5 +38,10 @@ public class ChargingStationMessage implements Serializable {
         this.loadingTime = loading_time;
         this.kwh = kwh;
         this.loadingPotential = loading_potential;
+    }
+
+    @Override
+    public double[] getValuesListFromKeys(String[] keys) {
+        return new double[0]; // TODO: Move function from pipe her
     }
 }

@@ -1,6 +1,5 @@
 package myapps;
 
-import java.io.*;
 import benchmark.MetricsCollector;
 import java.io.IOException;
 import java.io.InputStream;
@@ -9,9 +8,10 @@ import java.nio.file.Paths;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 
-import customSerdes.ChargingStationDeserializer;
-import customSerdes.ChargingStationMessage;
-import customSerdes.ChargingStationSerializer;
+import serdes.AnonymizedMessage;
+import serdes.Deserializer;
+import serdes.chargingstation.ChargingStationMessage;
+import serdes.Serializer;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.*;
@@ -20,15 +20,16 @@ import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.Produced;
 
 import java.util.*;
+import serdes.emobility.EMobilityStationMessage;
 
 public class Pipe {
-    public static String processing(ChargingStationMessage value, DataRepository dataRepository, String[] fields, boolean enableMonitoring) throws IOException {
+    public static String processing(AnonymizedMessage message, DataRepository dataRepository, String[] fields, boolean enableMonitoring) throws IOException {
       String id = "lol"; // TODO: remove temporary stub
       if (enableMonitoring) {
         MetricsCollector.setPipeEntryTimestamps(id, System.currentTimeMillis());
       }
 
-      double[] valuesList = createValuesList(fields, value);
+      double[] valuesList = message.getValuesListFromKeys(fields);
       StringBuilder valueToSaveInRedis = new StringBuilder();
       for (double d: valuesList
       ) {
@@ -136,19 +137,20 @@ public class Pipe {
         String outputTopic = props.getProperty("output-topic");
         boolean enableMonitoring = Boolean.parseBoolean(props.getProperty("enable-monitoring"));
 
-        ChargingStationSerializer<ChargingStationMessage> chargingStationSerializer = new ChargingStationSerializer<>();
-        ChargingStationDeserializer<ChargingStationMessage> chargingStationDeserializer = new ChargingStationDeserializer<>(ChargingStationMessage.class);
-        Serde<ChargingStationMessage> chargingStationMessageSerde = Serdes.serdeFrom(chargingStationSerializer, chargingStationDeserializer);
+        Serializer<EMobilityStationMessage> serializer = new Serializer<>();
+        Deserializer<EMobilityStationMessage>
+            emobilityDeserializer = new Deserializer<>(EMobilityStationMessage.class);
+        Serde<EMobilityStationMessage> emobilitySerde = Serdes.serdeFrom(serializer, emobilityDeserializer);
 
         try (InputStream inputStream = Files.newInputStream(Paths.get(userDirectory + "/src/main/resources/kafka.properties"))) {
           props.load(inputStream);
           props.put(StreamsConfig.METADATA_MAX_AGE_CONFIG, "1000"); // Needed to prevent timeouts during broker startup.
           props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
-          props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, chargingStationMessageSerde.getClass());
+          props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, emobilitySerde.getClass());
 
           // Create anonymization stream and use it with Kafka
           StreamsBuilder streamsBuilder = new StreamsBuilder();
-          KStream<String, ChargingStationMessage> src = streamsBuilder.stream(inputTopic, Consumed.with(Serdes.String(), chargingStationMessageSerde));
+          KStream<String, EMobilityStationMessage> src = streamsBuilder.stream(inputTopic, Consumed.with(Serdes.String(), emobilitySerde));
           DataRepository dataRepository = new DataRepository();
           Produced<String, String> produced = Produced.with(Serdes.String(), Serdes.String());
           String[] fields = getFieldsToAnonymize();

@@ -15,7 +15,7 @@ def generate_station_rows() -> Iterable:
             id = uuid.uuid4()
             date = datetime.now()
             EV_usage = round(uniform(0, uniform(100, 1000)), 2)
-            yield [id, date, f"{station}" + "EMobility", EV_usage]
+            yield [str(id), date, f"{station}" + "EMobility", EV_usage]
         
 def get_fields_names():
     return ["id", "Timestamp","timeseries_id", "Seconds_EnergyConsumption"]
