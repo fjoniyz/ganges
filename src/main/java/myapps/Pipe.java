@@ -20,9 +20,23 @@ import org.apache.kafka.streams.kstream.Produced;
 
 import java.util.*;
 import serdes.emobility.EMobilityStationMessage;
+import serdes.emobility.EMobilityStationSerde;
 
 public class Pipe {
-    public static String processing(AnonymizedMessage message, DataRepository dataRepository, String[] fields) throws IOException {
+
+    public static AnonymizedMessage copyMessage(AnonymizedMessage message) {
+      if (message.getClass().equals(EMobilityStationMessage.class)) {
+        EMobilityStationMessage emobilityMsg = (EMobilityStationMessage) message;
+        return new EMobilityStationMessage(new String(emobilityMsg.getId()), new String(emobilityMsg.getTimestamp()), new String(emobilityMsg.getTimeseriesId()), emobilityMsg.getEvUsage());
+      }
+      else {
+        return null; // TODO: add other message types
+      }
+    }
+
+
+    public static AnonymizedMessage processing(AnonymizedMessage message, DataRepository dataRepository, String[] fields) throws IOException {
+
       double[] valuesList = message.getValuesListFromKeys(fields);
       StringBuilder valueToSaveInRedis = new StringBuilder();
       for (double d: valuesList
@@ -112,7 +126,7 @@ public class Pipe {
         String userDirectory = System.getProperty("user.dir");
         Properties props = new Properties();
 
-        try (InputStream inputStream = Files.newInputStream(Paths.get(userDirectory + "/src/main/resources/config.properties"))) {
+        try (InputStream inputStream = Files.newInputStream(Paths.get(userDirectory + "/src/main/resources/pipe.properties"))) {
           props.load(inputStream);
         } catch (IOException e) {
           throw new RuntimeException(e);
