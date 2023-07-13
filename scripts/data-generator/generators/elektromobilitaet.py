@@ -4,19 +4,21 @@ from random import uniform, randint
 from time import sleep
 import os
 from typing import Iterable
+import uuid
 
 
 def generate_station_rows() -> Iterable:
-    """Returns value in format [Timestamp, timeseries_id, Seconds_EnergyConsumption]"""
+    """Returns value in format [id, Timestamp, timeseries_id, Seconds_EnergyConsumption]"""
     # timeseries = station
     while True:
         for station in range(100):
+            id = uuid.uuid4()
             date = datetime.now()
             EV_usage = round(uniform(0, uniform(100, 1000)), 2)
-            yield [date, f"{station}" + "EMobility", EV_usage]
+            yield [str(id), date, f"{station}" + "EMobility", EV_usage]
         
 def get_fields_names():
-    return ["Timestamp","timeseries_id", "Seconds_EnergyConsumption"]
+    return ["id", "Timestamp","timeseries_id", "Seconds_EnergyConsumption"]
     
 if __name__ == "__main__":
     """ Writes into a electromobilitydata.csv file with random secondly 
