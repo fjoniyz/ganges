@@ -3,6 +3,8 @@ package myapps;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Random;
 
 
@@ -53,14 +55,14 @@ public class DeltaDocaTest {
             this.randomHeader2[i] = temp2;
         }
 
-        this.doca = new Doca(100, 0.7, 100, 60, false);
+        this.doca = new Doca();
     }
 
     @Test
     public void testAddFromNormalDistToDomain() {
 
         for (int i = 0; i < normalHeader1.length; i++) {
-            double[][] X = new double[][]{new double[]{normalHeader1[i]}, new double[]{normalHeader2[i]}};
+            List<Double> X = Arrays.asList(normalHeader1[i], normalHeader2[i]);
             doca.addToDomain(X);
         }
     }
@@ -68,7 +70,7 @@ public class DeltaDocaTest {
     @Test
     public void testAddFromRandomDistToDomain() {
         for (int i = 0; i < randomHeader1.length; i++) {
-            double[][] X = new double[][]{new double[]{randomHeader1[i]}, new double[]{randomHeader2[i]}};
+            List<Double> X = Arrays.asList(normalHeader1[i], normalHeader2[i]);
             doca.addToDomain(X);
         }
     }
@@ -77,7 +79,7 @@ public class DeltaDocaTest {
     public void testAddFromRandomDistToDeltaDoca() {
         for (int i = 0; i < randomHeader1.length; i++) {
             double[][] X = new double[][]{new double[]{randomHeader1[i]}, new double[]{randomHeader2[i]}};
-            doca.addTuple(X);
+            doca.addData(X);
         }
     }
 
@@ -85,7 +87,7 @@ public class DeltaDocaTest {
     public void testAddFromNormalDistToDeltaDoca() {
         for (int i = 0; i < randomHeader1.length; i++) {
             double[][] X = new double[][]{new double[]{randomHeader1[i]}, new double[]{randomHeader2[i]}};
-            doca.addTuple(X);
+            doca.addData(X);
         }
     }
 }
