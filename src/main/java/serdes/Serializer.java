@@ -1,11 +1,10 @@
-package customSerdes;
+package serdes;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.commons.lang3.SerializationException;
-import org.apache.kafka.common.serialization.Serializer;
 
-public class ChargingStationSerializer<T> implements Serializer<T> {
+public class Serializer<T> implements org.apache.kafka.common.serialization.Serializer<T> {
     private ObjectMapper om = new ObjectMapper();
 
     @Override
