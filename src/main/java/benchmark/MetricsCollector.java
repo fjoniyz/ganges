@@ -1,44 +1,62 @@
 package benchmark;
 
-import java.sql.Timestamp;
-
-// TODO: not sure about this class - WIP
+import java.util.HashMap;
 
 public class MetricsCollector {
-    private Timestamp pipeEntryTimestamp;
-    private Timestamp pipeExitTimestamp;
-    private Timestamp anonEntryTimestamp;
-    private Timestamp anonExitTimestamp;
 
-    public Timestamp getPipeEntryTimestamp() {
-        return pipeEntryTimestamp;
+    private static MetricsCollector instance;
+    private static HashMap<String, Long> pipeEntryTimestamps;
+    private static HashMap<String, Long> pipeExitTimestamps;
+    private static HashMap<String, Long> anonEntryTimestamps;
+    private static HashMap<String, Long> anonExitTimestamps;
+
+    private MetricsCollector() {
     }
 
-    public Timestamp getPipeExitTimestamp() {
-        return pipeExitTimestamp;
+    public static MetricsCollector getInstance() {
+        if (instance == null) {
+            instance = new MetricsCollector();
+        }
+        return instance;
     }
 
-    public Timestamp getAnonEntryTimestamp() {
-        return anonEntryTimestamp;
+    public static long getPipeEntryTimestamp(String id) {
+        return pipeEntryTimestamps.get(id);
     }
 
-    public Timestamp getAnonExitTimestamp() {
-        return anonExitTimestamp;
+    public static long getPipeExitTimestamp(String id) {
+        return pipeExitTimestamps.get(id);
     }
 
-    public void setAnonEntryTimestamp(Timestamp anonEntryTimestamp) {
-        this.anonEntryTimestamp = anonEntryTimestamp;
+    public static long getAnonEntryTimestamp(String id) {
+        return anonEntryTimestamps.get(id);
     }
 
-    public void setPipeEntryTimestamp(Timestamp pipeEntryTimestamp) {
-        this.pipeEntryTimestamp = pipeEntryTimestamp;
+    public static long getAnonExitTimestamp(String id) {
+        return anonExitTimestamps.get(id);
     }
 
-    public void setPipeExitTimestamp(Timestamp pipeExitTimestamp) {
-        this.pipeExitTimestamp = pipeExitTimestamp;
+    public static long getAnonDuration(String id) {
+        return anonExitTimestamps.get(id) - anonEntryTimestamps.get(id);
     }
 
-    public void setAnonExitTimestamp(Timestamp anonExitTimestamp) {
-        this.anonExitTimestamp = anonExitTimestamp;
+    public static long getExitTimestamps(String id) {
+        return pipeExitTimestamps.get(id) - pipeEntryTimestamps.get(id);
+    }
+
+    public static void setAnonEntryTimestamps(String id, long timestamp) {
+        anonEntryTimestamps.put(id, timestamp);
+    }
+
+    public static void setPipeEntryTimestamps(String id, long timestamp) {
+        pipeEntryTimestamps.put(id, timestamp);
+    }
+
+    public static void setPipeExitTimestamps(String id, long timestamp) {
+        pipeExitTimestamps.put(id, timestamp);
+    }
+
+    public static void setAnonExitTimestamps(String id, long timestamp) {
+        anonExitTimestamps.put(id, timestamp);
     }
 }

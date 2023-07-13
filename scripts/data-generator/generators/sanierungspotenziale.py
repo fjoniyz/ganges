@@ -11,13 +11,15 @@ from random import uniform
 from time import sleep
 import numpy as np
 import os
+import uuid
 
 def generate_electricity_rows():
-    """Returns value in format [Datetime, Seconds_EnergyConsumption, apartement_number, location]"""
+    """Returns value in format [id, Datetime, Seconds_EnergyConsumption, apartement_number, location]"""
     # there are about 100 apartments
     # order of magnitude is completely wrong
     # apartments is an array with the number of inhabitants
     while True:
+        id = uuid.uuid4()
         apartments = np.random.randint(1,6,100) 
         locations = ["street a", "street b", "street c", "street c"]
         locations = int(len(apartments)/len(locations) + 1)*locations
@@ -27,10 +29,10 @@ def generate_electricity_rows():
             date = datetime.now()
             # the number of inhabitants effects energy consumption
             EV = round(uniform(1000*inhabitants, 10000*inhabitants), 2)
-            yield [date, f"{apartment}"+"sanierung-apartment", EV, location, inhabitants, development]
+            yield [id, date, f"{apartment}"+"sanierung-apartment", EV, location, inhabitants, development]
         
 def get_fields_names():
-    return ["Datetime","Seconds_EnergyConsumption", "apartment_number", "location"]
+    return ["id", "Datetime", "Seconds_EnergyConsumption", "apartment_number", "location"]
 
 if __name__ == "__main__":
     with open(os.path.dirname(os.path.realpath(__file__)) + '/../data/sanierungsdata.csv', 'w', newline='') as file:

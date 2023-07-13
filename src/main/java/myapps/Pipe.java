@@ -1,6 +1,9 @@
 package myapps;
 
 import java.io.*;
+import benchmark.MetricsCollector;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Properties;
@@ -19,33 +22,47 @@ import org.apache.kafka.streams.kstream.Produced;
 import java.util.*;
 
 public class Pipe {
-    public static String processing(ChargingStationMessage value, DataRepository dataRepository, String[] fields) throws IOException {
-        double[] valuesList = createValuesList(fields, value);
-        StringBuilder valueToSaveInRedis = new StringBuilder();
-        for (double d: valuesList
-        ) {
-            valueToSaveInRedis.append(d).append(",");
-        }
-        // Retrieve non-anonymized data from cache
-        dataRepository.saveValue(valueToSaveInRedis.toString());
-        List<String> allSavedValues = dataRepository.getValues();
+    public static String processing(ChargingStationMessage value, DataRepository dataRepository, String[] fields, boolean enableMonitoring) throws IOException {
+      String id = "lol"; // TODO: remove temporary stub
+      if (enableMonitoring) {
+        MetricsCollector.setPipeEntryTimestamps(id, System.currentTimeMillis());
+      }
 
-        // Parse cached strings into double arrays
-        double[][] input = new double[allSavedValues.size()][];
+      double[] valuesList = createValuesList(fields, value);
+      StringBuilder valueToSaveInRedis = new StringBuilder();
+      for (double d: valuesList
+      ) {
+          valueToSaveInRedis.append(d).append(",");
+      }
+      // Retrieve non-anonymized data from cache
+      dataRepository.saveValue(valueToSaveInRedis.toString());
+      List<String> allSavedValues = dataRepository.getValues();
 
-        for (int i = 0; i < allSavedValues.size(); i++) {
-            String[] values = allSavedValues.get(i).split(",");
-            double[] toDouble =
-                    Arrays.stream(values).mapToDouble(Double::parseDouble).toArray();
+      // Parse cached strings into double arrays
+      double[][] input = new double[allSavedValues.size()][];
 
-            input[i] = toDouble;
-        }
+      for (int i = 0; i < allSavedValues.size(); i++) {
+          String[] values = allSavedValues.get(i).split(",");
+          double[] toDouble =
+                  Arrays.stream(values).mapToDouble(Double::parseDouble).toArray();
 
-        // Anonymization
-        Doca docaInstance = new Doca();
-        double[][] output = docaInstance.anonymize(input);
-        String result = Arrays.deepToString(output);
-        return result;
+          input[i] = toDouble;
+      }
+
+      // Anonymization
+      Doca docaInstance = new Doca();
+      if (enableMonitoring) {
+        MetricsCollector.setAnonEntryTimestamps(id, System.currentTimeMillis());
+      }
+      double[][] output = docaInstance.anonymize(input);
+      if (enableMonitoring) {
+        MetricsCollector.setAnonExitTimestamps(id, System.currentTimeMillis());
+      }
+      String result = Arrays.deepToString(output);
+      if (enableMonitoring) {
+        MetricsCollector.setPipeExitTimestamps(id, System.currentTimeMillis());
+      }
+      return result;
     }
 
     public static String[] getFieldsToAnonymize() throws IOException {
@@ -107,35 +124,42 @@ public class Pipe {
 
     public static void main(final String[] args) {
         String userDirectory = System.getProperty("user.dir");
-        try (InputStream inputStream = Files.newInputStream(Paths.get(userDirectory + "/src/main/resources/config.properties"))) {
-            Properties props = new Properties();
+        Properties props = new Properties();
 
-            String inputTopic = "input";
-            String outputTopic = "output-test";
+        try (InputStream inputStream = Files.newInputStream(Paths.get(userDirectory + "/src/main/resources/pipe.properties"))) {
+          props.load(inputStream);
+        } catch (IOException e) {
+          throw new RuntimeException(e);
+        }
 
-            ChargingStationSerializer<ChargingStationMessage> chargingStationSerializer = new ChargingStationSerializer<>();
-            ChargingStationDeserializer<ChargingStationMessage> chargingStationDeserializer = new ChargingStationDeserializer<>(ChargingStationMessage.class);
-            Serde<ChargingStationMessage> chargingStationMessageSerde = Serdes.serdeFrom(chargingStationSerializer, chargingStationDeserializer);
+        String inputTopic = props.getProperty("input-topic");
+        String outputTopic = props.getProperty("output-topic");
+        boolean enableMonitoring = Boolean.parseBoolean(props.getProperty("enable-monitoring"));
 
-            props.load(inputStream);
-            props.put(StreamsConfig.METADATA_MAX_AGE_CONFIG, "1000"); // Needed to prevent timeouts during broker startup.
-            props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
-            props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, chargingStationMessageSerde.getClass());
+        ChargingStationSerializer<ChargingStationMessage> chargingStationSerializer = new ChargingStationSerializer<>();
+        ChargingStationDeserializer<ChargingStationMessage> chargingStationDeserializer = new ChargingStationDeserializer<>(ChargingStationMessage.class);
+        Serde<ChargingStationMessage> chargingStationMessageSerde = Serdes.serdeFrom(chargingStationSerializer, chargingStationDeserializer);
 
-            // Create anonymization stream and use it with Kafka
-            StreamsBuilder streamsBuilder = new StreamsBuilder();
-            KStream<String, ChargingStationMessage> src = streamsBuilder.stream(inputTopic, Consumed.with(Serdes.String(), chargingStationMessageSerde));
-            DataRepository dataRepository = new DataRepository();
-            Produced<String, String> produced = Produced.with(Serdes.String(), Serdes.String());
-            String[] fields = getFieldsToAnonymize();
-            src.mapValues(value -> {
-                try {
-                    return processing(value, dataRepository, fields);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            }).to(outputTopic, produced);
-            Topology topology = streamsBuilder.build();
+        try (InputStream inputStream = Files.newInputStream(Paths.get(userDirectory + "/src/main/resources/kafka.properties"))) {
+          props.load(inputStream);
+          props.put(StreamsConfig.METADATA_MAX_AGE_CONFIG, "1000"); // Needed to prevent timeouts during broker startup.
+          props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+          props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, chargingStationMessageSerde.getClass());
+
+          // Create anonymization stream and use it with Kafka
+          StreamsBuilder streamsBuilder = new StreamsBuilder();
+          KStream<String, ChargingStationMessage> src = streamsBuilder.stream(inputTopic, Consumed.with(Serdes.String(), chargingStationMessageSerde));
+          DataRepository dataRepository = new DataRepository();
+          Produced<String, String> produced = Produced.with(Serdes.String(), Serdes.String());
+          String[] fields = getFieldsToAnonymize();
+          src.mapValues(value -> {
+              try {
+                  return processing(value, dataRepository, fields, enableMonitoring);
+              } catch (IOException e) {
+                  throw new RuntimeException(e);
+              }
+          }).to(outputTopic, produced);
+          Topology topology = streamsBuilder.build();
 
         try (KafkaStreams streams = new KafkaStreams(topology, props)) {
           final CountDownLatch latch = new CountDownLatch(1);
