@@ -46,7 +46,7 @@ public class ChargingStationMessage implements Serializable, AnonymizedMessage {
     }
 
     @Override
-    public double[] getValuesListFromKeys(String[] keys) {
-        return new double[0]; // TODO: Move function from pipe her
+    public Double[] getValuesListFromKeys(String[] keys) {
+        return new Double[0]; // TODO: Move function from pipe her
     }
 }

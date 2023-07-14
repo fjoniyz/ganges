@@ -5,7 +5,6 @@ import com.fasterxml.jackson.annotation.JsonRootName;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import lombok.Data;
 import serdes.AnonymizedMessage;
 
@@ -26,18 +25,16 @@ public class EMobilityStationMessage implements Serializable, AnonymizedMessage 
     this.evUsage = evUsage;
   }
 
-  public double[] getValuesListFromKeys(String[] keys) {
+  public Double[] getValuesListFromKeys(String[] keys) {
     List<Double> values = new ArrayList<>();
     for (String field : keys) {
-      switch (field) {
-        case "evUsage":
-          values.add(getEvUsage());
-          break;
-        default:
-          System.out.println("Invalid field in config file: " + field);
+      if (field.equals("evUsage")) {
+        values.add(getEvUsage());
+      } else {
+        System.out.println("Invalid field in config file: " + field);
       }
     }
-    return values.stream().mapToDouble(d -> d).toArray();
+    return values.toArray(new Double[values.size()]);
   }
 
   public void setEvUsage(double evUsage) {

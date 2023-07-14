@@ -20,7 +20,6 @@ import org.apache.kafka.streams.kstream.Produced;
 
 import java.util.*;
 import serdes.emobility.EMobilityStationMessage;
-import serdes.emobility.EMobilityStationSerde;
 
 public class Pipe {
 
@@ -35,34 +34,32 @@ public class Pipe {
     }
 
 
-    public static AnonymizedMessage processing(AnonymizedMessage message, DataRepository dataRepository, String[] fields) throws IOException {
-
-      double[] valuesList = message.getValuesListFromKeys(fields);
-      StringBuilder valueToSaveInRedis = new StringBuilder();
-      for (double d: valuesList
-      ) {
-          valueToSaveInRedis.append(d).append(",");
-      }
+    public static String processing(AnonymizedMessage message, DataRepository dataRepository, String[] fields) throws IOException {
+      String id = message.getId();
+      Double[] valuesList = message.getValuesListFromKeys(fields);
       // Retrieve non-anonymized data from cache
-      dataRepository.saveValue(valueToSaveInRedis.toString());
-      List<String> allSavedValues = dataRepository.getValues();
+      HashMap<String, Double> keyValueMap = new HashMap<>();
+      for (int i = 0; i < valuesList.length; i++) {
+        keyValueMap.put(fields[i], valuesList[i]);
+      }
+      dataRepository.saveValues(id, keyValueMap);
+
+      // Here we assume that for one message type the values are stored consistently
+      List<Double[]> allSavedValues = dataRepository.getValuesByKeys(fields);
 
       // Parse cached strings into double arrays
       double[][] input = new double[allSavedValues.size()][];
 
       for (int i = 0; i < allSavedValues.size(); i++) {
-          String[] values = allSavedValues.get(i).split(",");
-          double[] toDouble =
-                  Arrays.stream(values).mapToDouble(Double::parseDouble).toArray();
-
-          input[i] = toDouble;
+          double[] doubleArray =
+                  Arrays.stream(allSavedValues.get(i)).mapToDouble(v -> v).toArray();
+          input[i] = doubleArray;
       }
 
       // Anonymization
-      Doca docaInstance = new Doca();
-      double[][] output = docaInstance.anonymize(input);
-      String result = Arrays.deepToString(output);
-      return result;
+      double[][] output = Doca.anonymize(input);
+
+      return Arrays.deepToString(output);
     }
 
     public static String[] getFieldsToAnonymize() throws IOException {
