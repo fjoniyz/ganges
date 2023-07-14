@@ -23,10 +23,11 @@ import serdes.emobility.EMobilityStationMessage;
 
 public class Pipe {
 
-    public static AnonymizedMessage copyMessage(AnonymizedMessage message) {
-      if (message.getClass().equals(EMobilityStationMessage.class)) {
-        EMobilityStationMessage emobilityMsg = (EMobilityStationMessage) message;
-        return new EMobilityStationMessage(new String(emobilityMsg.getId()), new String(emobilityMsg.getTimestamp()), new String(emobilityMsg.getTimeseriesId()), emobilityMsg.getEvUsage());
+    public static AnonymizedMessage createMessage(Class<?> messageClass, Object... values) {
+      AnonymizedMessage message = null;
+      if (messageClass.equals(EMobilityStationMessage.class)) {
+//        message = new EMobilityStationMessage(values[0], values);
+        return message;
       }
       else {
         return null; // TODO: add other message types
@@ -34,9 +35,11 @@ public class Pipe {
     }
 
 
-    public static String processing(AnonymizedMessage message, DataRepository dataRepository, String[] fields) throws IOException {
+    public static <T extends AnonymizedMessage> String processing(T message, DataRepository dataRepository, String[] fields) throws IOException {
       String id = message.getId();
-      Double[] valuesList = message.getValuesListFromKeys(fields);
+      Double[] valuesList = message.getValuesListByKeys(fields);
+      dataRepository.open();
+
       // Retrieve non-anonymized data from cache
       HashMap<String, Double> keyValueMap = new HashMap<>();
       for (int i = 0; i < valuesList.length; i++) {
@@ -46,7 +49,7 @@ public class Pipe {
 
       // Here we assume that for one message type the values are stored consistently
       List<Double[]> allSavedValues = dataRepository.getValuesByKeys(fields);
-
+      dataRepository.close();
       // Parse cached strings into double arrays
       double[][] input = new double[allSavedValues.size()][];
 
@@ -146,8 +149,9 @@ public class Pipe {
           // Create anonymization stream and use it with Kafka
           StreamsBuilder streamsBuilder = new StreamsBuilder();
           KStream<String, EMobilityStationMessage> src = streamsBuilder.stream(inputTopic, Consumed.with(Serdes.String(), emobilitySerde));
-          DataRepository dataRepository = new DataRepository();
           Produced<String, String> produced = Produced.with(Serdes.String(), Serdes.String());
+
+          DataRepository dataRepository = new DataRepository();
           String[] fields = getFieldsToAnonymize();
           src.mapValues(value -> {
               try {
