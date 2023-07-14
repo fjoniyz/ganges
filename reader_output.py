@@ -27,14 +27,6 @@ def create_TaskSimEvCharging(x, power) :
     max_duration = min_duration + 60
     min_demand = int(x.kwh)
     max_demand = int(x.loadingPotential)
-    print("Min_duration ", min_duration)
-    print("Max_duration ", max_duration)
-    print("Min_demand ", min_demand)
-    print("Max_demand ", max_demand)
-    print("Min_start ", min_start)
-    print("Max_start ", max_start)
-    print("Power ", power)
-
 
     return prognose.TaskSimEvCharging(min_duration, max_duration, min_demand, max_demand, min_start, max_start, power)
 
@@ -69,10 +61,41 @@ try:
         x = json.loads(msg.value(), object_hook=lambda d: SimpleNamespace(**d))
         # Process the message
         print(f"Received message: {msg.value().decode('utf-8')}")
-        d = {'col1': [323, 21, 32], 'col2': [3, 4, 732], 'col3': [5, 6, 8]}
         prognose.random.seed(prognose.pd.Timestamp.utcnow().dayofyear)
         power = [1, 2, 3, 4]
         task_instance = create_TaskSimEvCharging(x, [1,2,3,4])
+        # d = {"col1": [task_instance.max_start, task_instance.min_start, task_instance.min_demand,
+        #               task_instance.max_demand, task_instance.min_duration, task_instance.max_duration],
+        #      "col2": [task_instance.max_start, task_instance.min_start, task_instance.min_demand,
+        #               task_instance.max_demand, task_instance.min_duration, task_instance.max_duration],
+        #      "col3": [task_instance.max_start, task_instance.min_start, task_instance.min_demand,
+        #               task_instance.max_demand, task_instance.min_duration, task_instance.max_duration],
+        #      "col4": [task_instance.max_start, task_instance.min_start, task_instance.min_demand,
+        #               task_instance.max_demand, task_instance.min_duration, task_instance.max_duration],
+        #      "col5": [task_instance.max_start, task_instance.min_start, task_instance.min_demand,
+        #               task_instance.max_demand, task_instance.min_duration, task_instance.max_duration],
+        #      "col7": [task_instance.max_start, task_instance.min_start, task_instance.min_demand,
+        #               task_instance.max_demand, task_instance.min_duration, task_instance.max_duration],
+        #      "col8": [task_instance.max_start, task_instance.min_start, task_instance.min_demand,
+        #               task_instance.max_demand, task_instance.min_duration, task_instance.max_duration],
+        #      "col9": [task_instance.max_start, task_instance.min_start, task_instance.min_demand,
+        #               task_instance.max_demand, task_instance.min_duration, task_instance.max_duration],
+        #      "col10": [task_instance.max_start, task_instance.min_start, task_instance.min_demand,
+        #               task_instance.max_demand, task_instance.min_duration, task_instance.max_duration],
+        #      "col11": [task_instance.max_start, task_instance.min_start, task_instance.min_demand,
+        #               task_instance.max_demand, task_instance.min_duration, task_instance.max_duration],
+        #      }
+        d = {"col1": [task_instance.max_start],
+             "col2": [task_instance.max_start],
+             "col3": [task_instance.max_start],
+             "col4": [task_instance.max_start],
+             "col5": [task_instance.max_start],
+             "col7": [task_instance.max_start],
+             "col8": [task_instance.max_start],
+             "col9": [task_instance.max_start],
+             "col10": [task_instance.max_start],
+             "col11": [task_instance.max_start],
+             }
         df = prognose.DataFrame(data=d)
         print(prognose.simulate_ev_forecast(df=df, cfg=task_instance))
 

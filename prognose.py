@@ -225,10 +225,6 @@ def simulate_ev_forecast(df: DataFrame, cfg: TaskSimEvCharging) -> DataFrame:
             # power shuts down, after demand is full filled (in minute steps)
 
             duration = ceil(item.demand / item.power * 60)
-            print(item.demand)
-            print(item.power)
-            print(duration)
-
             if item.duration < duration:
                 duration = item.duration
 
@@ -419,10 +415,3 @@ def simulate_ev_forecast(df: DataFrame, cfg: TaskSimEvCharging) -> DataFrame:
 
     return df_f
 
-# d = {'col1': [323, 21,32], 'col2': [3, 4, 732], 'col3': [5,6, 8]}
-# random.seed(pd.Timestamp.utcnow().dayofyear)
-# power = [1,2,3,4]
-#
-# task_instance = TaskSimEvCharging(10, 60, 5, 50, 0, 100, power)
-# df = DataFrame(data=d)
-# print(simulate_ev_forecast(df=df, cfg=task_instance))
