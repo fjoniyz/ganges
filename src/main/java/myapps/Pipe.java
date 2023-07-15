@@ -22,7 +22,7 @@ import org.apache.kafka.streams.kstream.Produced;
 import java.util.*;
 
 public class Pipe {
-    public static String processing(ChargingStationMessage value, String[] fields) throws IOException {
+    public static String processing(ChargingStationMessage value, String[] fields, DataRepository dataRepository) throws IOException {
         double[] valuesList = createValuesList(fields, value);
         StringBuilder valueToSaveInRedis = new StringBuilder();
         for (double d: valuesList
@@ -30,19 +30,19 @@ public class Pipe {
             valueToSaveInRedis.append(d).append(",");
         }
         // Retrieve non-anonymized data from cache
-//        dataRepository.saveValue(valueToSaveInRedis.toString());
-//        List<String> allSavedValues = dataRepository.getValues();
+        dataRepository.saveValue(valueToSaveInRedis.toString());
+        List<String> allSavedValues = dataRepository.getValues();
 
-        double[][] input = new double[1][];
+        double[][] input = new double[allSavedValues.size()][];
         input[0] = valuesList;
 
-//        for (int i = 0; i < allSavedValues.size(); i++) {
-//            String[] values = allSavedValues.get(i).split(",");
-//            double[] toDouble =
-//                    Arrays.stream(values).mapToDouble(Double::parseDouble).toArray();
-//
-//            input[i] = toDouble;
-//        }
+        for (int i = 0; i < allSavedValues.size(); i++) {
+            String[] values = allSavedValues.get(i).split(",");
+            double[] toDouble =
+                    Arrays.stream(values).mapToDouble(Double::parseDouble).toArray();
+
+            input[i] = toDouble;
+        }
 
         // Anonymization
 
@@ -134,12 +134,12 @@ public class Pipe {
             // Create anonymization stream and use it with Kafka
             StreamsBuilder streamsBuilder = new StreamsBuilder();
             KStream<String, ChargingStationMessage> src = streamsBuilder.stream(inputTopic, Consumed.with(Serdes.String(), chargingStationMessageSerde));
-//            DataRepository dataRepository = new DataRepository();
+            DataRepository dataRepository = new DataRepository();
             Produced<String, String> produced = Produced.with(Serdes.String(), Serdes.String());
             String[] fields = getFieldsToAnonymize();
             src.mapValues(value -> {
                 try {
-                    return processing(value, fields);
+                    return processing(value, fields, dataRepository);
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }

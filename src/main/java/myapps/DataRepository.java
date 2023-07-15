@@ -5,6 +5,7 @@ import com.lambdaworks.redis.RedisConnection;
 import com.lambdaworks.redis.RedisURI;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -15,8 +16,6 @@ import java.util.concurrent.ThreadLocalRandom;
 public class DataRepository {
     RedisClient redisClient;
     RedisConnection<String, String> connection;
-    int lastKey = 0;
-
     public DataRepository() {
         redisClient = new RedisClient(RedisURI.create("redis://localhost/"));
         connection = redisClient.connect();
@@ -27,8 +26,8 @@ public class DataRepository {
      * @param value value to be saved
      */
     public void saveValue(String value) {
+        int lastKey = getHighestKey();
         String key = Integer.toString(lastKey + 1);
-        lastKey = Integer.parseInt(key);
         connection.set(key, value);
     }
 
@@ -38,10 +37,27 @@ public class DataRepository {
      */
     public List<String> getValues(){
         List<String> keys = connection.keys("*");
-        List<String> values = new ArrayList<>();
+        List<Integer> keysAsInts = new ArrayList<>();
         for(String key: keys){
-            values.add(connection.get(key));
+            keysAsInts.add(Integer.parseInt(key));
+        }
+        Collections.sort(keysAsInts);
+        List<String> values = new ArrayList<>();
+        for(Integer key: keysAsInts){
+            values.add(connection.get(Integer.toString(key)));
         }
         return values;
+    }
+
+    public int getHighestKey() {
+        List<String> keys = connection.keys("*");
+        int maxKey = 0;
+        for(String s : keys){
+            int key = Integer.parseInt(s);
+            if(key > maxKey){
+                maxKey = key;
+            }
+        }
+        return maxKey;
     }
 }
