@@ -15,6 +15,7 @@ import java.util.concurrent.ThreadLocalRandom;
 public class DataRepository {
     RedisClient redisClient;
     RedisConnection<String, String> connection;
+    int lastKey = 0;
 
     public DataRepository() {
         redisClient = new RedisClient(RedisURI.create("redis://localhost/"));
@@ -26,7 +27,8 @@ public class DataRepository {
      * @param value value to be saved
      */
     public void saveValue(String value) {
-        String key = Integer.toString(ThreadLocalRandom.current().nextInt(0, 1000 + 1));
+        String key = Integer.toString(lastKey + 1);
+        lastKey = Integer.parseInt(key);
         connection.set(key, value);
     }
 
