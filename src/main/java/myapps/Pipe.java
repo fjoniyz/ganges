@@ -54,7 +54,7 @@ public class Pipe {
         value.setKwh(kwh);
         value.setLoadingPotential(load_potential);
         Serializer<ChargingStationMessage> serializer = new ChargingStationSerializer<>();
-        byte[] json = serializer.serialize("output-test", value);
+        byte[] json = serializer.serialize("output", value);
         return new String(json, StandardCharsets.UTF_8);
     }
 
@@ -119,8 +119,8 @@ public class Pipe {
         String userDirectory = System.getProperty("user.dir");
         try (InputStream inputStream = Files.newInputStream(Paths.get(userDirectory + "/src/main/resources/config.properties"))) {
             Properties props = new Properties();
-            String inputTopic = "input-test3";
-            String outputTopic = "output";
+            String inputTopic = "input-topicc";
+            String outputTopic = "output-topic";
 
             ChargingStationSerializer<ChargingStationMessage> chargingStationSerializer = new ChargingStationSerializer<>();
             ChargingStationDeserializer<ChargingStationMessage> chargingStationDeserializer = new ChargingStationDeserializer<>(ChargingStationMessage.class);

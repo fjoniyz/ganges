@@ -7,7 +7,7 @@ from numpy.random import seed
 
 from random import choices
 
-from chaospy import Normal
+from chaospy import Normal, Trunc
 class TaskSimEvCharging:
     def __init__(self, min_duration, max_duration, min_demand, max_demand, min_start, max_start, power):
         self.min_start = min_start
@@ -120,8 +120,8 @@ def simulate_ev_forecast(df: DataFrame, cfg: TaskSimEvCharging) -> DataFrame:
     mduration_dec = noise.sample(nr_days)  # fore measurement
 
     # how how much energy is needed
-
-    demand_dec = dec_demand.sample(nr_days)  # for forecast
+    trunc_dist = Trunc(dec_demand, lower=0)
+    demand_dec = trunc_dist.sample(nr_days)  # for forecast
 
     mdemand_dec = noise.sample(nr_days)  # for measurement
 
@@ -223,11 +223,9 @@ def simulate_ev_forecast(df: DataFrame, cfg: TaskSimEvCharging) -> DataFrame:
             )
 
             # power shuts down, after demand is full filled (in minute steps)
-
             duration = ceil(item.demand / item.power * 60)
             if item.duration < duration:
                 duration = item.duration
-
             d_power[item.start - 1: item.start - 1 + duration] = item.power
 
             # measured power

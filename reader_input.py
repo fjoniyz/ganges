@@ -6,7 +6,7 @@ from types import SimpleNamespace
 # Kafka broker configuration
 bootstrap_servers = 'localhost:9092'
 group_id = 'my-consumer-group'
-topic = 'input-test3'
+topic = 'input-topicc'
 
 def create_TaskSimEvCharging(x, power) :
     #each max is just min value plus one hour
@@ -62,16 +62,26 @@ try:
         prognose.random.seed(prognose.pd.Timestamp.utcnow().dayofyear)
         power = [1, 2, 3, 4]
         task_instance = create_TaskSimEvCharging(x, [1,2,3,4])
-        d = {"col1": [task_instance.max_start],
-             "col2": [task_instance.max_start],
-             "col3": [task_instance.max_start],
-             "col4": [task_instance.max_start],
-             "col5": [task_instance.max_start],
-             "col7": [task_instance.max_start],
-             "col8": [task_instance.max_start],
-             "col9": [task_instance.max_start],
-             "col10": [task_instance.max_start],
-             "col11": [task_instance.max_start],
+        d = {"col1": [task_instance.max_start, task_instance.min_start, task_instance.min_demand,
+                      task_instance.max_demand, task_instance.min_duration, task_instance.max_duration],
+             "col2": [task_instance.max_start, task_instance.min_start, task_instance.min_demand,
+                      task_instance.max_demand, task_instance.min_duration, task_instance.max_duration],
+             "col3": [task_instance.max_start, task_instance.min_start, task_instance.min_demand,
+                      task_instance.max_demand, task_instance.min_duration, task_instance.max_duration],
+             "col4": [task_instance.max_start, task_instance.min_start, task_instance.min_demand,
+                      task_instance.max_demand, task_instance.min_duration, task_instance.max_duration],
+             "col5": [task_instance.max_start, task_instance.min_start, task_instance.min_demand,
+                      task_instance.max_demand, task_instance.min_duration, task_instance.max_duration],
+             "col7": [task_instance.max_start, task_instance.min_start, task_instance.min_demand,
+                      task_instance.max_demand, task_instance.min_duration, task_instance.max_duration],
+             "col8": [task_instance.max_start, task_instance.min_start, task_instance.min_demand,
+                      task_instance.max_demand, task_instance.min_duration, task_instance.max_duration],
+             "col9": [task_instance.max_start, task_instance.min_start, task_instance.min_demand,
+                      task_instance.max_demand, task_instance.min_duration, task_instance.max_duration],
+             "col10": [task_instance.max_start, task_instance.min_start, task_instance.min_demand,
+                       task_instance.max_demand, task_instance.min_duration, task_instance.max_duration],
+             "col11": [task_instance.max_start, task_instance.min_start, task_instance.min_demand,
+                       task_instance.max_demand, task_instance.min_duration, task_instance.max_duration],
              }
         df = prognose.DataFrame(data=d)
         print(prognose.simulate_ev_forecast(df=df, cfg=task_instance))
