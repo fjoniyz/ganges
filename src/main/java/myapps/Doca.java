@@ -67,7 +67,7 @@ public class Doca implements AnonymizationAlgorithm{
     }
 
     @Override
-    public static double[][] anonymize(
+    public double[][] anonymize(
         double[][] X) {
         String[] parameters = getParameters();
         double eps = Double.parseDouble(parameters[0]);
