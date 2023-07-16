@@ -15,4 +15,5 @@ jobs:
           VALIDATE_ALL_CODEBASE: true
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          LINTER_RULES_PATH: /
           JAVA_FILE_NAME: ${GITHUB_WORKSPACE}/checkstyle_checks.xml
