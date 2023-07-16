@@ -13,5 +13,6 @@ jobs:
         uses: github/super-linter@v5
         env:
           VALIDATE_ALL_CODEBASE: true
-          JAVA_FILE_NAME: checkstyle_checks.xml
-          GITHUB_TOKEN: ${{ secrets.token_secret }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          JAVA_FILE_NAME: ${GITHUB_WORKSPACE}/checkstyle_checks.xml
