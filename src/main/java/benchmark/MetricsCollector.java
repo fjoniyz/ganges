@@ -15,6 +15,25 @@ public class MetricsCollector {
   private static HashMap<String, Long> pipeExitTimestamps = new HashMap<>();
   private static HashMap<String, Long> anonEntryTimestamps = new HashMap<>();
   private static HashMap<String, Long> anonExitTimestamps = new HashMap<>();
+  private static HashMap<String, Long> producerTimestamps = new HashMap<>();
+  private static HashMap<String, Long> consumerTimestamps = new HashMap<>();
+
+  public static Long getProducerTimestamps(String id) {
+    return producerTimestamps.get(id);
+  }
+
+  public static void setProducerTimestamps(String id, long timestamp) {
+    producerTimestamps.put(id, timestamp);
+  }
+
+  public static Long getConsumerTimestamps(String id) {
+    return consumerTimestamps.get(id);
+  }
+
+  public static void setConsumerTimestamps(String id, long timestamp) throws IOException {
+    consumerTimestamps.put(id, timestamp);
+    MetricsCollector.metricsToCsv();
+  }
 
   private MetricsCollector() {
   }
@@ -89,12 +108,12 @@ public class MetricsCollector {
       CSVWriter writer = new CSVWriter(outputfile);
 
       // adding header to csv
-      String[] header = { "ID", "EntryPipe", "EntryAnonymization", "ExitAnonymization", "ExitPipe"};
+      String[] header = { "ID", "ProducerTimestamp","EntryPipe", "EntryAnonymization", "ExitAnonymization", "ExitPipe","ConsumerTimestamp"};
       writer.writeNext(header);
 
       for (Map.Entry<String, Long> entry : pipeEntryTimestamps.entrySet()) {
         String id = entry.getKey();
-        String[] data = {id, entry.getValue().toString(),getAnonEntryTimestamp(id).toString(), getAnonExitTimestamp(id).toString(), getExitTimestamps(id).toString() };
+        String[] data = {id, getProducerTimestamps(id).toString(), entry.getValue().toString(),getAnonEntryTimestamp(id).toString(), getAnonExitTimestamp(id).toString(), getExitTimestamps(id).toString(), getConsumerTimestamps(id).toString() };
         writer.writeNext(data);
       }
       // closing writer connection

@@ -16,14 +16,16 @@ public class EMobilityStationMessage implements Serializable, AnonymizedMessage 
   private String timestamp;
   private String timeseriesId;
   private double evUsage;
+  private String producerTimestamp;
 
   @JsonCreator
   public EMobilityStationMessage(@JsonProperty("id")String id, @JsonProperty("Timestamp")String timestamp, @JsonProperty("timeseries_id")String timeseriesId,
-                                 @JsonProperty("Seconds_EnergyConsumption")double evUsage) {
+                                 @JsonProperty("Seconds_EnergyConsumption")double evUsage, @JsonProperty("producer_timestamp")String producerTimestamp) {
     this.id = id;
     this.timestamp = timestamp;
     this.timeseriesId = timeseriesId;
     this.evUsage = evUsage;
+    this.producerTimestamp = producerTimestamp;
   }
 
   public double[] getValuesListFromKeys(String[] keys) {

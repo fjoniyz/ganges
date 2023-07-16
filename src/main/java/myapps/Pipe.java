@@ -63,7 +63,6 @@ public class Pipe {
       if (enableMonitoring) {
         MetricsCollector.setPipeExitTimestamps(id, System.currentTimeMillis());
       }
-      MetricsCollector.metricsToCsv();
       return result;
     }
 

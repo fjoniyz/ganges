@@ -1,10 +1,14 @@
 package benchmark;
 
-import com.ganges.examples.interceptor_consumer.DemoConsumerInterceptor;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.io.IOException;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Properties;
-import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -15,7 +19,7 @@ public class PerformanceBenchmark {
     private void getAnonymizationTime() {
 
     }
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException, ParseException {
         Properties props = new Properties();
         props.setProperty("bootstrap.servers", "localhost:9092");
         props.setProperty("group.id", "test");
@@ -26,14 +30,18 @@ public class PerformanceBenchmark {
         props.setProperty(
             "value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
         consumer = new KafkaConsumer<>(props);
-        consumer.subscribe(Arrays.asList("energy-usage"));
+        consumer.subscribe(Arrays.asList("output-test"));
 
         anonymizationThread = new Thread();
         while (true) {
             ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
-            for (ConsumerRecord<String, String> record : records)
-                System.out.printf(
-                    "offset = %d, key = %s, value = %s%n", record.offset(), record.key(), record.value());
+            for (ConsumerRecord<String, String> record : records) {
+                long consumerTimestamp = System.currentTimeMillis();
+
+                MetricsCollector.setConsumerTimestamps(record.key(), consumerTimestamp); // TODO: put the id into the record key
+
+                System.out.printf("offset = %d, key = %s, value = %s%n", record.offset(), record.key(), record.value());
+            }
         }
     }
 }
