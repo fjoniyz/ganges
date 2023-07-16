@@ -61,7 +61,7 @@ public class Pipe {
 
       // Anonymization
       double[][] output = Doca.anonymize(input);
-
+      System.out.println(Arrays.deepToString(output));
       return Arrays.deepToString(output);
     }
 
@@ -124,16 +124,16 @@ public class Pipe {
 
     public static void main(final String[] args) {
         String userDirectory = System.getProperty("user.dir");
-        Properties props = new Properties();
+        Properties pipeProps = new Properties();
 
         try (InputStream inputStream = Files.newInputStream(Paths.get(userDirectory + "/src/main/resources/pipe.properties"))) {
-          props.load(inputStream);
+          pipeProps.load(inputStream);
         } catch (IOException e) {
           throw new RuntimeException(e);
         }
 
-        String inputTopic = props.getProperty("input-topic");
-        String outputTopic = props.getProperty("output-topic");
+        String inputTopic = pipeProps.getProperty("input-topic");
+        String outputTopic = pipeProps.getProperty("output-topic");
 
         Serializer<EMobilityStationMessage> serializer = new Serializer<>();
         Deserializer<EMobilityStationMessage>
@@ -141,10 +141,11 @@ public class Pipe {
         Serde<EMobilityStationMessage> emobilitySerde = Serdes.serdeFrom(serializer, emobilityDeserializer);
 
         try (InputStream inputStream = Files.newInputStream(Paths.get(userDirectory + "/src/main/resources/kafka.properties"))) {
-          props.load(inputStream);
-          props.put(StreamsConfig.METADATA_MAX_AGE_CONFIG, "1000"); // Needed to prevent timeouts during broker startup.
-          props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
-          props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, emobilitySerde.getClass());
+          Properties kafkaProps = new Properties();
+          kafkaProps.load(inputStream);
+          kafkaProps.put(StreamsConfig.METADATA_MAX_AGE_CONFIG, "1000"); // Needed to prevent timeouts during broker startup.
+          kafkaProps.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+          kafkaProps.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, emobilitySerde.getClass());
 
           // Create anonymization stream and use it with Kafka
           StreamsBuilder streamsBuilder = new StreamsBuilder();
@@ -162,7 +163,7 @@ public class Pipe {
           }).to(outputTopic, produced);
           Topology topology = streamsBuilder.build();
 
-        try (KafkaStreams streams = new KafkaStreams(topology, props)) {
+        try (KafkaStreams streams = new KafkaStreams(topology, kafkaProps)) {
           final CountDownLatch latch = new CountDownLatch(1);
           try {
             streams.start();
