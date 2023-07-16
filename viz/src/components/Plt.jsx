@@ -11,6 +11,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 const Plt = ({ restProxyUrl, topic }) => {
   const [messages, setMessages] = useState([]);
   const [vizKey, setVizKey] = useState('');
+  const [messageIdKey, setMessageIdKey] = useState('id');
   const [comparedTopic, setCompareTopic] = useState('')
   const chartRef = useRef(null);
   const compareChartRef = useRef(null);
@@ -78,8 +79,9 @@ const Plt = ({ restProxyUrl, topic }) => {
     const form = e.target;
     const formData = new FormData(form);
     const formJson = Object.fromEntries(formData.entries());
-    const compareTopic = formJson.plainTopic;
+    const compareTopic = formJson.compareTopic;
     setCompareTopic(compareTopic);
+    setMessageIdKey(formJson.idKey);
 
     subscribeToTopic([topic, compareTopic]);
 
@@ -199,17 +201,15 @@ const Plt = ({ restProxyUrl, topic }) => {
     }
   };
 
-
   const compareValues = () => {
     const messagesA = messages.filter(message => message.topic === topic)
     const messagesB = messages.filter(message => message.topic === comparedTopic)
 
-    const values = messagesA.filter(mA => {
-      messagesB.find(mB => mB.value["id"] === mA.value["id"])
-    }).map(mA => {
-      const mB = messagesB.find(mB => mB.id === mA.id)
-      return (mB.value[vizKey] - mA.value[vizKey])
-    });
+    const values = messagesA.filter((mA) => messagesB.find(mB => mB.value[messageIdKey] === mA.value[messageIdKey]))
+      .map((mA) => {
+        const mB = messagesB.find(mB => mB.value[messageIdKey] === mA.value[messageIdKey]);
+        return (mB.value[vizKey] - mA.value[vizKey]);
+      });
 
     return calculateValueDistribution(values);
   };
@@ -321,8 +321,10 @@ const Plt = ({ restProxyUrl, topic }) => {
         <input
           type="text"
           name="vizKey"
+          defaultValue="value"
           class="p-2 rounded mr-2" />
-        <button type="submit">Submit</button>
+        <br />
+        <button type="submit" class="my-2">Submit</button>
       </form>
 
       {vizKey && (
@@ -359,10 +361,20 @@ const Plt = ({ restProxyUrl, topic }) => {
             <br />
             <input
               type="text"
-              name="plainTopic"
+              name="compareTopic"
               class="p-2 rounded mr-2"
             />
-            <button type="submit">Submit</button>
+            <br />
+            <label>Message UUID-key</label>
+            <br />
+            <input
+              type="text"
+              name="idKey"
+              defaultValue={messageIdKey}
+              class="p-2 rounded mr-2"
+            />
+            <br />
+            <button type="submit" class="my-2">Submit</button>
           </form>
 
           {comparedTopic.length > 0 && (
