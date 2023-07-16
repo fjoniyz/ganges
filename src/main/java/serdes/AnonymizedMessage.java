@@ -1,7 +1,8 @@
 package serdes;
 
 public interface AnonymizedMessage {
-  public String getId();
-  public Double[] getValuesListByKeys(String[] keys);
+  String getId();
+
+  Double[] getValuesListByKeys(String[] keys);
 
 }
