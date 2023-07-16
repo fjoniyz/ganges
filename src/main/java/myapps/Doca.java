@@ -8,7 +8,7 @@ import java.util.List;
 import java.io.*;
 import java.util.Properties;
 
-public class Doca implements AnonymizationAlgorithm{
+public class Doca implements AnonymizationAlgorithm {
 
     public static double getMax(double[][] X) {
         double max = Double.NEGATIVE_INFINITY;
