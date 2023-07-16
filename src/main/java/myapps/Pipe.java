@@ -23,8 +23,8 @@ import java.util.*;
 import serdes.emobility.EMobilityStationMessage;
 
 public class Pipe {
-    public static String processing(AnonymizedMessage message, DataRepository dataRepository, String[] fields, boolean enableMonitoring) throws IOException {
-      String id = "lol"; // TODO: remove temporary stub
+    public static String processing(String id, AnonymizedMessage message, DataRepository dataRepository, String[] fields, boolean enableMonitoring) throws IOException {
+      //String id = "lol"; // TODO: remove temporary stub
       if (enableMonitoring) {
         MetricsCollector.setPipeEntryTimestamps(id, System.currentTimeMillis());
       }
@@ -63,6 +63,7 @@ public class Pipe {
       if (enableMonitoring) {
         MetricsCollector.setPipeExitTimestamps(id, System.currentTimeMillis());
       }
+      MetricsCollector.metricsToCsv();
       return result;
     }
 
@@ -156,7 +157,7 @@ public class Pipe {
           String[] fields = getFieldsToAnonymize();
           src.mapValues(value -> {
               try {
-                  return processing(value, dataRepository, fields, enableMonitoring);
+                  return processing(value.getId(), value, dataRepository, fields, enableMonitoring);
               } catch (IOException e) {
                   throw new RuntimeException(e);
               }
