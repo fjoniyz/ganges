@@ -1,6 +1,6 @@
 # Visualizer for kafka 
 
-Currently only displays values and the distribution.
+Helpful to view and validate our anonymization modules. Offers ploting for specific keys and their distribution as well as comparing topics and therefore displaying the applied noise.
 
 ## Install
 
