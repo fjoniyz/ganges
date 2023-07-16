@@ -16,4 +16,4 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           LINTER_RULES_PATH: /
-          JAVA_FILE_NAME: ${GITHUB_WORKSPACE}/checkstyle_checks.xml
+          JAVA_FILE_NAME: checkstyle_checks.xml
