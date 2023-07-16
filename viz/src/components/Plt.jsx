@@ -295,7 +295,7 @@ const Plt = ({ restProxyUrl, topic }) => {
 
   return (
     <div>
-      <h3 class="text-xl mb-4">{topic}</h3>
+      <h3 class="text-xl mb-4">Topic: {topic}</h3>
       <h3 class="text-xl mb-4"></h3>
 
       <Accordion>
@@ -356,7 +356,7 @@ const Plt = ({ restProxyUrl, topic }) => {
 
           <h2 class="text-2xl my-4">Compare to another Topic</h2>
           {/* Input for the plaintext and annonymized topic names*/}
-          <form onSubmit={handleCompareSubmit} class="py-3">
+          <form onSubmit={handleCompareSubmit} class="pb-3">
             <label>Topic to compare:</label>
             <br />
             <input
