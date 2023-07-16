@@ -60,7 +60,8 @@ public class Pipe {
       }
 
       // Anonymization
-      double[][] output = Doca.anonymize(input);
+      Doca doca = new Doca();
+      double[][] output = doca.anonymize(input);
 
       return Arrays.deepToString(output);
     }
