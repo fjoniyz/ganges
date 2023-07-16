@@ -56,14 +56,3 @@ services:
       KAFKA_REST_ACCESS_CONTROL_ALLOW_ORIGIN: "*"
       KAFKA_REST_ACCESS_CONTROL_ALLOW_METHODS: "GET,POST,PUT,DELETE"
       KAFKA_REST_ACCESS_CONTROL_ALLOW_HEADERS: "origin,content-type,accept,authorization"
-
-#  visualizer:
-#    build: ./visualizer-flask/
-#    hostname: visualizer
-#    container_name: visualizer
-#    volumes:
-#      - ./visualizer-flask:/app
-#    ports:
-#      - "8080:80"
-#    depends_on:
-#      - streams
