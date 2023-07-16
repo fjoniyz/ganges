@@ -1,4 +1,7 @@
 package myapps;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Properties;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -16,7 +19,7 @@ import myapps.utils.GreenwaldKhannaQuantileEstimator;
 import org.apache.commons.math3.distribution.LaplaceDistribution;
 import org.apache.commons.math3.random.JDKRandomGenerator;
 
-public class Doca {
+public class Doca implements AnonymizationAlgorithm {
 
     //-----------Attributes for DELTA Phase----------------//
     private List<List<Double>> stableDomain;    // List of all items that are part of the stable domain
@@ -421,7 +424,7 @@ public class Doca {
     }
 
     public static String[] getParameters() {
-        String[] result = new String[5];
+        String[] result = new String[4];
         String userDirectory = System.getProperty("user.dir");
         try(InputStream inputStream = Files.newInputStream(Paths.get(userDirectory+"/src/main/resources/doca.properties"))){
             Properties properties = new Properties();
@@ -430,26 +433,25 @@ public class Doca {
             result[1] = properties.getProperty("delay_constraint");
             result[2] = properties.getProperty("beta");
             result[3] = properties.getProperty("inplace");
-            result[4] = properties.getProperty("delta");
             return result;
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
-
-    public static double[][] anonymize(
-            double[][] X) {
+    @Override
+    public double[][] anonymize(
+        double[][] x) {
         String[] parameters = getParameters();
         double eps = Double.parseDouble(parameters[0]);
         int delay_constraint = Integer.parseInt(parameters[1]);
         int beta = Integer.parseInt(parameters[2]);
         boolean inplace = Boolean.parseBoolean(parameters[3]);
         double delta = Double.parseDouble(parameters[4]);
-        int num_instances = X.length;
-        int num_attributes = X[0].length;
+        int num_instances = x.length;
+        int num_attributes = x[0].length;
 
-        double sensitivity = Math.abs((DocaUtil.getMax(X) - DocaUtil.getMin(X)));
+        double sensitivity = Math.abs((DocaUtil.getMax(x) - DocaUtil.getMin(x)));
 
         List<List<Integer>> clusters = new ArrayList<>();
         List<List<Integer>> clusters_final = new ArrayList<>();
@@ -474,7 +476,7 @@ public class Doca {
         // Create Output structure
         double[][] output;
         if (inplace) {
-            output = X;
+            output = x;
         } else {
             output = new double[num_instances][num_attributes];
         }
@@ -486,7 +488,7 @@ public class Doca {
                 System.out.println("Clock " + clock + " " + TODOREMOVE_Perfect);
             }
 
-            double[] data_point = X[clock];
+            double[] data_point = x[clock];
 
             // Update min/max
             for (int i = 0; i < num_attributes; i++) {
@@ -593,7 +595,7 @@ public class Doca {
             double[] mean = new double[num_attributes];
             for (int i : cs) {
                 for (int j = 0; j < num_attributes; j++) {
-                    mean[j] += X[i][j];
+                    mean[j] += x[i][j];
                 }
             }
             for (int j = 0; j < num_attributes; j++) {
