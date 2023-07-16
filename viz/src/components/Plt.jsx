@@ -318,7 +318,10 @@ const Plt = ({ restProxyUrl, topic }) => {
       <form onSubmit={handleKeySubmit} class="py-3">
         <label>Enter specific key to visualize:</label>
         <br />
-        <input type="text" name="vizKey" class="p-2 rounded mr-2" />
+        <input
+          type="text"
+          name="vizKey"
+          class="p-2 rounded mr-2" />
         <button type="submit">Submit</button>
       </form>
 
@@ -351,7 +354,7 @@ const Plt = ({ restProxyUrl, topic }) => {
 
           <h2 class="text-2xl my-4">Compare to another Topic</h2>
           {/* Input for the plaintext and annonymized topic names*/}
-          <form onSubmit={handleCompareSubmit}>
+          <form onSubmit={handleCompareSubmit} class="py-3">
             <label>Topic to compare:</label>
             <br />
             <input
