@@ -5,7 +5,10 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Doca {
+import java.io.*;
+import java.util.Properties;
+
+public class Doca implements AnonymizationAlgorithm {
 
     public static double getMax(double[][] X) {
         double max = Double.NEGATIVE_INFINITY;
@@ -63,17 +66,18 @@ public class Doca {
         }
     }
 
-    public static double[][] anonymize(
-            double[][] X) {
+    @Override
+    public double[][] anonymize(
+        double[][] x) {
         String[] parameters = getParameters();
         double eps = Double.parseDouble(parameters[0]);
         int delay_constraint = Integer.parseInt(parameters[1]);
         int beta = Integer.parseInt(parameters[2]);
         boolean inplace = Boolean.parseBoolean(parameters[3]);
-        int num_instances = X.length;
-        int num_attributes = X[0].length;
+        int num_instances = x.length;
+        int num_attributes = x[0].length;
 
-        double sensitivity = Math.abs((getMax(X) - getMin(X)));
+        double sensitivity = Math.abs((getMax(x) - getMin(x)));
 
         List<List<Integer>> clusters = new ArrayList<>();
         List<List<Integer>> clusters_final = new ArrayList<>();
@@ -98,7 +102,7 @@ public class Doca {
         // Create Output structure
         double[][] output;
         if (inplace) {
-            output = X;
+            output = x;
         } else {
             output = new double[num_instances][num_attributes];
         }
@@ -110,7 +114,7 @@ public class Doca {
                 System.out.println("Clock " + clock + " " + TODOREMOVE_Perfect);
             }
 
-            double[] data_point = X[clock];
+            double[] data_point = x[clock];
 
             // Update min/max
             for (int i = 0; i < num_attributes; i++) {
@@ -217,7 +221,7 @@ public class Doca {
             double[] mean = new double[num_attributes];
             for (int i : cs) {
                 for (int j = 0; j < num_attributes; j++) {
-                    mean[j] += X[i][j];
+                    mean[j] += x[i][j];
                 }
             }
             for (int j = 0; j < num_attributes; j++) {
