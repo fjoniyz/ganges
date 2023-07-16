@@ -15,7 +15,7 @@ counter = 1
 
 while True:
     data = {"id": counter, "value": random()}
-    producer.produce("streams-input", value=json.dumps(data))
+    producer.produce("streams-input2", value=json.dumps(data))
     print("Sample #{} produced!".format(counter))
     counter += 1
     producer.flush(1)

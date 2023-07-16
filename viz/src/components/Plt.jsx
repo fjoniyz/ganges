@@ -11,37 +11,21 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 const Plt = ({ restProxyUrl, topic }) => {
   const [messages, setMessages] = useState([]);
   const [vizKey, setVizKey] = useState('');
+  const [comparedTopic, setCompareTopic] = useState('')
   const chartRef = useRef(null);
+  const compareChartRef = useRef(null);
   const distributionChartRef = useRef(null);
   const messageListRef = useRef([]);
 
   const consumerGroup = 'frontend';
   const consumerInstance = 'viz-react';
 
-  // Fetch messages
-  const fetchMessages = async () => {
-    try {
-
-      const response = await axios.get(
-        `http://${restProxyUrl}/consumers/${consumerGroup}/instances/${consumerInstance}/records`,
-        {
-          headers: {
-            'Accept': 'application/vnd.kafka.json.v2+json',
-          },
-        }
-      );
-      setMessages((prevMessages) => [...prevMessages, ...response.data]);
-    } catch (error) {
-      console.error('Error fetching messages:', error);
-    }
-  };
-
-  const subscribeToTopic = async () => {
+  const subscribeToTopic = async (topic) => {
     try {
       await axios.post(
         `http://${restProxyUrl}/consumers/${consumerGroup}/instances/${consumerInstance}/subscription`,
         {
-          topics: [topic],
+          topics: topic,
         },
         {
           headers: {
@@ -54,6 +38,23 @@ const Plt = ({ restProxyUrl, topic }) => {
     }
   };
 
+  const fetchMessages = async () => {
+    try {
+
+      const response = await axios.get(
+        `http://${restProxyUrl}/consumers/${consumerGroup}/instances/${consumerInstance}/records`,
+        {
+          headers: {
+            'Accept': 'application/vnd.kafka.json.v2+json',
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+    }
+  };
+
   const handleKeySubmit = (e) => {
     e.preventDefault();
     // Read the form data
@@ -62,7 +63,7 @@ const Plt = ({ restProxyUrl, topic }) => {
     const formJson = Object.fromEntries(formData.entries());
     const vizKey = formJson.vizKey;
     setVizKey(vizKey);
-    
+
     // Reset charts
     if (chartRef.current) {
       chartRef.current = null;
@@ -72,7 +73,22 @@ const Plt = ({ restProxyUrl, topic }) => {
     }
   };
 
-  const createGraphs = () => {
+  const handleCompareSubmit = async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const formData = new FormData(form);
+    const formJson = Object.fromEntries(formData.entries());
+    const compareTopic = formJson.plainTopic;
+    setCompareTopic(compareTopic);
+
+    subscribeToTopic([topic, compareTopic]);
+
+    if (compareChartRef.current) {
+      compareChartRef.current = null;
+    }
+  };
+
+  const createValueGraph = () => {
     try {
       const canvas = document.getElementById('graphCanvas');
       const ctx = canvas.getContext('2d');
@@ -104,7 +120,13 @@ const Plt = ({ restProxyUrl, topic }) => {
           },
         },
       });
+    } catch (error) {
+      console.error('Error creating graphs:', error);
+    }
+  };
 
+  const createDistributionGraph = () => {
+    try {
       const distributionCanvas = document.getElementById('distributionCanvas');
       const distributionCtx = distributionCanvas.getContext('2d');
 
@@ -140,18 +162,77 @@ const Plt = ({ restProxyUrl, topic }) => {
     }
   };
 
+  const createCompareGraph = () => {
+    try {
+      const canvas = document.getElementById('compareCanvas');
+      const ctx = canvas.getContext('2d');
+
+      compareChartRef.current = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: [],
+          datasets: [
+            {
+              label: 'Noise',
+              data: [],
+              backgroundColor: 'rgba(75, 192, 192, 0.2)',
+              borderColor: 'rgba(75, 192, 192, 1)',
+              borderWidth: 1,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: {
+              display: true,
+            },
+            y: {
+              display: true,
+              beginAtZero: true,
+            },
+          },
+        },
+      });
+    } catch (error) {
+      console.error('Error creating graphs:', error);
+    }
+  };
+
+
+  const compareValues = () => {
+    const messagesA = messages.filter(message => message.topic === topic)
+    const messagesB = messages.filter(message => message.topic === comparedTopic)
+
+    const values = messagesA.filter(mA => {
+      messagesB.find(mB => mB.value["id"] === mA.value["id"])
+    }).map(mA => {
+      const mB = messagesB.find(mB => mB.id === mA.id)
+      return (mB.value[vizKey] - mA.value[vizKey])
+    });
+
+    return calculateValueDistribution(values);
+  };
+
 
   // Update charts on message change
   useEffect(() => {
     if (document.getElementById('graphCanvas')) {
-      if (chartRef.current && distributionChartRef.current) {
+      if (chartRef.current) {
         // Get value of given vizKey from messages
-        const values = messages.map((message) => message.value[vizKey]);
+        const values = messages.filter(message => message.topic === topic).map(message => message.value[vizKey]);
 
         // Update chart with values
-        chartRef.current.data.labels = messages.map((message) => message.offset);
+        chartRef.current.data.labels = messages.filter(message => message.topic === topic).map((message) => message.offset);
         chartRef.current.data.datasets[0].data = values;
         chartRef.current.update();
+      } else {
+        createValueGraph();
+      }
+    }
+    if (document.getElementById('distributionCanvas')) {
+      if (distributionChartRef.current) {
+        const values = messages.filter(message => message.topic === topic).map(message => message.value[vizKey]);
 
         // Update chart with value distribution
         const distributionData = calculateValueDistribution(values);
@@ -159,12 +240,23 @@ const Plt = ({ restProxyUrl, topic }) => {
         distributionChartRef.current.data.datasets[0].data = distributionData.values;
         distributionChartRef.current.update();
       } else {
-        createGraphs();
+        createDistributionGraph();
+      }
+    }
+    if (document.getElementById('compareCanvas')) {
+      if (compareChartRef.current) {
+        const distributionData = compareValues();
+        compareChartRef.current.data.labels = distributionData.labels;
+        compareChartRef.current.data.datasets[0].data = distributionData.values;
+        compareChartRef.current.update();
+      } else {
+        createCompareGraph();
       }
     }
     // Set messageListRef to contain all messages
     messageListRef.current = messages;
   }, [messages]);
+
 
   // Calculate value distribution
   const calculateValueDistribution = (values) => {
@@ -190,8 +282,11 @@ const Plt = ({ restProxyUrl, topic }) => {
 
   // Poll for new messages
   useEffect(() => {
-    const intervalId = setInterval(fetchMessages, 1000);
-    subscribeToTopic();
+    subscribeToTopic([topic]);
+    const intervalId = setInterval(async () => {
+      const messageResponse = await fetchMessages();
+      setMessages((prevMessages) => [...prevMessages, ...messageResponse]);
+    }, 1000);
 
     return () => {
       clearInterval(intervalId);
@@ -253,8 +348,40 @@ const Plt = ({ restProxyUrl, topic }) => {
               <canvas id="distributionCanvas" />
             </AccordionDetails>
           </Accordion>
+
+          <h2 class="text-2xl my-4">Compare to another Topic</h2>
+          {/* Input for the plaintext and annonymized topic names*/}
+          <form onSubmit={handleCompareSubmit}>
+            <label>Topic to compare:</label>
+            <br />
+            <input
+              type="text"
+              name="plainTopic"
+              class="p-2 rounded mr-2"
+            />
+            <button type="submit">Submit</button>
+          </form>
+
+          {comparedTopic.length > 0 && (
+            <>
+              <Accordion>
+                <AccordionSummary
+                  expandIcon={<ExpandMoreIcon />}
+                  aria-controls="panel3a-content"
+                  id="panel3a-header"
+                >
+                  <Typography>Applied Noise Distribution</Typography>
+                </AccordionSummary>
+                <AccordionDetails>
+                  <canvas id="compareCanvas" />
+                </AccordionDetails>
+              </Accordion>
+            </>
+          )}
         </>
       )}
+
+
     </div>
   );
 };

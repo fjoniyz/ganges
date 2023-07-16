@@ -70,7 +70,7 @@ const App = () => {
 
   return (
     <div class="m-10">
-      <h1 class="mb-10 text-5xl">Kafka Topics</h1>
+      <h1 class="mb-10 text-5xl">Kafka Visualizer</h1>
       {!restProxyUrl && (
         <form onSubmit={handleUrlSubmit}>
           <label>REST Proxy URL:</label>
@@ -91,7 +91,7 @@ const App = () => {
           <h2 class="text-2xl my-4">Available Topics:</h2>
           <List>
             {topics.map((topic) => (
-              <ListItem disablePadding rounded>
+              <ListItem disablePadding key={topic}>
                 <ListItemButton
                   onClick={() => handleSubscribe(topic)}
                   // if topic in subscribedTopics, disable button
@@ -112,7 +112,7 @@ const App = () => {
               <h2 class="text-2xl my-4">Subscribed Topics:</h2>
               <ul>
                 {subscribedTopics.map((topic) => (
-                  <li class="w-[90vw] border rounded p-5">
+                  <li class="w-[90vw] border rounded p-5" key={topic}>
                     <Plt key={topic} topic={topic} restProxyUrl={restProxyUrl} />
                   </li>
                 ))}
