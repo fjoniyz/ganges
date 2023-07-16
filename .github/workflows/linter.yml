@@ -7,7 +7,13 @@ jobs:
   formatting:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3 # v2 minimum required
-      - uses: axel-op/googlejavaformat-action@v3
-        with:
-          args: "--set-exit-if-changed"
+      - name: Checkout Code
+        uses: actions/checkout@v3 # v2 minimum required
+      - name: Lint Codebase
+        uses: github/super-linter@v5
+        env:
+          VALIDATE_ALL_CODEBASE: true
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          LINTER_RULES_PATH: /
+          JAVA_FILE_NAME: checkstyle_checks.xml
