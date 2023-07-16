@@ -39,6 +39,7 @@ public class PerformanceBenchmark {
                 long consumerTimestamp = System.currentTimeMillis();
 
                 MetricsCollector.setConsumerTimestamps(record.key(), consumerTimestamp); // TODO: put the id into the record key
+                MetricsCollector.metricsToCsv();
 
                 System.out.printf("offset = %d, key = %s, value = %s%n", record.offset(), record.key(), record.value());
             }

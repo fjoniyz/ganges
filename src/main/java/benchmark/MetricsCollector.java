@@ -30,9 +30,8 @@ public class MetricsCollector {
     return consumerTimestamps.get(id);
   }
 
-  public static void setConsumerTimestamps(String id, long timestamp) throws IOException {
+  public static void setConsumerTimestamps(String id, long timestamp) {
     consumerTimestamps.put(id, timestamp);
-    MetricsCollector.metricsToCsv();
   }
 
   private MetricsCollector() {
@@ -108,7 +107,7 @@ public class MetricsCollector {
       CSVWriter writer = new CSVWriter(outputfile);
 
       // adding header to csv
-      String[] header = { "ID", "ProducerTimestamp","EntryPipe", "EntryAnonymization", "ExitAnonymization", "ExitPipe","ConsumerTimestamp"};
+      String[] header = { "ID", "ProducerTimestamp","EntryPipeTimestamp", "EntryAnonymizationTimestamp", "ExitAnonymizationTimestamp", "ExitPipeTimestamp","ConsumerTimestamp"};
       writer.writeNext(header);
 
       for (Map.Entry<String, Long> entry : pipeEntryTimestamps.entrySet()) {
