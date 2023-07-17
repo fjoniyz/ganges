@@ -50,6 +50,11 @@ public class ChargingStationMessage implements Serializable, AnonymizedMessage {
   }
 
   @Override
+  public String getProducerTimestamp() {
+    return null;
+  }
+
+  @Override
   public double[] getValuesListFromKeys(String[] keys) {
     return new double[0]; // TODO: Move function from pipe her
   }

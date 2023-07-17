@@ -5,6 +5,7 @@ import java.text.ParseException;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Properties;
+import myapps.Pipe;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -27,7 +28,6 @@ public class PerformanceBenchmark {
         "value.deserializer", "org.apache.kafka.common.serialization.StringDeserializer");
     KafkaConsumer<String, String> consumer = new KafkaConsumer<>(props);
     consumer.subscribe(Arrays.asList("output-test"));
-
 
     MetricsCollector metricsCollector = MetricsCollector.getInstance();
     metricsCollector.setFileName("consumer_results.csv");

@@ -42,6 +42,7 @@ public class Pipe {
                                                                 String[] fields, boolean enableMonitoring) throws IOException {
     String id = message.getId();
     if (enableMonitoring) {
+      MetricsCollector.setProducerTimestamps(id, Long.parseLong(message.getProducerTimestamp()));
       MetricsCollector.setPipeEntryTimestamps(id, System.currentTimeMillis());
     }
     double[] valuesList = message.getValuesListFromKeys(fields);
