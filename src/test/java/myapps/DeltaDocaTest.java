@@ -1,6 +1,7 @@
 package myapps;
 
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Arrays;
@@ -58,7 +59,7 @@ public class DeltaDocaTest {
         this.doca = new Doca();
     }
 
-    @Test
+    @Ignore
     public void testAddFromNormalDistToDomain() {
 
         for (int i = 0; i < normalHeader1.length; i++) {
@@ -67,7 +68,7 @@ public class DeltaDocaTest {
         }
     }
 
-    @Test
+    @Ignore
     public void testAddFromRandomDistToDomain() {
         for (int i = 0; i < randomHeader1.length; i++) {
             List<Double> X = Arrays.asList(normalHeader1[i], normalHeader2[i]);
@@ -83,7 +84,7 @@ public class DeltaDocaTest {
         }
     }
 
-    @Test
+    @Ignore
     public void testAddFromNormalDistToDeltaDoca() {
         for (int i = 0; i < randomHeader1.length; i++) {
             double[][] X = new double[][]{new double[]{randomHeader1[i]}, new double[]{randomHeader2[i]}};

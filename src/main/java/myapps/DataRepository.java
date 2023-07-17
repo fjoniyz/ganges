@@ -45,6 +45,7 @@ public class DataRepository {
         connection.set(key, value);
     }
 
+
     public void saveValues(String key, HashMap<String, Double> values) {
         for (Map.Entry<String, Double> value : values.entrySet()) {
             connection.hset(key, value.getKey(), value.getValue().toString());
@@ -68,12 +69,24 @@ public class DataRepository {
         List<Map<String, Double>> entries = new ArrayList<>();
         for (String redisKey : connection.keys("*")) {
             HashMap<String, Double> entry = new HashMap<>();
-            for(int i = 0; i < entryKeys.length; i++) {
-                entry.put(entryKeys[i], Double.parseDouble(connection.hget(redisKey,
-                    entryKeys[i])));
+            for (String entryKey : entryKeys) {
+                entry.put(entryKey, Double.parseDouble(connection.hget(redisKey, entryKey)));
             }
             entries.add(entry);
         }
         return entries;
+    }
+
+    public void deleteDataByKey(String key) {
+        connection.del(key);
+    }
+
+    //TODO: Make sure tihs doesn't delete all entries with the same key
+    public void deleteEntryByKey(int index, String key) {
+        List<String> keys = connection.keys(key);
+        if (!keys.isEmpty()) {
+            String indexKey = keys.get(index);
+            connection.del(key,indexKey);
+        }
     }
 }
