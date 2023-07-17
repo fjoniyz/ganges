@@ -11,6 +11,8 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 const Plt = ({ restProxyUrl, topic }) => {
   const [messages, setMessages] = useState([]);
   const [vizKey, setVizKey] = useState('');
+  const [progKey, setProgKey] = useState('');
+  const [progResult, setProgResult] = useState('');
   const [messageIdKey, setMessageIdKey] = useState('id');
   const [comparedTopic, setCompareTopic] = useState('')
   const chartRef = useRef(null);
@@ -20,6 +22,7 @@ const Plt = ({ restProxyUrl, topic }) => {
 
   const consumerGroup = 'frontend';
   const consumerInstance = 'viz-react';
+  const porgPollIntervalId = null;
 
   const subscribeToTopic = async (topic) => {
     try {
@@ -56,6 +59,16 @@ const Plt = ({ restProxyUrl, topic }) => {
     }
   };
 
+  const fetchProgResults = async (progApiUrl, topic) => {
+    try {
+      const response = await axios.get(`http://${progApiUrl}?topic=${topic}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching prognose data:', error);
+    }
+  };
+
+
   const handleKeySubmit = (e) => {
     e.preventDefault();
     // Read the form data
@@ -71,6 +84,24 @@ const Plt = ({ restProxyUrl, topic }) => {
     }
     if (distributionChartRef.current) {
       distributionChartRef.current = null;
+    }
+  };
+
+  const handleProgKeySubmit = (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const formJson = Object.fromEntries(formData.entries());
+    setProgKey(formJson.progKey);
+
+    // TODO remove progKey
+
+    if (formJson.progKey) {
+      porgPollIntervalId = setInterval(async () => {
+        const messageResponse = await fetchProgResults(topic);
+        setProgResult(messageResponse);
+      }, 1000);
+    } else {
+      clearInterval(porgPollIntervalId);
     }
   };
 
@@ -314,6 +345,19 @@ const Plt = ({ restProxyUrl, topic }) => {
           </div>
         </AccordionDetails>
       </Accordion>
+
+      <form onSubmit={handleProgKeySubmit} class="py-3">
+        <label>Enter specific key to execute prognose on:</label>
+        <br />
+        <input
+          type="text"
+          name="progKey"
+          defaultValue="value"
+          class="p-2 rounded mr-2" />
+        <br />
+        <button type="submit" class="my-2">Submit</button>
+      </form>
+
 
       <form onSubmit={handleKeySubmit} class="py-3">
         <label>Enter specific key to visualize:</label>
