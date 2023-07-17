@@ -53,12 +53,12 @@ public class CastleGuard implements AnonymizationAlgorithm {
     this.headers = Arrays.asList(parameters[8].split(","));
     this.sensitiveAttr = parameters[9];
 
-    for (String header : headers) {
+    for (String header : this.headers) {
       globalRanges.put(header, null);
     }
     this.clusterManagement =
         new ClusterManagement(
-            this.k, this.l, mu, headers, sensitiveAttr);
+            this.k, this.l, mu, this.headers, this.sensitiveAttr);
   }
 
     public HashMap<String, Range<Float>> getGlobalRanges() {
