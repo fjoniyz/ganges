@@ -4,6 +4,10 @@ import com.ganges.lib.castleguard.utils.ClusterManagement;
 import com.ganges.lib.castleguard.utils.LogUtils;
 import com.ganges.lib.castleguard.utils.Utils;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -11,32 +15,50 @@ import myapps.AnonymizationAlgorithm;
 import org.apache.commons.lang3.Range;
 import org.apache.commons.math3.distribution.LaplaceDistribution;
 import org.apache.commons.math3.random.JDKRandomGenerator;
+import org.apache.kafka.common.protocol.types.Field;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class CastleGuard implements AnonymizationAlgorithm {
-  private final CGConfig config;
+
   private List<String> headers;
   private String sensitiveAttr;
   private Deque<Item> items = new ArrayDeque<>(); // a.k.a. global_tuples in castle.py
   private HashMap<String, Range<Float>> globalRanges = new HashMap<>();
   private double tau = Double.POSITIVE_INFINITY;
+  private int delta;
+  private int beta;
+  private int bigBeta;
+  private double phi;
+  private int k;
+  private int l;
+  private boolean useDiffPrivacy;
+
   private ClusterManagement clusterManagement;
   private Deque<Item> outputQueue = new ArrayDeque<>();
 
   private final Logger logger = LoggerFactory.getLogger(CastleGuard.class);
 
   public CastleGuard(CGConfig config, List<String> headers, String sensitiveAttr) {
-    this.config = config;
-    this.headers = headers;
-    this.sensitiveAttr = sensitiveAttr;
+    String[] parameters = getParameters();
+    this.k = Integer.parseInt(parameters[0]);
+    this.delta = Integer.parseInt(parameters[1]);
+    this.beta = Integer.parseInt(parameters[2]);
+    this.bigBeta = Integer.parseInt(parameters[3]);
+    int mu = Integer.parseInt(parameters[4]);
+    this.l = Integer.parseInt(parameters[5]);
+    this.phi = Double.parseDouble(parameters[6]);
+    this.useDiffPrivacy = Boolean.parseBoolean(parameters[7]);
+    this.headers = Arrays.asList(parameters[8].split(","));
+    this.sensitiveAttr = parameters[9];
+
     for (String header : headers) {
       globalRanges.put(header, null);
     }
     this.clusterManagement =
         new ClusterManagement(
-            this.config.getK(), this.config.getL(), this.config.getMu(), headers, sensitiveAttr);
+            this.k, this.l, mu, headers, sensitiveAttr);
   }
 
     public HashMap<String, Range<Float>> getGlobalRanges() {
@@ -83,6 +105,27 @@ public class CastleGuard implements AnonymizationAlgorithm {
     }
 
 
+    public static String[] getParameters() {
+        String[] result = new String[10];
+        String userDirectory = System.getProperty("user.dir");
+        try(InputStream inputStream = Files.newInputStream(Paths.get(userDirectory+"/src/main/resources/castleguard.properties"))){
+            Properties properties = new Properties();
+            properties.load(inputStream);
+            result[0] = properties.getProperty("k");
+            result[1] = properties.getProperty("delta");
+            result[2] = properties.getProperty("beta");
+            result[3] = properties.getProperty("bigBeta");
+            result[4] = properties.getProperty("mu");
+            result[5] = properties.getProperty("l");
+            result[6] = properties.getProperty("phi");
+            result[7] = properties.getProperty("useDiffPrivacy");
+            result[8] = properties.getProperty("headers");
+            result[9] = properties.getProperty("senstive_attribute");
+            return result;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
   /**
    * Inserts a new piece of data into the algorithm and updates the state, checking whether data
@@ -92,14 +135,14 @@ public class CastleGuard implements AnonymizationAlgorithm {
    */
     public void insertData(HashMap<String, Float> data) {
         Random rand = new Random();
-        if (config.isUseDiffPrivacy() && rand.nextDouble() > config.getBigBeta()) {
+        if (this.useDiffPrivacy && rand.nextDouble() > this.bigBeta) {
             logger.info("Suppressing the item");
             return;
         }
         Item item = new Item(data, this.headers, this.sensitiveAttr);
         updateGlobalRanges(item);
 
-        if (config.isUseDiffPrivacy()) {
+        if (this.useDiffPrivacy) {
             perturb(item);
         }
         Optional<Cluster> cluster = bestSelection(item);
@@ -113,7 +156,7 @@ public class CastleGuard implements AnonymizationAlgorithm {
         }
 
         items.add(item);
-        if (items.size() > config.getDelta()) {
+        if (items.size() > this.delta) {
             delayConstraint(items.pop());
         }
         this.clusterManagement.updateTau(this.globalRanges);
@@ -128,7 +171,7 @@ public class CastleGuard implements AnonymizationAlgorithm {
         Set<Float> outputPids = new HashSet<>();
         Set<Float> outputDiversity = new HashSet<>();
         boolean splittable =
-                cluster.getKSize() >= 2 * config.getK() && cluster.getDiversitySize() >= config.getL();
+                cluster.getKSize() >= 2 * this.k && cluster.getDiversitySize() >= this.l;
         List<Cluster> splitted =
                 splittable
                         ? this.clusterManagement.splitL(cluster, this.headers, this.globalRanges)
@@ -152,8 +195,8 @@ public class CastleGuard implements AnonymizationAlgorithm {
             // Calculate loss
             this.clusterManagement.updateLoss(sCluster, globalRanges);
 
-            assert outputPids.size() >= config.getK();
-            assert outputDiversity.size() >= config.getL();
+            assert outputPids.size() >= this.k;
+            assert outputDiversity.size() >= this.l;
 
             this.clusterManagement.addToAnonymizedClusters(cluster);
         }
@@ -169,8 +212,8 @@ public class CastleGuard implements AnonymizationAlgorithm {
         List<Cluster> anonClusters = this.clusterManagement.getAnonymizedClusters();
 
         Cluster itemCluster = item.getCluster();
-        if (this.config.getK() <= itemCluster.getSize()
-                && this.config.getL() < itemCluster.getDiversitySize()) {
+        if (this.k <= itemCluster.getSize()
+                && this.l < itemCluster.getDiversitySize()) {
             checkAndOutputCluster(itemCluster);
             return;
         }
@@ -237,7 +280,7 @@ public class CastleGuard implements AnonymizationAlgorithm {
         double min_value = this.globalRanges.get(header).getMinimum();
 
         // Calaculate scale
-        double scale = Math.max((max_value - min_value), 1) / this.config.getPhi();
+        double scale = Math.max((max_value - min_value), 1) / this.phi;
 
         // Draw random noise from Laplace distribution
         JDKRandomGenerator rg = new JDKRandomGenerator();
@@ -294,7 +337,7 @@ public class CastleGuard implements AnonymizationAlgorithm {
         }
 
         if (setCok.isEmpty()) {
-            if (this.config.getBeta() <= notAnonClusters.size()) {
+            if (this.beta <= notAnonClusters.size()) {
                 Random rand = new Random();
                 int randomIndex = rand.nextInt(setCmin.size());
                 List<Cluster> setCminList = new ArrayList<>(setCmin);
