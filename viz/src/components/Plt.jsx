@@ -33,7 +33,7 @@ const Plt = ({ restProxyUrl, topic }) => {
         },
         {
           headers: {
-            'Content-Type': 'application/vnd.kafka.v2+json',
+            'Content-Type': 'application/vnd.kafka.json.v2+json',
           },
         }
       );
@@ -92,7 +92,7 @@ const Plt = ({ restProxyUrl, topic }) => {
     if (!progCheck) {
       porgPollIntervalId = setInterval(async () => {
         const messageResponse = await fetchProgResults("localhost:8080", topic);
-        setProgResult(messageResponse);
+        if (messageResponse) setProgResult(messageResponse);
       }, 1000);
     } else {
       clearInterval(porgPollIntervalId);
@@ -310,7 +310,7 @@ const Plt = ({ restProxyUrl, topic }) => {
     subscribeToTopic([topic]);
     const intervalId = setInterval(async () => {
       const messageResponse = await fetchMessages();
-      setMessages((prevMessages) => [...prevMessages, ...messageResponse]);
+      if (messageResponse) setMessages((prevMessages) => [...prevMessages, ...messageResponse]);
     }, 1000);
 
     return () => {

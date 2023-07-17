@@ -1,13 +1,16 @@
-from confluent_kafka import Consumer, KafkaError
+from tracemalloc import start
+from confluent_kafka import Consumer
 import json
-import prognose
-from types import SimpleNamespace
 
+from pandas import Timedelta
+import app.prognose as prognose
+from types import SimpleNamespace
+from datetime import datetime, timedelta
 
 # Kafka broker configuration
 bootstrap_servers = 'broker:29092'
 group_id = 'consumer-group-1'
-topic = 'input-test'
+topic = 'streams-input'
 
 
 def create_TaskSimEvCharging(config, power):
@@ -22,15 +25,23 @@ def create_TaskSimEvCharging(config, power):
     # dt = datetime.fromisoformat(input_end_time_loading)
     # minutes_end_time_loading = dt.hour * 60 + dt.minute
 
-    min_start = config.start_time_loading
-    max_start = int(min_start) + 60
-    min_duration = config.end_time_loading - config.start_time_loading
-    max_duration = min_duration + 60
+    min_start = datetime.strptime(
+        config.start_time_loading, '%Y-%m-%dT%H:%M:%S').timestamp()
+
+    max_start = min_start + 3600
+
+    end_time_loading_seconds = datetime.strptime(
+        config.end_time_loading, '%Y-%m-%dT%H:%M:%S').timestamp()
+    start_time_loading_seconds = datetime.strptime(
+        config.start_time_loading, '%Y-%m-%dT%H:%M:%S').timestamp()
+
+    min_duration = end_time_loading_seconds - start_time_loading_seconds
+    max_duration = min_duration + 3600
+
     min_demand = int(config.kwh)
     max_demand = int(config.loading_potential)
 
     return prognose.TaskSimEvCharging(min_duration, max_duration, min_demand, max_demand, min_start, max_start, power)
-
 
 def generate_prognose():
 
@@ -54,17 +65,13 @@ def generate_prognose():
         # We want 100 messages
         messages = consumer.consume(100, 1)
         messageDict = {}
-        task_instance = None
+        power = [1, 2, 3, 4]
+        
 
         if messages is None:
             return "No message received"
-        if messages.error():
-            if messages.error().code() == KafkaError._PARTITION_EOF:
-                # End of partition, continue polling
-                return "End of partition"
-            else:
-                # Error occurred
-                print(f"Error: {messages.error()}")
+
+        print(f"Received {len(messages)} messages")
 
         # Parse the messages
         for i in range(len(messages)):
@@ -75,7 +82,7 @@ def generate_prognose():
             # Process the message
             print(f"Received message: {messages[i].value().decode('utf-8')}")
 
-            power = [1, 2, 3, 4]
+            
             task_instance = create_TaskSimEvCharging(config, power)
 
             messageDict.update({f"col{i}": [task_instance.max_start, task_instance.min_start, task_instance.min_demand,
@@ -83,8 +90,22 @@ def generate_prognose():
 
         df = prognose.DataFrame(data=messageDict)
 
-        result = prognose.simulate_ev_forecast(df=df, cfg=task_instance)
-        print(result)
+        config = json.loads(
+                messages[0].value(), object_hook=lambda d: SimpleNamespace(**d))
+        task_instance = create_TaskSimEvCharging(config, power)
+
+        print(f"Dataframe: {df}")
+        print(f"Task instance: {task_instance}")
+        print(f"max_demand: {task_instance.max_demand}")
+        print(f"min_demand: {task_instance.min_demand}")
+        print(f"max_duration: {task_instance.max_duration}")
+        print(f"min_duration: {task_instance.min_duration}")
+        print(f"max_start: {task_instance.max_start}")
+        print(f"min_start: {task_instance.min_start}")
+        
+        result = prognose.simulate_ev_forecast(
+            df=df, cfg=task_instance)  # type: ignore
+        print(f"Result: {result}")
 
         return result
 
