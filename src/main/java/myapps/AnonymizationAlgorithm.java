@@ -5,4 +5,7 @@ import java.util.Map;
 
 public interface AnonymizationAlgorithm {
     List<Map<String, Double>> anonymize(List<Map<String, Double>> X);
+
+  double[][] anonymize(
+      double[][] x);
 }

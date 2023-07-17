@@ -170,8 +170,8 @@ public class Doca implements AnonymizationAlgorithm {
                     double sum = 0;
                     for (int i = 0; i < num_attributes; i++) {
                         sum +=
-                                Math.max(0, data_point[i] - mx_c.get(c)[i])
-                                        - Math.min(0, data_point[i] - mn_c.get(c)[i]);
+                            Math.max(0, data_point[i] - mx_c.get(c)[i])
+                                - Math.min(0, data_point[i] - mn_c.get(c)[i]);
                     }
                     enlargement[c] = sum;
                 }
@@ -195,16 +195,16 @@ public class Doca implements AnonymizationAlgorithm {
                 if (!ok_clusters.isEmpty()) {
                     TODOREMOVE_Perfect += 1;
                     best_cluster =
-                            ok_clusters.stream()
-                                    .min(
-                                            (c1, c2) -> Integer.compare(clusters.get(c1).size(), clusters.get(c2).size()))
-                                    .orElse(null);
+                        ok_clusters.stream()
+                            .min(
+                                (c1, c2) -> Integer.compare(clusters.get(c1).size(), clusters.get(c2).size()))
+                            .orElse(null);
                 } else if (clusters.size() >= beta) {
                     best_cluster =
-                            min_clusters.stream()
-                                    .min(
-                                            (c1, c2) -> Integer.compare(clusters.get(c1).size(), clusters.get(c2).size()))
-                                    .orElse(null);
+                        min_clusters.stream()
+                            .min(
+                                (c1, c2) -> Integer.compare(clusters.get(c1).size(), clusters.get(c2).size()))
+                            .orElse(null);
                 }
             }
 
@@ -233,7 +233,7 @@ public class Doca implements AnonymizationAlgorithm {
                 }
             }
             assert overripe_clusters.size() <= 1
-                    : "Every datapoint should only be able to be in one cluster!?";
+                : "Every datapoint should only be able to be in one cluster!?";
             if (!overripe_clusters.isEmpty()) {
                 int c = overripe_clusters.get(0);
                 double[] dif_cluster = new double[num_attributes];

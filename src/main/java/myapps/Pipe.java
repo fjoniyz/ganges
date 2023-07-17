@@ -11,6 +11,7 @@ import java.util.concurrent.CountDownLatch;
 import customSerdes.ChargingStationDeserializer;
 import customSerdes.ChargingStationMessage;
 import customSerdes.ChargingStationSerializer;
+import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.serialization.Serializer;
@@ -34,24 +35,25 @@ public class Pipe {
         List<String> allSavedValues = dataRepository.getValues();
 
     // Parse cached strings into double arrays
-    double[][] input = new double[10][];
+    double[][] input = new double[allSavedValues.size()][];
 
-        for (int i = 0; i < allSavedValues.size(); i++) {
-            String[] values = allSavedValues.get(i).split(",");
-            double[] toDouble =
-                    Arrays.stream(values).mapToDouble(Double::parseDouble).toArray();
+    for (int i = 0; i < allSavedValues.size(); i++) {
+        String[] values = allSavedValues.get(i).split(",");
+        double[] toDouble =
+                Arrays.stream(values).mapToDouble(Double::parseDouble).toArray();
 
-            input[i] = toDouble;
-        }
+        input[i] = toDouble;
+    }
 
     // Anonymization
     Doca docaInstance = new Doca();
     double[][] output = docaInstance.anonymize(input);
     double[] lastItem = output[output.length-1];
+    System.out.println("Last item: " + Arrays.deepToString(output));
     float kwh = (float)lastItem[0];
-    int load_potential = (int) lastItem[1];
+//    int load_potential = (int) lastItem[1];
     value.setKwh(kwh);
-    value.setLoadingPotential(load_potential);
+//    value.setLoadingPotential(load_potential);
 //        String result = Arrays.deepToString(output);
     Serializer<ChargingStationMessage> serializer = new ChargingStationSerializer<>();
     byte[] json = serializer.serialize("output-test", value);
@@ -110,6 +112,7 @@ public class Pipe {
           break;
         default:
           System.out.println("Invalid field in config file: " + field);
+          break;
       }
     }
     return values.stream().mapToDouble(d -> d).toArray();
@@ -117,9 +120,9 @@ public class Pipe {
 
   public static void main(final String[] args) {
     String userDirectory = System.getProperty("user.dir");
-    try (InputStream inputStream = Files.newInputStream(Paths.get(userDirectory + "/src/main/resources/config.properties"))) {
+    try (InputStream inputStream = Files.newInputStream(Paths.get(userDirectory + "/src/main/resources/kafka.properties"))) {
       Properties props = new Properties();
-      String inputTopic = "input-test3";
+      String inputTopic = "input-test6";
       String outputTopic = "output";
 
       ChargingStationSerializer<ChargingStationMessage> chargingStationSerializer = new ChargingStationSerializer<>();

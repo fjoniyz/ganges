@@ -223,7 +223,7 @@ def simulate_ev_forecast(df: DataFrame, cfg: TaskSimEvCharging) -> DataFrame:
             )
 
             # power shuts down, after demand is full filled (in minute steps)
-            duration = ceil(item.demand / item.power * 60)
+            duration = int(ceil(item.demand / item.power * 60))
             if item.duration < duration:
                 duration = item.duration
             d_power[item.start - 1: item.start - 1 + duration] = item.power

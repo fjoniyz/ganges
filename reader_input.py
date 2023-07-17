@@ -6,7 +6,7 @@ from types import SimpleNamespace
 # Kafka broker configuration
 bootstrap_servers = 'localhost:9092'
 group_id = 'my-consumer-group'
-topic = 'input-topicc'
+topic = 'input-test6'
 
 def create_TaskSimEvCharging(x, power) :
     #each max is just min value plus one hour
@@ -61,7 +61,7 @@ try:
         print(f"Received message: {msg.value().decode('utf-8')}")
         prognose.random.seed(prognose.pd.Timestamp.utcnow().dayofyear)
         power = [1, 2, 3, 4]
-        task_instance = create_TaskSimEvCharging(x, [1,2,3,4])
+        task_instance = create_TaskSimEvCharging(x, power)
         d = {"col1": [task_instance.max_start, task_instance.min_start, task_instance.min_demand,
                       task_instance.max_demand, task_instance.min_duration, task_instance.max_duration],
              "col2": [task_instance.max_start, task_instance.min_start, task_instance.min_demand,
