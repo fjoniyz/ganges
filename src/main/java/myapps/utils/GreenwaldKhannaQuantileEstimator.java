@@ -1,9 +1,6 @@
 package myapps.utils;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 
 /***
  * Implementation of the Greenwald-Khanna Quantile Estimator algorithm for estimating quantiles in a data stream.
@@ -133,7 +130,7 @@ public class GreenwaldKhannaQuantileEstimator {
         return -(low + 1); // key not found
     }
 
-    public List<Double> getQuantile(double p) {
+    public HashMap<String, Double> getQuantile(double p) {
         if (this.tuples.isEmpty()) {
             throw new IllegalStateException("Sequence contains no elements");
         }
@@ -160,7 +157,11 @@ public class GreenwaldKhannaQuantileEstimator {
             throw new IllegalStateException("Failed to find the requested quantile");
         }
 
-        return Arrays.asList(this.tuples.get(bestIndex).getValue(), (double) bestIndex);
+        HashMap<String, Double> resultMap = new HashMap<>();
+        resultMap.put("value", this.tuples.get(bestIndex).getValue());
+        resultMap.put("index", (double) bestIndex);
+        return resultMap;
+        //return Arrays.asList(this.tuples.get(bestIndex).getValue(), (double) bestIndex);
     }
 
     public void compress() {

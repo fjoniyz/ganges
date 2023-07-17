@@ -1,10 +1,15 @@
 package myapps;
+import java.lang.reflect.Array;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Properties;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.stream.Collectors;
 
 //TODO: Check if ranges have to be update manually
 import com.ganges.lib.castleguard.utils.Utils;
@@ -16,11 +21,13 @@ import myapps.utils.GreenwaldKhannaQuantileEstimator;
 import org.apache.commons.math3.distribution.LaplaceDistribution;
 import org.apache.commons.math3.random.JDKRandomGenerator;
 
-public class Doca {
+public class Doca implements AnonymizationAlgorithm {
+
+    private static DataRepository domainRepository = new DataRepository();
 
     //-----------Attributes for DELTA Phase----------------//
     private List<List<Double>> stableDomain;    // List of all items that are part of the stable domain
-    private GreenwaldKhannaQuantileEstimator GKQuantileEstimator;   // GK Quantile Estimator
+    private static GreenwaldKhannaQuantileEstimator GKQuantileEstimator = new GreenwaldKhannaQuantileEstimator(0.02);   // GK Quantile Estimator
     private List<Double> Vinf = new ArrayList<>();  // List of all lower bounds for each attribute/header TODO: Check if ranges have to be correct implemented or change with ranges
     private List<Double> Vsup = new ArrayList<>();  // List of all upper bounds for each attribute/header
     private double delta;   // publishing rate [0,1], 0 means no publishing
@@ -31,7 +38,7 @@ public class Doca {
     private List<Item> currentItems = new ArrayList<>();    // List of all current items (bound by delay constraint)
 
     //-----------Parameters for DELTA Phase----------------//
-    private final double GKQError = 0.02;   // Error of the GK Quantile Estimator
+    private static final double GKQError = 0.02;   // Error of the GK Quantile Estimator
     // could be potentially also just used as lower bound (if domains wont get stable)
     private int sizeOfStableDomain = 200;   // Size that has to be reached before release conditions for stable Domain are checked
     private final double LAMBDA = 0.15;      // tolerance parameter for domain building
@@ -53,7 +60,7 @@ public class Doca {
         this.inplace = Boolean.parseBoolean(parameters[3]);
         this.delta = Double.parseDouble(parameters[4]);
         this.stableDomain = new ArrayList<>();
-        this.GKQuantileEstimator = new GreenwaldKhannaQuantileEstimator(GKQError);
+        //this.GKQuantileEstimator = new GreenwaldKhannaQuantileEstimator(GKQError);
         this.tau = 0;
         this.clusterList = new ArrayList<>();
     }
@@ -62,12 +69,12 @@ public class Doca {
     /**
      * Added Tuple gets either suppressed or released to the DOCA Phase
      *
-     * @param X Input Tuple
+     * @param x Input Tuple
      */
-    public double[][] addData(double[][] X) {
+    public double[][] addData(double[][] x) {
         List<List<Double>> domain = new ArrayList<>();
         List<Double> convDataPoint = new ArrayList<>();
-        for (double[] l : X) {
+        for (double[] l : x) {
             for (double v : l) {
                 convDataPoint.add(v);
             }
@@ -84,8 +91,7 @@ public class Doca {
         if (domain != null) {
             List<Item> itemList = DocaUtil.dataPointsToItems(domain);
 
-            // TODO: Is this a good way to calculate the sensitivity??
-            double sensitivity = Math.abs(DocaUtil.getMax(X) - DocaUtil.getMin(X));
+            double sensitivity = Math.abs(DocaUtil.getMax(x) - DocaUtil.getMin(x));
             if (delta != 0) {
                 // calculate sensitivity
                 List<Float> firstElem = new ArrayList<>(itemList.get(0).getData().values());
@@ -137,6 +143,8 @@ public class Doca {
      * @return the domain if it is stable, otherwise null
      */
     protected List<List<Double>> addToDomain(List<Double> X) {
+        domainRepository.open();
+
         double tolerance = this.LAMBDA;
 
         // EXPERIMENTAL: Use mean of tuple as value for GK
@@ -145,24 +153,35 @@ public class Doca {
         double mean = sum / X.size();
 
         // Add tuple to GKQEstimator
-        this.GKQuantileEstimator.add(mean, X);
+        GKQuantileEstimator.add(mean, X);
 
         // Add Quantile to Vinf and Vsup
         // (1) quantile , (2) index of quantile
-        List<Double> estQuantilInf = this.GKQuantileEstimator.getQuantile((1.0 - this.delta) / 2.0);
-        List<Double> estQuantilSup = this.GKQuantileEstimator.getQuantile((1.0 + this.delta) / 2.0);
+        HashMap<String, Double> estQuantilInf = GKQuantileEstimator.getQuantile((1.0 - this.delta) / 2.0);
+        HashMap<String, Double> estQuantilSup = GKQuantileEstimator.getQuantile((1.0 + this.delta) / 2.0);
 
-        this.Vinf.add(estQuantilInf.get(0));
-        this.Vsup.add(estQuantilSup.get(0));
+        //TODO: Maybe storing the current values in the static QuantileEstimator is already enough and DataRepo is not needed
+        domainRepository.saveValues("Vinf", estQuantilInf);
+        domainRepository.saveValues("Vsup", estQuantilSup);
+
+
+        List<Map<String, Double>> tempVinf = domainRepository.getValuesByKeys(new String[]{"Vinf"});
+        List<Map<String, Double>> tempVsup = domainRepository.getValuesByKeys(new String[]{"Vsup"});
+
+        //this.Vinf.add(estQuantilInf.get(0));
+        //this.Vsup.add(estQuantilSup.get(0));
 
         // Check if domain is big enough
-        if (Vinf.size() == sizeOfStableDomain && Vsup.size() == sizeOfStableDomain) {
+        if (tempVinf.size() == sizeOfStableDomain && tempVsup.size() == sizeOfStableDomain) {
 
-            double stdVinf = DocaUtil.calculateStandardDeviation(Vinf);
-            double stdVsup = DocaUtil.calculateStandardDeviation(Vsup);
+            List<Double> vInfValues = tempVinf.stream().map(map -> map.get("value")).collect(Collectors.toList());
+            List<Double> vSupValues = tempVsup.stream().map(map -> map.get("value")).collect(Collectors.toList());
 
-            double meanVinf = Vinf.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
-            double meanVsup = Vsup.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+            double stdVinf = DocaUtil.calculateStandardDeviation(vInfValues);
+            double stdVsup = DocaUtil.calculateStandardDeviation(vSupValues);
+
+            double meanVinf = vInfValues.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+            double meanVsup = vSupValues.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
 
             //coefficient of variation
             double cvVinf = stdVinf / meanVinf;
@@ -171,18 +190,24 @@ public class Doca {
             // check if domain is stable
             if (cvVinf < tolerance && cvVsup < tolerance) {
 
-                List<List<Double>> domain = this.GKQuantileEstimator.getDomain();
-                this.stableDomain = domain.subList(estQuantilInf.get(1).intValue(), estQuantilSup.get(1).intValue());
+                List<List<Double>> domain = GKQuantileEstimator.getDomain();
+                this.stableDomain = domain.subList(estQuantilInf.get("index").intValue(), estQuantilSup.get("index").intValue());
 
 
-                this.Vinf = new ArrayList<>();
-                this.Vsup = new ArrayList<>();
-                this.GKQuantileEstimator = new GreenwaldKhannaQuantileEstimator(this.GKQError);
+                //this.Vinf = new ArrayList<>();
+                //this.Vsup = new ArrayList<>();
+                GKQuantileEstimator = new GreenwaldKhannaQuantileEstimator(0.02);
+                domainRepository.deleteDataByKey("Vinf");
+                domainRepository.deleteDataByKey("Vsup");
+                domainRepository.close();
                 return this.stableDomain;
             }
             // remove oldest tuple to remain size of stable domain
-            this.Vinf.remove(0);
-            this.Vsup.remove(0);
+            //this.Vinf.remove(0);
+            //this.Vsup.remove(0);
+            domainRepository.deleteEntryByKey(0, "Vinf");
+            domainRepository.deleteEntryByKey(0, "Vsup");
+            domainRepository.close();
         }
         return null;
     }
@@ -370,7 +395,7 @@ public class Doca {
         for (Map.Entry<String, Float> attrEntry : attr.entrySet()) {
             mean.put(attrEntry.getKey(), attrEntry.getValue() / expiredCluster.getContents().size());
         }
-        sensitivity = 100f;
+        //sensitivity = 100f;
         double scale = (sensitivity / (expiredCluster.getContents().size() * eps));
         HashMap<String, Float> laplace = new HashMap<>();
         for (String attribute : mean.keySet()) {
@@ -421,7 +446,7 @@ public class Doca {
     }
 
     public static String[] getParameters() {
-        String[] result = new String[5];
+        String[] result = new String[4];
         String userDirectory = System.getProperty("user.dir");
         try(InputStream inputStream = Files.newInputStream(Paths.get(userDirectory+"/src/main/resources/doca.properties"))){
             Properties properties = new Properties();
@@ -430,26 +455,57 @@ public class Doca {
             result[1] = properties.getProperty("delay_constraint");
             result[2] = properties.getProperty("beta");
             result[3] = properties.getProperty("inplace");
-            result[4] = properties.getProperty("delta");
             return result;
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
+    @Override
+    public List<Map<String, Double>> anonymize(List<Map<String, Double>> X) {
+        if (X.size() == 0 || X.get(0).size() == 0) {
+            return new ArrayList<>();
+        }
 
-    public static double[][] anonymize(
-            double[][] X) {
+        // Preserving value order through anonymization input/output
+        ArrayList<String> headers = new ArrayList<>(X.get(0).keySet());
+
+        // Convert map to double array
+        double[][] docaInput = new double[X.size()][];
+        for (int i = 0; i < X.size(); i++) {
+            docaInput[i] = new double[X.get(i).size()];
+            for (int headerId = 0; headerId < headers.size(); headerId++) {
+                docaInput[i][headerId] = X.get(i).get(headers.get(headerId));
+            }
+        }
+
+        double[][] result = anonymize(docaInput);
+
+        // Convert double array to map
+        List<Map<String, Double>> outputResult = new ArrayList<>();
+        for (double[] dataRow : result) {
+            Map<String, Double> dataRowMap = new LinkedHashMap<>();
+            for (int headerId = 0; headerId < headers.size(); headerId++) {
+                dataRowMap.put(headers.get(headerId), dataRow[headerId]);
+            }
+            outputResult.add(dataRowMap);
+        }
+        return outputResult;
+    }
+
+
+    public double[][] anonymize(
+        double[][] x) {
         String[] parameters = getParameters();
         double eps = Double.parseDouble(parameters[0]);
         int delay_constraint = Integer.parseInt(parameters[1]);
         int beta = Integer.parseInt(parameters[2]);
         boolean inplace = Boolean.parseBoolean(parameters[3]);
         double delta = Double.parseDouble(parameters[4]);
-        int num_instances = X.length;
-        int num_attributes = X[0].length;
+        int num_instances = x.length;
+        int num_attributes = x[0].length;
 
-        double sensitivity = Math.abs((DocaUtil.getMax(X) - DocaUtil.getMin(X)));
+        double sensitivity = Math.abs((DocaUtil.getMax(x) - DocaUtil.getMin(x)));
 
         List<List<Integer>> clusters = new ArrayList<>();
         List<List<Integer>> clusters_final = new ArrayList<>();
@@ -474,7 +530,7 @@ public class Doca {
         // Create Output structure
         double[][] output;
         if (inplace) {
-            output = X;
+            output = x;
         } else {
             output = new double[num_instances][num_attributes];
         }
@@ -486,7 +542,7 @@ public class Doca {
                 System.out.println("Clock " + clock + " " + TODOREMOVE_Perfect);
             }
 
-            double[] data_point = X[clock];
+            double[] data_point = x[clock];
 
             // Update min/max
             for (int i = 0; i < num_attributes; i++) {
@@ -593,7 +649,7 @@ public class Doca {
             double[] mean = new double[num_attributes];
             for (int i : cs) {
                 for (int j = 0; j < num_attributes; j++) {
-                    mean[j] += X[i][j];
+                    mean[j] += x[i][j];
                 }
             }
             for (int j = 0; j < num_attributes; j++) {
@@ -611,5 +667,4 @@ public class Doca {
 
         return output;
     }
-
 }

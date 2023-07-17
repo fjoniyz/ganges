@@ -2,7 +2,9 @@ package myapps.utils;
 
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.junit.Assert.assertEquals;
 
@@ -21,13 +23,13 @@ public class QuantilEstimatorTest {
         estimator.add(50);
 
         // Calculate quantiles and assert their values
-        List<Double> quantile25 = estimator.getQuantile(0.25);
+        List<Double> quantile25 = new ArrayList<>(estimator.getQuantile(0.25).values());
         assertEquals(20.0, quantile25.get(0),0.0);
 
-        List<Double> quantile50 = estimator.getQuantile(0.5);
+        List<Double> quantile50 = new ArrayList<>(estimator.getQuantile(0.5).values());
         assertEquals(30.0, quantile50.get(0), 0.0);
 
-        List<Double> quantile75 = estimator.getQuantile(0.75);
+        List<Double> quantile75 = new ArrayList<>(estimator.getQuantile(0.75).values());
         assertEquals(40.0, quantile75.get(0), 0.0);
 
         // Add more values
@@ -38,13 +40,13 @@ public class QuantilEstimatorTest {
         estimator.add(100);
 
         // Calculate quantiles again
-        quantile25 = estimator.getQuantile(0.25);
+        quantile25 = new ArrayList<>(estimator.getQuantile(0.25).values());
         assertEquals(30.0, quantile25.get(0), 0.0);
 
-        quantile50 = estimator.getQuantile(0.5);
+        quantile50 = new ArrayList<>(estimator.getQuantile(0.5).values());
         assertEquals(50.0, quantile50.get(0), 0.0);
 
-        quantile75 = estimator.getQuantile(0.75);
+        quantile75 = new ArrayList<>(estimator.getQuantile(0.75).values());
         assertEquals(80.0, quantile75.get(0), 0.0);
     }
 }
