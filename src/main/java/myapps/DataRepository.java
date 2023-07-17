@@ -77,6 +77,10 @@ public class DataRepository {
         return entries;
     }
 
+    public Map<String, String> getTopicByKey(String entryKey) {
+        return connection.hgetall(entryKey);
+    }
+
     public void deleteDataByKey(String key) {
         connection.del(key);
     }

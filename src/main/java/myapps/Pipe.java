@@ -24,6 +24,7 @@ import serdes.emobility.EMobilityStationMessage;
 
 public class Pipe {
 
+    private static final Doca doca = new Doca();
 
     public static AnonymizedMessage createMessage(Class<?> messageClass, Object... values) {
       AnonymizedMessage message = null;
@@ -53,8 +54,13 @@ public class Pipe {
         dataRepository.close();
 
         // Anonymization
-        Doca doca = new Doca();
         List<Map<String, Double>> output = doca.anonymize(allSavedValues);
+
+        // If the output is null, it means that not enough data to anonymize was processed yet
+        if (output == null) {
+            System.out.println("New Data was processed");
+            return null;
+        }
 
         String outputString =
                 output.stream().map(dataRow -> dataRow.values().toString()).collect(Collectors.joining(
