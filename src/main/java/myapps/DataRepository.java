@@ -64,12 +64,13 @@ public class DataRepository {
         return values;
     }
 
-    public List<Double[]> getValuesByKeys(String[] entryKeys) {
-        List<Double[]> entries = new ArrayList<>();
+    public List<Map<String, Double>> getValuesByKeys(String[] entryKeys) {
+        List<Map<String, Double>> entries = new ArrayList<>();
         for (String redisKey : connection.keys("*")) {
-            Double[] entry = new Double[entryKeys.length];
+            HashMap<String, Double> entry = new HashMap<>();
             for(int i = 0; i < entryKeys.length; i++) {
-                entry[i] = Double.parseDouble(connection.hget(redisKey, entryKeys[i]));
+                entry.put(entryKeys[i], Double.parseDouble(connection.hget(redisKey,
+                    entryKeys[i])));
             }
             entries.add(entry);
         }

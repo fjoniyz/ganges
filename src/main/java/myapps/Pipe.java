@@ -7,6 +7,7 @@ import java.nio.file.Paths;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 
+import java.util.stream.Collectors;
 import serdes.AnonymizedMessage;
 import serdes.Deserializer;
 import serdes.chargingstation.ChargingStationMessage;
@@ -48,24 +49,18 @@ public class Pipe {
       dataRepository.saveValues(id, keyValueMap);
 
       // Here we assume that for one message type the values are stored consistently
-      List<Double[]> allSavedValues = dataRepository.getValuesByKeys(fields);
+      List<Map<String, Double>> allSavedValues = dataRepository.getValuesByKeys(fields);
       dataRepository.close();
-      // Parse cached strings into double arrays
-      double[][] input = new double[allSavedValues.size()][];
 
-      for (int i = 0; i < allSavedValues.size(); i++) {
-          double[] doubleArray =
-                  Arrays.stream(allSavedValues.get(i)).mapToDouble(v -> v).toArray();
-          input[i] = doubleArray;
-      }
+      // Anonymization
+      Doca doca = new Doca();
+      List<Map<String, Double>> output = doca.anonymize(allSavedValues);
 
-        // Anonymization
-        Doca docaInstance = new Doca();
-        double[][] output = docaInstance.addData(input);
-        if (output.length == 0 || output[0].length == 0) {
-            return null;
-        }
-        return Arrays.deepToString(output);
+      String outputString =
+          output.stream().map(dataRow -> dataRow.values().toString()).collect(Collectors.joining(
+              ","));
+      System.out.println("result: " + outputString);
+      return outputString;
     }
 
     public static String[] getFieldsToAnonymize() throws IOException {
@@ -79,7 +74,7 @@ public class Pipe {
             for (String field : docaFields) {
                 System.out.println(field);
             }
-            return new PropertiesToReturn(isDeltaWanted, docaFields);
+            return docaFields;
         }
     }
 
@@ -157,34 +152,6 @@ public class Pipe {
 
           DataRepository dataRepository = new DataRepository();
           String[] fields = getFieldsToAnonymize();
-          src.mapValues(value -> {
-              try {
-                  return processing(value, dataRepository, fields);
-              } catch (IOException e) {
-                  throw new RuntimeException(e);
-              }
-          }).to(outputTopic, produced);
-          Topology topology = streamsBuilder.build();
-            // Create anonymization stream and use it with Kafka
-            StreamsBuilder streamsBuilder = new StreamsBuilder();
-            KStream<String, ChargingStationMessage> src = streamsBuilder.stream(inputTopic, Consumed.with(Serdes.String(), chargingStationMessageSerde));
-            DataRepository dataRepository = new DataRepository();
-            Produced<String, String> produced = Produced.with(Serdes.String(), Serdes.String());
-            PropertiesToReturn propertiesToReturn = getFieldsToAnonymize();
-            String[] fields = propertiesToReturn.docaFields;
-
-            /*
-            if(!propertiesToReturn.isDeltaWanted){
-                src.mapValues(value -> {
-                    try {
-                        return processing(value, dataRepository, fields);
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
-                }).to(outputTopic, produced);
-            } else {
-                src.mapValues(Pipe::processingWithDelta).to(outputTopic, produced);
-            }*/
             src.mapValues(value -> {
                 try {
                     String res = processing(value, dataRepository, fields);
@@ -196,8 +163,7 @@ public class Pipe {
                     throw new RuntimeException(e);
                 }
             }).to(outputTopic, produced);
-
-            Topology topology = streamsBuilder.build();
+          Topology topology = streamsBuilder.build();
 
         try (KafkaStreams streams = new KafkaStreams(topology, props)) {
           final CountDownLatch latch = new CountDownLatch(1);
