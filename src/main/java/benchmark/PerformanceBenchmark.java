@@ -1,11 +1,7 @@
 package benchmark;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import java.io.IOException;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Properties;
@@ -32,14 +28,18 @@ public class PerformanceBenchmark {
     KafkaConsumer<String, String> consumer = new KafkaConsumer<>(props);
     consumer.subscribe(Arrays.asList("output-test"));
 
-    Thread anonymizationThread = new Thread();
+
+    MetricsCollector metricsCollector = MetricsCollector.getInstance();
+    metricsCollector.setFileName("consumer_results.csv");
     while (true) {
       ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
       for (ConsumerRecord<String, String> record : records) {
         long consumerTimestamp = System.currentTimeMillis();
 
-        MetricsCollector.setConsumerTimestamps(record.key(), consumerTimestamp); // TODO: put the id into the record key
-        MetricsCollector.metricsToCsv();
+        MetricsCollector.setConsumerTimestamps(record.key(), consumerTimestamp); // TODO: put the
+        // id into the
+        // record key
+        metricsCollector.saveMetricsToCSV();
 
         System.out.printf("offset = %d, key = %s, value = %s%n", record.offset(), record.key(), record.value());
       }

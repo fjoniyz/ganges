@@ -5,34 +5,28 @@ import com.opencsv.CSVWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class MetricsCollector {
 
   private static MetricsCollector instance;
+
+  private static Set<String> allIds = new LinkedHashSet<>();
+  private static HashMap<String, Long> producerTimestamps = new HashMap<>();
   private static HashMap<String, Long> pipeEntryTimestamps = new HashMap<>();
-  private static HashMap<String, Long> pipeExitTimestamps = new HashMap<>();
   private static HashMap<String, Long> anonEntryTimestamps = new HashMap<>();
   private static HashMap<String, Long> anonExitTimestamps = new HashMap<>();
-  private static HashMap<String, Long> producerTimestamps = new HashMap<>();
+  private static HashMap<String, Long> pipeExitTimestamps = new HashMap<>();
   private static HashMap<String, Long> consumerTimestamps = new HashMap<>();
 
-  public static Long getProducerTimestamps(String id) {
-    return producerTimestamps.get(id);
-  }
 
-  public static void setProducerTimestamps(String id, long timestamp) {
-    producerTimestamps.put(id, timestamp);
-  }
-
-  public static Long getConsumerTimestamps(String id) {
-    return consumerTimestamps.get(id);
-  }
-
-  public static void setConsumerTimestamps(String id, long timestamp) {
-    consumerTimestamps.put(id, timestamp);
-  }
+  private String fileName;
 
   private MetricsCollector() {
   }
@@ -42,30 +36,6 @@ public class MetricsCollector {
       instance = new MetricsCollector();
     }
     return instance;
-  }
-
-  public static Long getPipeEntryTimestamp(String id) {
-    return pipeEntryTimestamps.get(id);
-  }
-
-  public static Long getPipeExitTimestamp(String id) {
-    return pipeExitTimestamps.get(id);
-  }
-
-  public static Long getAnonEntryTimestamp(String id) {
-    return anonEntryTimestamps.get(id);
-  }
-
-  public static Long getAnonExitTimestamp(String id) {
-    return anonExitTimestamps.get(id);
-  }
-
-  public static Long getAnonDuration(String id) {
-    return anonExitTimestamps.get(id) - anonEntryTimestamps.get(id);
-  }
-
-  public static Long getExitTimestamps(String id) {
-    return pipeExitTimestamps.get(id);
   }
 
   public static void printMetrics() {
@@ -95,9 +65,9 @@ public class MetricsCollector {
     System.out.println("Average anonymization time: " + averageAnonTime + "ms");
   }
 
-  public static void metricsToCsv() throws IOException {
+  public void saveMetricsToCSV() throws IOException {
 
-    File file = new File("results.csv");
+    File file = new File(fileName);
 
     try {
       // create FileWriter object with file as parameter
@@ -107,36 +77,101 @@ public class MetricsCollector {
       CSVWriter writer = new CSVWriter(outputfile);
 
       // adding header to csv
-      String[] header = { "ID", "ProducerTimestamp","EntryPipeTimestamp", "EntryAnonymizationTimestamp", "ExitAnonymizationTimestamp", "ExitPipeTimestamp","ConsumerTimestamp"};
+      String[] header = { "ID", "ProducerTimestamp", "EntryPipeTimestamp",
+          "EntryAnonymizationTimestamp", "ExitAnonymizationTimestamp", "ExitPipeTimestamp",
+          "ConsumerTimestamp"};
       writer.writeNext(header);
 
-      for (Map.Entry<String, Long> entry : pipeEntryTimestamps.entrySet()) {
-        String id = entry.getKey();
-        String[] data = {id, getProducerTimestamps(id).toString(), entry.getValue().toString(),getAnonEntryTimestamp(id).toString(), getAnonExitTimestamp(id).toString(), getExitTimestamps(id).toString(), getConsumerTimestamps(id).toString() };
+      for (String id : allIds) {
+        List<String> dataList = new ArrayList<>();
+
+        String producerTimestamp = producerTimestamps.containsKey(id)
+            ? producerTimestamps.get(id).toString() : "";
+        String pipeEntryTimestamp = pipeEntryTimestamps.containsKey(id)
+            ? pipeEntryTimestamps.get(id).toString() : "";
+        String pipeExitTimestamp = pipeExitTimestamps.containsKey(id)
+            ? pipeExitTimestamps.get(id).toString() : "";
+        String anonEntryTimestamp = anonEntryTimestamps.containsKey(id)
+            ? anonEntryTimestamps.get(id).toString() : "";
+        String anonExitTimestamp = anonExitTimestamps.containsKey(id)
+            ? anonExitTimestamps.get(id).toString() : "";
+        String consumerTimestamp = consumerTimestamps.containsKey(id)
+            ? consumerTimestamps.get(id).toString() : "";
+
+        String[] data = {id, producerTimestamp, pipeEntryTimestamp, anonEntryTimestamp,
+            anonExitTimestamp, pipeExitTimestamp, consumerTimestamp };
         writer.writeNext(data);
       }
       // closing writer connection
       writer.close();
-    }
-    catch (IOException e) {
+    } catch (IOException e) {
       e.printStackTrace();
     }
+  }
 
+  public static Long getProducerTimestamps(String id) {
+    return producerTimestamps.get(id);
+  }
+
+  public static Long getConsumerTimestamps(String id) {
+    return consumerTimestamps.get(id);
+  }
+
+  public static Long getPipeEntryTimestamp(String id) {
+    return pipeEntryTimestamps.get(id);
+  }
+
+  public static Long getPipeExitTimestamp(String id) {
+    return pipeExitTimestamps.get(id);
+  }
+
+  public static Long getAnonEntryTimestamp(String id) {
+    return anonEntryTimestamps.get(id);
+  }
+
+  public static Long getAnonExitTimestamp(String id) {
+    return anonExitTimestamps.get(id);
+  }
+
+  public static Long getAnonDuration(String id) {
+    return anonExitTimestamps.get(id) - anonEntryTimestamps.get(id);
+  }
+
+  public static Long getExitTimestamps(String id) {
+    return pipeExitTimestamps.get(id);
+  }
+
+  public static void setProducerTimestamps(String id, long timestamp) {
+    allIds.add(id);
+    producerTimestamps.put(id, timestamp);
   }
 
   public static void setAnonEntryTimestamps(String id, long timestamp) {
+    allIds.add(id);
     anonEntryTimestamps.put(id, timestamp);
   }
 
+  public static void setConsumerTimestamps(String id, long timestamp) {
+    allIds.add(id);
+    consumerTimestamps.put(id, timestamp);
+  }
+
   public static void setPipeEntryTimestamps(String id, long timestamp) {
+    allIds.add(id);
     pipeEntryTimestamps.put(id, timestamp);
   }
 
   public static void setPipeExitTimestamps(String id, long timestamp) {
+    allIds.add(id);
     pipeExitTimestamps.put(id, timestamp);
   }
 
   public static void setAnonExitTimestamps(String id, long timestamp) {
+    allIds.add(id);
     anonExitTimestamps.put(id, timestamp);
+  }
+
+  public void setFileName(String fileName) {
+    this.fileName = fileName;
   }
 }

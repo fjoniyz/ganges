@@ -13,10 +13,6 @@ import serdes.AnonymizedMessage;
 import serdes.Deserializer;
 import serdes.chargingstation.ChargingStationMessage;
 import serdes.Serializer;
-import serdes.AnonymizedMessage;
-import serdes.Deserializer;
-import serdes.chargingstation.ChargingStationMessage;
-import serdes.Serializer;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.*;
@@ -76,8 +72,9 @@ public class Pipe {
             ","));
     if (enableMonitoring) {
       MetricsCollector.setPipeExitTimestamps(id, System.currentTimeMillis());
+      MetricsCollector.getInstance().saveMetricsToCSV();
     }
-    System.out.println("result: " + outputString);
+
     return outputString;
   }
 
@@ -151,6 +148,9 @@ public class Pipe {
     String inputTopic = props.getProperty("input-topic");
     String outputTopic = props.getProperty("output-topic");
     boolean enableMonitoring = Boolean.parseBoolean(props.getProperty("enable-monitoring"));
+    if (enableMonitoring) {
+      MetricsCollector.getInstance().setFileName("results_pipe.csv");
+    }
 
     Serializer<EMobilityStationMessage> serializer = new Serializer<>();
     Deserializer<EMobilityStationMessage>
@@ -170,13 +170,20 @@ public class Pipe {
 
       DataRepository dataRepository = new DataRepository();
       String[] fields = getFieldsToAnonymize();
-      src.mapValues(value -> {
-        try {
-          return processing(value, dataRepository, fields, enableMonitoring);
-        } catch (IOException e) {
-          throw new RuntimeException(e);
-        }
-      }).to(outputTopic, produced);
+      src.mapValues(
+              value -> {
+                try {
+                  return processing(value, dataRepository, fields, enableMonitoring);
+                } catch (IOException e) {
+                  throw new RuntimeException(e);
+                }
+              })
+          .map(
+              (key, value) -> {
+                System.out.println("result: " + key + " ; " + value);
+                return new KeyValue<>(key, value);
+              })
+          .to(outputTopic, produced);
       Topology topology = streamsBuilder.build();
 
       try (KafkaStreams streams = new KafkaStreams(topology, props)) {
