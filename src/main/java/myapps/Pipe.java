@@ -8,6 +8,11 @@ import java.nio.file.Paths;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 
+import java.util.stream.Collectors;
+import serdes.AnonymizedMessage;
+import serdes.Deserializer;
+import serdes.chargingstation.ChargingStationMessage;
+import serdes.Serializer;
 import serdes.AnonymizedMessage;
 import serdes.Deserializer;
 import serdes.chargingstation.ChargingStationMessage;
@@ -23,159 +28,170 @@ import java.util.*;
 import serdes.emobility.EMobilityStationMessage;
 
 public class Pipe {
-    public static String processing(String id, AnonymizedMessage message, DataRepository dataRepository, String[] fields, boolean enableMonitoring) throws IOException {
-      //String id = "lol"; // TODO: remove temporary stub
-      if (enableMonitoring) {
-        MetricsCollector.setPipeEntryTimestamps(id, System.currentTimeMillis());
-      }
 
-      double[] valuesList = message.getValuesListFromKeys(fields);
-      StringBuilder valueToSaveInRedis = new StringBuilder();
-      for (double d: valuesList
-      ) {
-          valueToSaveInRedis.append(d).append(",");
-      }
-      // Retrieve non-anonymized data from cache
-      dataRepository.saveValue(valueToSaveInRedis.toString());
-      List<String> allSavedValues = dataRepository.getValues();
+  public static AnonymizedMessage createMessage(Class<?> messageClass, Object... values) {
 
-      // Parse cached strings into double arrays
-      double[][] input = new double[allSavedValues.size()][];
+    AnonymizedMessage message = null;
+    if (messageClass.equals(EMobilityStationMessage.class)) {
+      // message = new EMobilityStationMessage(values[0], values);
+      return message;
+    } else {
+      return null; // TODO: add other message types
+    }
+  }
 
-      for (int i = 0; i < allSavedValues.size(); i++) {
-          String[] values = allSavedValues.get(i).split(",");
-          double[] toDouble =
-                  Arrays.stream(values).mapToDouble(Double::parseDouble).toArray();
 
-          input[i] = toDouble;
-      }
+  public static <T extends AnonymizedMessage> String processing(T message,
+                                                                DataRepository dataRepository,
+                                                                String[] fields, boolean enableMonitoring) throws IOException {
+    String id = message.getId();
+    if (enableMonitoring) {
+      MetricsCollector.setPipeEntryTimestamps(id, System.currentTimeMillis());
+    }
+    double[] valuesList = message.getValuesListFromKeys(fields);
+    dataRepository.open();
 
-      // Anonymization
-      Doca docaInstance = new Doca();
-      if (enableMonitoring) {
-        MetricsCollector.setAnonEntryTimestamps(id, System.currentTimeMillis());
+    // Retrieve non-anonymized data from cache
+    HashMap<String, Double> keyValueMap = new HashMap<>();
+    for (int i = 0; i < valuesList.length; i++) {
+      keyValueMap.put(fields[i], valuesList[i]);
+    }
+    dataRepository.saveValues(id, keyValueMap);
+
+    // Here we assume that for one message type the values are stored consistently
+    List<Map<String, Double>> allSavedValues = dataRepository.getValuesByKeys(fields);
+    dataRepository.close();
+
+    // Anonymization
+    Doca doca = new Doca();
+    if (enableMonitoring) {
+      MetricsCollector.setAnonEntryTimestamps(id, System.currentTimeMillis());
+    }
+    List<Map<String, Double>> output = doca.anonymize(allSavedValues);
+    if (enableMonitoring) {
+      MetricsCollector.setAnonExitTimestamps(id, System.currentTimeMillis());
+    }
+    String outputString =
+        output.stream().map(dataRow -> dataRow.values().toString()).collect(Collectors.joining(
+            ","));
+    if (enableMonitoring) {
+      MetricsCollector.setPipeExitTimestamps(id, System.currentTimeMillis());
+    }
+    System.out.println("result: " + outputString);
+    return outputString;
+  }
+
+  public static String[] getFieldsToAnonymize() throws IOException {
+    String userDirectory = System.getProperty("user.dir");
+    try (InputStream inputStream = Files.newInputStream(Paths.get(userDirectory + "/src/main/resources/doca.properties"))) {
+      Properties properties = new Properties();
+      properties.load(inputStream);
+      String docaFieldsString = properties.getProperty("doca_fields");
+      String[] docaFields = docaFieldsString.split(",");
+      for (String field : docaFields) {
+        System.out.println(field);
       }
-      double[][] output = docaInstance.anonymize(input);
-      if (enableMonitoring) {
-        MetricsCollector.setAnonExitTimestamps(id, System.currentTimeMillis());
+      return docaFields;
+    }
+  }
+
+  public static double[] createValuesList(String[] fields, ChargingStationMessage chargingStationMessage) {
+    List<Double> values = new ArrayList<>();
+    for (String field : fields) {
+      switch (field) {
+        case "urbanisation_level":
+          System.out.println("urb level: " + chargingStationMessage.getUrbanisationLevel());
+          values.add((double) chargingStationMessage.getUrbanisationLevel());
+          break;
+        case "number_loading_stations":
+          System.out.println("number load stat: " + chargingStationMessage.getNumberLoadingStations());
+          values.add((double) chargingStationMessage.getNumberLoadingStations());
+          break;
+        case "number_parking_spaces":
+          System.out.println("parking spaces" + chargingStationMessage.getNumberParkingSpaces());
+          values.add((double) chargingStationMessage.getNumberParkingSpaces());
+          break;
+        case "start_time_loading":
+          System.out.println("loading time start" + chargingStationMessage.getStartTimeLoading());
+          values.add((double) chargingStationMessage.getStartTimeLoading());
+          break;
+        case "end_time_loading":
+          System.out.println("load time end" + chargingStationMessage.getEndTimeLoading());
+          values.add((double) chargingStationMessage.getEndTimeLoading());
+          break;
+        case "loading_time":
+          System.out.println("loading time" + chargingStationMessage.getLoadingTime());
+          values.add((double) chargingStationMessage.getLoadingTime());
+          break;
+        case "kwh":
+          System.out.println("kwh: " + chargingStationMessage.getKwh());
+          values.add((double) chargingStationMessage.getKwh());
+          break;
+        case "loading_potential":
+          System.out.println("load potential " + chargingStationMessage.getLoadingPotential());
+          values.add((double) chargingStationMessage.getLoadingPotential());
+          break;
+        default:
+          System.out.println("Invalid field in config file: " + field);
       }
-      String result = Arrays.deepToString(output);
-      if (enableMonitoring) {
-        MetricsCollector.setPipeExitTimestamps(id, System.currentTimeMillis());
-      }
-      return result;
+    }
+    return values.stream().mapToDouble(d -> d).toArray();
+  }
+
+  public static void main(final String[] args) {
+    String userDirectory = System.getProperty("user.dir");
+    Properties props = new Properties();
+
+    try (InputStream inputStream = Files.newInputStream(Paths.get(userDirectory + "/src/main/resources/pipe.properties"))) {
+      props.load(inputStream);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
     }
 
-    public static String[] getFieldsToAnonymize() throws IOException {
-        String userDirectory = System.getProperty("user.dir");
-        try (InputStream inputStream = Files.newInputStream(Paths.get(userDirectory + "/src/main/resources/doca.properties"))) {
-            Properties properties = new Properties();
-            properties.load(inputStream);
-            String docaFieldsString = properties.getProperty("doca_fields");
-            String[] docaFields = docaFieldsString.split(",");
-            for (String field : docaFields) {
-                System.out.println(field);
-            }
-            return docaFields;
-        }
-    }
+    String inputTopic = props.getProperty("input-topic");
+    String outputTopic = props.getProperty("output-topic");
+    boolean enableMonitoring = Boolean.parseBoolean(props.getProperty("enable-monitoring"));
 
-    public static double[] createValuesList(String[] fields, ChargingStationMessage chargingStationMessage) {
-        List<Double> values = new ArrayList<>();
-        for (String field : fields) {
-            switch (field) {
-                case "urbanisation_level":
-                    System.out.println("urb level: " + chargingStationMessage.getUrbanisationLevel());
-                    values.add((double) chargingStationMessage.getUrbanisationLevel());
-                    break;
-                case "number_loading_stations":
-                    System.out.println("number load stat: " + chargingStationMessage.getNumberLoadingStations());
-                    values.add((double) chargingStationMessage.getNumberLoadingStations());
-                    break;
-                case "number_parking_spaces":
-                    System.out.println("parking spaces" + chargingStationMessage.getNumberParkingSpaces());
-                    values.add((double) chargingStationMessage.getNumberParkingSpaces());
-                    break;
-                case "start_time_loading":
-                    System.out.println("loading time start" + chargingStationMessage.getStartTimeLoading());
-                    values.add((double) chargingStationMessage.getStartTimeLoading());
-                    break;
-                case "end_time_loading":
-                    System.out.println("load time end" + chargingStationMessage.getEndTimeLoading());
-                    values.add((double) chargingStationMessage.getEndTimeLoading());
-                    break;
-                case "loading_time":
-                    System.out.println("loading time" + chargingStationMessage.getLoadingTime());
-                    values.add((double) chargingStationMessage.getLoadingTime());
-                    break;
-                case "kwh":
-                    System.out.println("kwh: " + chargingStationMessage.getKwh());
-                    values.add((double) chargingStationMessage.getKwh());
-                    break;
-                case "loading_potential":
-                    System.out.println("load potential " + chargingStationMessage.getLoadingPotential());
-                    values.add((double) chargingStationMessage.getLoadingPotential());
-                    break;
-                default:
-                    System.out.println("Invalid field in config file: " + field);
-            }
-        }
-        return values.stream().mapToDouble(d -> d).toArray();
-    }
+    Serializer<EMobilityStationMessage> serializer = new Serializer<>();
+    Deserializer<EMobilityStationMessage>
+        emobilityDeserializer = new Deserializer<>(EMobilityStationMessage.class);
+    Serde<EMobilityStationMessage> emobilitySerde = Serdes.serdeFrom(serializer, emobilityDeserializer);
 
-    public static void main(final String[] args) {
-        String userDirectory = System.getProperty("user.dir");
-        Properties props = new Properties();
+    try (InputStream inputStream = Files.newInputStream(Paths.get(userDirectory + "/src/main/resources/kafka.properties"))) {
+      props.load(inputStream);
+      props.put(StreamsConfig.METADATA_MAX_AGE_CONFIG, "1000"); // Needed to prevent timeouts during broker startup.
+      props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
+      props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, emobilitySerde.getClass());
 
-        try (InputStream inputStream = Files.newInputStream(Paths.get(userDirectory + "/src/main/resources/pipe.properties"))) {
-          props.load(inputStream);
+      // Create anonymization stream and use it with Kafka
+      StreamsBuilder streamsBuilder = new StreamsBuilder();
+      KStream<String, EMobilityStationMessage> src = streamsBuilder.stream(inputTopic, Consumed.with(Serdes.String(), emobilitySerde));
+      Produced<String, String> produced = Produced.with(Serdes.String(), Serdes.String());
+
+      DataRepository dataRepository = new DataRepository();
+      String[] fields = getFieldsToAnonymize();
+      src.mapValues(value -> {
+        try {
+          return processing(value, dataRepository, fields, enableMonitoring);
         } catch (IOException e) {
           throw new RuntimeException(e);
         }
+      }).to(outputTopic, produced);
+      Topology topology = streamsBuilder.build();
 
-        String inputTopic = props.getProperty("input-topic");
-        String outputTopic = props.getProperty("output-topic");
-        boolean enableMonitoring = Boolean.parseBoolean(props.getProperty("enable-monitoring"));
-
-        Serializer<EMobilityStationMessage> serializer = new Serializer<>();
-        Deserializer<EMobilityStationMessage>
-            emobilityDeserializer = new Deserializer<>(EMobilityStationMessage.class);
-        Serde<EMobilityStationMessage> emobilitySerde = Serdes.serdeFrom(serializer, emobilityDeserializer);
-
-        try (InputStream inputStream = Files.newInputStream(Paths.get(userDirectory + "/src/main/resources/kafka.properties"))) {
-          props.load(inputStream);
-          props.put(StreamsConfig.METADATA_MAX_AGE_CONFIG, "1000"); // Needed to prevent timeouts during broker startup.
-          props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
-          props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, emobilitySerde.getClass());
-
-          // Create anonymization stream and use it with Kafka
-          StreamsBuilder streamsBuilder = new StreamsBuilder();
-          KStream<String, EMobilityStationMessage> src = streamsBuilder.stream(inputTopic, Consumed.with(Serdes.String(), emobilitySerde));
-          DataRepository dataRepository = new DataRepository();
-          Produced<String, String> produced = Produced.with(Serdes.String(), Serdes.String());
-          String[] fields = getFieldsToAnonymize();
-          src.mapValues(value -> {
-              try {
-                  return processing(value.getId(), value, dataRepository, fields, enableMonitoring);
-              } catch (IOException e) {
-                  throw new RuntimeException(e);
-              }
-          }).to(outputTopic, produced);
-          Topology topology = streamsBuilder.build();
-
-        try (KafkaStreams streams = new KafkaStreams(topology, props)) {
-          final CountDownLatch latch = new CountDownLatch(1);
-          try {
-            streams.start();
-            latch.await();
-          } catch (Throwable e) {
-            System.exit(1);
-          }
+      try (KafkaStreams streams = new KafkaStreams(topology, props)) {
+        final CountDownLatch latch = new CountDownLatch(1);
+        try {
+          streams.start();
+          latch.await();
+        } catch (Throwable e) {
+          System.exit(1);
         }
-        System.exit(0);
+      }
+      System.exit(0);
 
-        } catch (IOException e) {
-          throw new RuntimeException(e);
-        }
+    } catch (IOException e) {
+      throw new RuntimeException(e);
     }
+  }
 }

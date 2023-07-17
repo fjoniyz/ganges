@@ -42,7 +42,7 @@ public class ChargingStationMessage implements Serializable, AnonymizedMessage {
 
     @Override
     public String getId() {
-        return null;
+        return aeSessionId.toString();
     }
 
     @Override
