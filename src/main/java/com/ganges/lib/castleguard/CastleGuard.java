@@ -5,7 +5,9 @@ import com.ganges.lib.castleguard.utils.LogUtils;
 import com.ganges.lib.castleguard.utils.Utils;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
+import myapps.AnonymizationAlgorithm;
 import org.apache.commons.lang3.Range;
 import org.apache.commons.math3.distribution.LaplaceDistribution;
 import org.apache.commons.math3.random.JDKRandomGenerator;
@@ -13,7 +15,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class CastleGuard {
+public class CastleGuard implements AnonymizationAlgorithm {
   private final CGConfig config;
   private List<String> headers;
   private String sensitiveAttr;
@@ -53,6 +55,35 @@ public class CastleGuard {
         Item output = outputQueue.pop();
         return Optional.of(output.getData());
     }
+
+    @Override
+    public Optional<List<Map<String, Double>>> anonymize(List<Map<String, Double>> X) {
+        for (Map<String, Double> dataPoint : X) {
+            HashMap<String, Float> data = new HashMap<>();
+            for (String header : headers) {
+                float floatData = dataPoint.get(header).floatValue();
+                data.put(header, floatData);
+            }
+            insertData(data);
+        }
+        Optional<HashMap<String, Float>> optionalFloatMap = tryGetOutputLine();
+        //TODO: Unify value data type to avoid this mess
+        Optional<List<Map<String, Double>>> output = optionalFloatMap.map(floatMap ->
+                floatMap.entrySet().stream()
+                        .map(entry -> {
+                            String key = entry.getKey();
+                            Double value = entry.getValue().doubleValue();
+                            Map<String, Double> doubleMap = new HashMap<>();
+                            doubleMap.put(key, value);
+                            return doubleMap;
+                        })
+                        .collect(Collectors.toList())
+        );
+        return output;
+    }
+
+
+
   /**
    * Inserts a new piece of data into the algorithm and updates the state, checking whether data
    * needs to be output as well
@@ -294,4 +325,6 @@ public class CastleGuard {
         // globalRanges.replaceAll(
         //        (h, v) -> Utils.updateRange(globalRanges.get(h), item.getData().get(h)));
     }
+
+
 }
