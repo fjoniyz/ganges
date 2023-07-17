@@ -1,5 +1,4 @@
 Flask>=2.0.2
-matplotlib>=3.4.3
 kafka-python>=2.0.2
 confluent-kafka>=1.7.0
-seaborn>=0.11.2
+numpy>=1.25.1

@@ -1,20 +1,20 @@
 from app import app
 from flask import jsonify, request
-import matplotlib.pyplot as plt
 import numpy as np
-
-import numpy as np
-import json
-
 
 @app.route('/prognose')
+
 def prognose():
     try:
         topic = request.args.get('topic', type=str, default='test')
-        prognose_result = []
+        response = {}
         
         # TODO
+        response['prognose_result'] = [topic]
 
-        return jsonify({'prognose_result': prognose_result})
+        response = jsonify(response)
+        response.headers.add('Access-Control-Allow-Origin', '*')
+
+        return response
     except Exception as e:
         return jsonify({'error': e.__str__()})

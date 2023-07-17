@@ -11,7 +11,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 const Plt = ({ restProxyUrl, topic }) => {
   const [messages, setMessages] = useState([]);
   const [vizKey, setVizKey] = useState('');
-  const [progKey, setProgKey] = useState('');
+  const [progCheck, setprogCheck] = useState(false);
   const [progResult, setProgResult] = useState('');
   const [messageIdKey, setMessageIdKey] = useState('id');
   const [comparedTopic, setCompareTopic] = useState('')
@@ -22,7 +22,7 @@ const Plt = ({ restProxyUrl, topic }) => {
 
   const consumerGroup = 'frontend';
   const consumerInstance = 'viz-react';
-  const porgPollIntervalId = null;
+  let porgPollIntervalId = null;
 
   const subscribeToTopic = async (topic) => {
     try {
@@ -61,7 +61,7 @@ const Plt = ({ restProxyUrl, topic }) => {
 
   const fetchProgResults = async (progApiUrl, topic) => {
     try {
-      const response = await axios.get(`http://${progApiUrl}?topic=${topic}`);
+      const response = await axios.get(`http://${progApiUrl}/prognose?topic=${topic}`);
       return response.data;
     } catch (error) {
       console.error('Error fetching prognose data:', error);
@@ -87,17 +87,11 @@ const Plt = ({ restProxyUrl, topic }) => {
     }
   };
 
-  const handleProgKeySubmit = (e) => {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const formJson = Object.fromEntries(formData.entries());
-    setProgKey(formJson.progKey);
-
-    // TODO remove progKey
-
-    if (formJson.progKey) {
+  const handleProgCheckChange = () => {
+    setprogCheck(!progCheck);
+    if (!progCheck) {
       porgPollIntervalId = setInterval(async () => {
-        const messageResponse = await fetchProgResults(topic);
+        const messageResponse = await fetchProgResults("localhost:8080", topic);
         setProgResult(messageResponse);
       }, 1000);
     } else {
@@ -327,7 +321,6 @@ const Plt = ({ restProxyUrl, topic }) => {
   return (
     <div>
       <h3 class="text-xl mb-4">Topic: {topic}</h3>
-      <h3 class="text-xl mb-4"></h3>
 
       <Accordion>
         <AccordionSummary
@@ -346,18 +339,17 @@ const Plt = ({ restProxyUrl, topic }) => {
         </AccordionDetails>
       </Accordion>
 
-      <form onSubmit={handleProgKeySubmit} class="py-3">
-        <label>Enter specific key to execute prognose on:</label>
-        <br />
-        <input
-          type="text"
-          name="progKey"
-          defaultValue="value"
-          class="p-2 rounded mr-2" />
-        <br />
-        <button type="submit" class="my-2">Submit</button>
-      </form>
+      <label class="my-3 flex items-center">
+        <input type="checkbox" class="m-2" checked={progCheck} onChange={handleProgCheckChange} />
+        <span>Execute charging prognose on topic</span>
+      </label>
 
+      {progResult && progCheck && (
+        <>
+          <h3 class="text-lg">Prognose Result</h3>
+          <p>{JSON.stringify(progResult)}</p>
+        </>
+      )}
 
       <form onSubmit={handleKeySubmit} class="py-3">
         <label>Enter specific key to visualize:</label>
