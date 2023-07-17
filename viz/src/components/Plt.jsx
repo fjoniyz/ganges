@@ -33,7 +33,7 @@ const Plt = ({ restProxyUrl, topic }) => {
         },
         {
           headers: {
-            'Content-Type': 'application/vnd.kafka.json.v2+json',
+            'Content-Type': 'application/vnd.kafka.v2+json',
           },
         }
       );
@@ -50,6 +50,7 @@ const Plt = ({ restProxyUrl, topic }) => {
         {
           headers: {
             'Accept': 'application/vnd.kafka.json.v2+json',
+            'Content-Type': 'application/vnd.kafka.json.v2+json',
           },
         }
       );
