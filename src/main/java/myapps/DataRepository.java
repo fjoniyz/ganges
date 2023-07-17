@@ -5,7 +5,9 @@ import com.lambdaworks.redis.RedisConnection;
 import com.lambdaworks.redis.RedisURI;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
@@ -21,6 +23,19 @@ public class DataRepository {
         connection = redisClient.connect();
     }
 
+    public void open() {
+        if (connection.isOpen()){
+            connection.close();
+        }
+        connection = redisClient.connect();
+    }
+
+    public void close() {
+        if (connection.isOpen()){
+            connection.close();
+        }
+    }
+
     /**
      * Save value in cache
      * @param value value to be saved
@@ -28,6 +43,12 @@ public class DataRepository {
     public void saveValue(String value) {
         String key = Integer.toString(ThreadLocalRandom.current().nextInt(0, 1000 + 1));
         connection.set(key, value);
+    }
+
+    public void saveValues(String key, HashMap<String, Double> values) {
+        for (Map.Entry<String, Double> value : values.entrySet()) {
+            connection.hset(key, value.getKey(), value.getValue().toString());
+        }
     }
 
     /**
@@ -41,5 +62,18 @@ public class DataRepository {
             values.add(connection.get(key));
         }
         return values;
+    }
+
+    public List<Map<String, Double>> getValuesByKeys(String[] entryKeys) {
+        List<Map<String, Double>> entries = new ArrayList<>();
+        for (String redisKey : connection.keys("*")) {
+            HashMap<String, Double> entry = new HashMap<>();
+            for(int i = 0; i < entryKeys.length; i++) {
+                entry.put(entryKeys[i], Double.parseDouble(connection.hget(redisKey,
+                    entryKeys[i])));
+            }
+            entries.add(entry);
+        }
+        return entries;
     }
 }
