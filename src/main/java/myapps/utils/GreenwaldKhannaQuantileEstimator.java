@@ -62,9 +62,18 @@ public class GreenwaldKhannaQuantileEstimator {
         return tuples;
     }
 
+
     public List<List<Double>> getDomain() {
         List<List<Double>> domain = new ArrayList<>();
         for (Tuple t : tuples) {
+            domain.add(t.getItem());
+        }
+        return domain;
+    }
+
+    public List<List<Double>> getDomain(int from, int to) {
+        List<List<Double>> domain = new ArrayList<>();
+        for (Tuple t : tuples.subList(from, to)) {
             domain.add(t.getItem());
         }
         return domain;
@@ -130,7 +139,7 @@ public class GreenwaldKhannaQuantileEstimator {
         return -(low + 1); // key not found
     }
 
-    public HashMap<String, Double> getQuantile(double p) {
+    public HashMap<Integer, Double> getQuantile(double p) {
         if (this.tuples.isEmpty()) {
             throw new IllegalStateException("Sequence contains no elements");
         }
@@ -157,9 +166,9 @@ public class GreenwaldKhannaQuantileEstimator {
             throw new IllegalStateException("Failed to find the requested quantile");
         }
 
-        HashMap<String, Double> resultMap = new HashMap<>();
-        resultMap.put("value", this.tuples.get(bestIndex).getValue());
-        resultMap.put("index", (double) bestIndex);
+        HashMap<Integer, Double> resultMap = new HashMap<>();
+        resultMap.put(bestIndex, this.tuples.get(bestIndex).getValue());
+        //resultMap.put("index", (double) bestIndex);
         return resultMap;
         //return Arrays.asList(this.tuples.get(bestIndex).getValue(), (double) bestIndex);
     }

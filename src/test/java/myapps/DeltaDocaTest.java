@@ -15,7 +15,7 @@ public class DeltaDocaTest {
     double[] normalHeader2 = null;
     double[] randomHeader1 = null;
     double[] randomHeader2 = null;
-    Doca doca = null;
+    static Doca doca = new Doca();
 
     @Before
     public void setUp() {
@@ -56,7 +56,7 @@ public class DeltaDocaTest {
             this.randomHeader2[i] = temp2;
         }
 
-        this.doca = new Doca();
+        //this.doca = new Doca();
     }
 
     @Ignore
@@ -78,9 +78,27 @@ public class DeltaDocaTest {
 
     @Test
     public void testAddFromRandomDistToDeltaDoca() {
+        /*
         for (int i = 0; i < randomHeader1.length; i++) {
             double[][] X = new double[][]{new double[]{randomHeader1[i]}, new double[]{randomHeader2[i]}};
             doca.addData(X);
+        }*/
+        int j = 0;
+
+        while (j < randomHeader1.length) {
+            Random rand = new Random();
+            int randBatchSize = rand.nextInt(((randomHeader1.length - j + 1) / 2)) + 1;
+            double[][] X  = new double[randBatchSize][2];
+            for (int i = 0; i < randBatchSize; i++) {
+                X[i][0] = randomHeader1[j];
+                X[i][1] = randomHeader2[j];
+                j++;
+            }
+            //double[][] X = new double[][]{new double[]{randomHeader1[j]}, new double[]{randomHeader2[j]}};
+            double[][] res = doca.addData(X);
+            if (res.length > 0 && res[0].length > 0) {
+                System.out.println("res: " + Arrays.deepToString(res));
+            }
         }
     }
 
@@ -91,4 +109,5 @@ public class DeltaDocaTest {
             doca.addData(X);
         }
     }
+
 }

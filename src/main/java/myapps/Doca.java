@@ -1,5 +1,4 @@
 package myapps;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -9,7 +8,6 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.stream.Collectors;
 
 //TODO: Check if ranges have to be update manually
 import com.ganges.lib.castleguard.utils.Utils;
@@ -28,8 +26,8 @@ public class Doca implements AnonymizationAlgorithm {
     //-----------Attributes for DELTA Phase----------------//
     private List<List<Double>> stableDomain;    // List of all items that are part of the stable domain
     private static GreenwaldKhannaQuantileEstimator GKQuantileEstimator = new GreenwaldKhannaQuantileEstimator(0.02);   // GK Quantile Estimator
-    private List<Double> Vinf = new ArrayList<>();  // List of all lower bounds for each attribute/header TODO: Check if ranges have to be correct implemented or change with ranges
-    private List<Double> Vsup = new ArrayList<>();  // List of all upper bounds for each attribute/header
+    private static List<Double> Vinf = new ArrayList<>();  // List of all lower bounds for each attribute/header TODO: Check if ranges have to be correct implemented or change with ranges
+    private static List<Double> Vsup = new ArrayList<>();  // List of all upper bounds for each attribute/header
     private double delta;   // publishing rate [0,1], 0 means no publishing
 
     //-----------Attributes for DOCA Phase----------------//
@@ -40,7 +38,7 @@ public class Doca implements AnonymizationAlgorithm {
     //-----------Parameters for DELTA Phase----------------//
     private static final double GKQError = 0.02;   // Error of the GK Quantile Estimator
     // could be potentially also just used as lower bound (if domains wont get stable)
-    private int sizeOfStableDomain = 200;   // Size that has to be reached before release conditions for stable Domain are checked
+    private int processingWindowSize = 50;   // Size that has to be reached before release conditions for stable Domain are checked
     private final double LAMBDA = 0.15;      // tolerance parameter for domain building
 
     //-----------Parameters for DOCA Phase----------------//
@@ -73,25 +71,34 @@ public class Doca implements AnonymizationAlgorithm {
      */
     public double[][] addData(double[][] x) {
         List<List<Double>> domain = new ArrayList<>();
-        List<Double> convDataPoint = new ArrayList<>();
+        List<List<Double>> dataPoints = new ArrayList<>();
         for (double[] l : x) {
+            List<Double> headerData = new ArrayList<>();
             for (double v : l) {
-                convDataPoint.add(v);
+                headerData.add(v);
             }
+            dataPoints.add(headerData);
         }
-        // If delta is 0 only add current tuple(s) to domain to skip domain bounding
+        List<List<List<Double>>> stableDomains = new ArrayList<>();
         if (this.delta != 0) {
-            domain = this.addToDomain(convDataPoint);
+            for (List<Double> dataPoint : dataPoints) {
+                domain = this.addToDomain(dataPoint);
+                if (domain != null) {
+                    stableDomains.add(domain);
+                }
+            }
         } else {
-            domain.add(convDataPoint);
+            stableDomains.add(dataPoints);
         }
 
         double[][] output = new double[0][0];
-        // Check if domain is ready - If Domain is not ready "addToDomain" returns null
-        if (domain != null) {
-            List<Item> itemList = DocaUtil.dataPointsToItems(domain);
+        List<Item> anonymizedData = new ArrayList<>();
+        for (List<List<Double>> stableDomain : stableDomains) {
+            List<Item> itemList = DocaUtil.dataPointsToItems(stableDomain);
 
             double sensitivity = Math.abs(DocaUtil.getMax(x) - DocaUtil.getMin(x));
+
+            // If delta is != 0 calculate specific sensitivity
             if (delta != 0) {
                 // calculate sensitivity
                 List<Float> firstElem = new ArrayList<>(itemList.get(0).getData().values());
@@ -110,26 +117,26 @@ public class Doca implements AnonymizationAlgorithm {
             for (Item item : itemList) {
                 List<Item> returnItems = this.doca(item, sensitivity, false);
                 pertubedItems.addAll(returnItems);
-                /*
+
                 if (returnItems != null) {
                     for (Item items : returnItems) {
                         System.out.println(items.getData().values());
                     }
-                }*/
-            }
-
-            // create output tuple
-            int rows = itemList.size();
-            int cols = itemList.get(0).getData().size();
-            output = new double[rows][cols];
-
-            for (int i = 0; i < rows; i++) {
-                Map<String, Float> attributes = itemList.get(i).getData();
-                int j = 0;
-                for (float value : attributes.values()) {
-                    output[i][j] = value;
-                    j++;
                 }
+            }
+            anonymizedData.addAll(pertubedItems);
+        }
+        // create output tuple
+        int rows = anonymizedData.size();
+        int cols = anonymizedData.get(0).getData().size();
+        output = new double[rows][cols];
+
+        for (int i = 0; i < rows; i++) {
+            Map<String, Float> attributes = anonymizedData.get(i).getData();
+            int j = 0;
+            for (float value : attributes.values()) {
+                output[i][j] = value;
+                j++;
             }
         }
         return output;
@@ -143,7 +150,7 @@ public class Doca implements AnonymizationAlgorithm {
      * @return the domain if it is stable, otherwise null
      */
     protected List<List<Double>> addToDomain(List<Double> X) {
-        domainRepository.open();
+        //domainRepository.open();
 
         double tolerance = this.LAMBDA;
 
@@ -156,32 +163,20 @@ public class Doca implements AnonymizationAlgorithm {
         GKQuantileEstimator.add(mean, X);
 
         // Add Quantile to Vinf and Vsup
-        // (1) quantile , (2) index of quantile
-        HashMap<String, Double> estQuantilInf = GKQuantileEstimator.getQuantile((1.0 - this.delta) / 2.0);
-        HashMap<String, Double> estQuantilSup = GKQuantileEstimator.getQuantile((1.0 + this.delta) / 2.0);
+        // Key is index, value is value
+        HashMap<Integer, Double> estQuantilInf = GKQuantileEstimator.getQuantile((1.0 - this.delta) / 2.0);
+        HashMap<Integer, Double> estQuantilSup = GKQuantileEstimator.getQuantile((1.0 + this.delta) / 2.0);
 
-        //TODO: Maybe storing the current values in the static QuantileEstimator is already enough and DataRepo is not needed
-        domainRepository.saveValues("Vinf", estQuantilInf);
-        domainRepository.saveValues("Vsup", estQuantilSup);
+        Vinf.add((double) estQuantilInf.values().toArray()[0]);
+        Vsup.add((double) estQuantilSup.values().toArray()[0]);
 
+        // Check if processing window is large enough
+        if (Vinf.size() == processingWindowSize && Vsup.size() == processingWindowSize) {
+            double stdVinf = DocaUtil.calculateStandardDeviation(Vinf);
+            double stdVsup = DocaUtil.calculateStandardDeviation(Vsup);
 
-        List<Map<String, Double>> tempVinf = domainRepository.getValuesByKeys(new String[]{"Vinf"});
-        List<Map<String, Double>> tempVsup = domainRepository.getValuesByKeys(new String[]{"Vsup"});
-
-        //this.Vinf.add(estQuantilInf.get(0));
-        //this.Vsup.add(estQuantilSup.get(0));
-
-        // Check if domain is big enough
-        if (tempVinf.size() == sizeOfStableDomain && tempVsup.size() == sizeOfStableDomain) {
-
-            List<Double> vInfValues = tempVinf.stream().map(map -> map.get("value")).collect(Collectors.toList());
-            List<Double> vSupValues = tempVsup.stream().map(map -> map.get("value")).collect(Collectors.toList());
-
-            double stdVinf = DocaUtil.calculateStandardDeviation(vInfValues);
-            double stdVsup = DocaUtil.calculateStandardDeviation(vSupValues);
-
-            double meanVinf = vInfValues.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
-            double meanVsup = vSupValues.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+            double meanVinf = Vinf.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+            double meanVsup = Vsup.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
 
             //coefficient of variation
             double cvVinf = stdVinf / meanVinf;
@@ -191,23 +186,19 @@ public class Doca implements AnonymizationAlgorithm {
             if (cvVinf < tolerance && cvVsup < tolerance) {
 
                 List<List<Double>> domain = GKQuantileEstimator.getDomain();
-                this.stableDomain = domain.subList(estQuantilInf.get("index").intValue(), estQuantilSup.get("index").intValue());
+                int from = (int) estQuantilInf.keySet().toArray()[0];
+                int to = (int) estQuantilSup.keySet().toArray()[0];
+                this.stableDomain = domain.subList(from, to);
 
 
-                //this.Vinf = new ArrayList<>();
-                //this.Vsup = new ArrayList<>();
+                Vinf = new ArrayList<>();
+                Vsup = new ArrayList<>();
                 GKQuantileEstimator = new GreenwaldKhannaQuantileEstimator(0.02);
-                domainRepository.deleteDataByKey("Vinf");
-                domainRepository.deleteDataByKey("Vsup");
-                domainRepository.close();
                 return this.stableDomain;
             }
             // remove oldest tuple to remain size of stable domain
-            //this.Vinf.remove(0);
-            //this.Vsup.remove(0);
-            domainRepository.deleteEntryByKey(0, "Vinf");
-            domainRepository.deleteEntryByKey(0, "Vsup");
-            domainRepository.close();
+            Vinf.remove(0);
+            Vsup.remove(0);
         }
         return null;
     }
@@ -342,12 +333,12 @@ public class Doca implements AnonymizationAlgorithm {
         // First try to find a cluster with minimum enlargement and acceptable loss
         if (!ok_clusters.isEmpty()) {
             best_cluster = ok_clusters.stream()
-                    .min((c1, c2) -> Integer.compare(clusters.get(c1).getContents().size(), clusters.get(c2).getContents().size()))
+                    .min(Comparator.comparingInt(c -> clusters.get(c).getContents().size()))
                     .orElse(-1);
             //If no new cluster is allowed, try to find a cluster with minimum enlargement
         } else if (clusters.size() >= beta) {
             best_cluster = min_clusters.stream()
-                    .min((c1, c2) -> Integer.compare(clusters.get(c1).getContents().size(), clusters.get(c2).getContents().size()))
+                    .min(Comparator.comparingInt(c -> clusters.get(c).getContents().size()))
                     .orElse(-1);
         }
 
@@ -430,23 +421,11 @@ public class Doca implements AnonymizationAlgorithm {
 
         expiredCluster.pertubeCluster(noise);
 
-        /*
-        int sda = 0;
-        for (Item item : expiredCluster.getContents()) {
-
-            System.out.println("Anonymized: (" + new ArrayList<>(item.getData().values()).get(0) + ", " + new ArrayList<>(item.getData().values()).get(1) + ")");
-            System.out.println("Original: (" + originalValues.get(sda) + ", " + originalValues.get(sda + 1) + ")\n");
-            sda += 2;
-        }
-        System.out.println("");
-        */
-
-        // TODO: Output expiring clusters from doca output (async)
         return expiredCluster.getContents();
     }
 
     public static String[] getParameters() {
-        String[] result = new String[4];
+        String[] result = new String[5];
         String userDirectory = System.getProperty("user.dir");
         try(InputStream inputStream = Files.newInputStream(Paths.get(userDirectory+"/src/main/resources/doca.properties"))){
             Properties properties = new Properties();
@@ -455,6 +434,7 @@ public class Doca implements AnonymizationAlgorithm {
             result[1] = properties.getProperty("delay_constraint");
             result[2] = properties.getProperty("beta");
             result[3] = properties.getProperty("inplace");
+            result[4] = properties.getProperty("delta");
             return result;
         } catch (IOException e) {
             throw new RuntimeException(e);
@@ -479,7 +459,11 @@ public class Doca implements AnonymizationAlgorithm {
             }
         }
 
-        double[][] result = anonymize(docaInput);
+        double[][] result = (docaInput);
+
+        if (result == null) {
+            return null;
+        }
 
         // Convert double array to map
         List<Map<String, Double>> outputResult = new ArrayList<>();
