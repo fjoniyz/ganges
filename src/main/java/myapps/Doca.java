@@ -3,9 +3,11 @@ package myapps;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 
 import java.io.*;
+import java.util.Map;
 import java.util.Properties;
 
 public class Doca implements AnonymizationAlgorithm {
@@ -67,6 +69,38 @@ public class Doca implements AnonymizationAlgorithm {
     }
 
     @Override
+    public List<Map<String, Double>> anonymize(List<Map<String, Double>> X) {
+        if (X.size() == 0 || X.get(0).size() == 0) {
+            return new ArrayList<>();
+        }
+
+        // Preserving value order through anonymization input/output
+        ArrayList<String> headers = new ArrayList<>(X.get(0).keySet());
+
+        // Convert map to double array
+        double[][] docaInput = new double[X.size()][];
+        for (int i = 0; i < X.size(); i++) {
+            docaInput[i] = new double[X.get(i).size()];
+            for (int headerId = 0; headerId < headers.size(); headerId++) {
+                docaInput[i][headerId] = X.get(i).get(headers.get(headerId));
+            }
+        }
+
+        double[][] result = anonymize(docaInput);
+
+        // Convert double array to map
+        List<Map<String, Double>> outputResult = new ArrayList<>();
+        for (double[] dataRow : result) {
+            Map<String, Double> dataRowMap = new LinkedHashMap<>();
+            for (int headerId = 0; headerId < headers.size(); headerId++) {
+                dataRowMap.put(headers.get(headerId), dataRow[headerId]);
+            }
+            outputResult.add(dataRowMap);
+        }
+        return outputResult;
+    }
+
+
     public double[][] anonymize(
         double[][] x) {
         String[] parameters = getParameters();

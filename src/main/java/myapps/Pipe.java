@@ -7,6 +7,7 @@ import java.nio.file.Paths;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 
+import java.util.stream.Collectors;
 import serdes.AnonymizedMessage;
 import serdes.Deserializer;
 import serdes.chargingstation.ChargingStationMessage;
@@ -48,22 +49,18 @@ public class Pipe {
       dataRepository.saveValues(id, keyValueMap);
 
       // Here we assume that for one message type the values are stored consistently
-      List<Double[]> allSavedValues = dataRepository.getValuesByKeys(fields);
+      List<Map<String, Double>> allSavedValues = dataRepository.getValuesByKeys(fields);
       dataRepository.close();
-      // Parse cached strings into double arrays
-      double[][] input = new double[allSavedValues.size()][];
-
-      for (int i = 0; i < allSavedValues.size(); i++) {
-          double[] doubleArray =
-                  Arrays.stream(allSavedValues.get(i)).mapToDouble(v -> v).toArray();
-          input[i] = doubleArray;
-      }
 
       // Anonymization
       Doca doca = new Doca();
-      double[][] output = doca.anonymize(input);
+      List<Map<String, Double>> output = doca.anonymize(allSavedValues);
 
-      return Arrays.deepToString(output);
+      String outputString =
+          output.stream().map(dataRow -> dataRow.values().toString()).collect(Collectors.joining(
+              ","));
+      System.out.println("result: " + outputString);
+      return outputString;
     }
 
     public static String[] getFieldsToAnonymize() throws IOException {
