@@ -54,7 +54,12 @@ public class Pipe {
 
       // Anonymization
       Doca doca = new Doca();
-      List<Map<String, Double>> output = doca.anonymize(allSavedValues);
+      Optional<List<Map<String, Double>>> optOutput = doca.anonymize(allSavedValues);
+      if (!optOutput.isPresent()) {
+        //TODO: Check what to return when no output is present
+        return "";
+      }
+      List<Map<String, Double>> output = optOutput.get();
 
       String outputString =
           output.stream().map(dataRow -> dataRow.values().toString()).collect(Collectors.joining(
