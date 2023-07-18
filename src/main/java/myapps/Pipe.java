@@ -4,6 +4,8 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import serdes.Serializer;
@@ -20,7 +22,7 @@ import org.apache.kafka.streams.kstream.Produced;
 import java.util.*;
 
 public class Pipe {
-    public static String processing(ChargingStationMessage value, String[] fields, DataRepository dataRepository) throws IOException {
+    public static String processing(ChargingStationMessage value, String[] fields, DataRepository dataRepository) throws IOException, ParseException {
         double[] valuesList = createValuesList(fields, value);
         StringBuilder valueToSaveInRedis = new StringBuilder();
         for (double d: valuesList
@@ -71,8 +73,11 @@ public class Pipe {
         }
     }
 
-    public static double[] createValuesList(String[] fields, ChargingStationMessage chargingStationMessage) {
+    public static double[] createValuesList(String[] fields, ChargingStationMessage chargingStationMessage) throws ParseException {
         List<Double> values = new ArrayList<>();
+        String formatPattern = "yyyy-MM-dd HH:mm:ss";
+        SimpleDateFormat format = new SimpleDateFormat(formatPattern);
+
         for (String field : fields) {
             switch (field) {
                 case "urbanisation_level":
@@ -88,12 +93,13 @@ public class Pipe {
                     values.add((double) chargingStationMessage.getNumberParkingSpaces());
                     break;
                 case "start_time_loading":
-                    System.out.println("loading time start" + chargingStationMessage.getStartTimeLoading());
-                    values.add((double) chargingStationMessage.getStartTimeLoading());
+                    Date startTimeLoading = format.parse(chargingStationMessage.getStartTimeLoading());
+                    values.add((double) startTimeLoading.getTime() / 1000);
                     break;
                 case "end_time_loading":
                     System.out.println("load time end" + chargingStationMessage.getEndTimeLoading());
-                    values.add((double) chargingStationMessage.getEndTimeLoading());
+                    Date endTimeLoading = format.parse(chargingStationMessage.getEndTimeLoading());
+                    values.add((double) endTimeLoading.getTime() / 1000);
                     break;
                 case "loading_time":
                     System.out.println("loading time" + chargingStationMessage.getLoadingTime());
@@ -119,7 +125,7 @@ public class Pipe {
         String userDirectory = System.getProperty("user.dir");
         try (InputStream inputStream = Files.newInputStream(Paths.get(userDirectory + "/src/main/resources/kafka.properties"))) {
             Properties props = new Properties();
-            String inputTopic = "input-test7";
+            String inputTopic = "input-test10";
             String outputTopic = "output";
 
             Serializer<ChargingStationMessage> chargingStationSerializer = new Serializer<>();
@@ -140,7 +146,7 @@ public class Pipe {
             src.mapValues(value -> {
                 try {
                     return processing(value, fields, dataRepository);
-                } catch (IOException e) {
+                } catch (IOException | ParseException e) {
                     throw new RuntimeException(e);
                 }
             }).to(outputTopic, produced);

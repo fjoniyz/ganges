@@ -1,5 +1,6 @@
 package serdes.chargingstation;
 import java.io.Serializable;
+import java.util.Date;
 import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -16,8 +17,8 @@ public class ChargingStationMessage implements Serializable, AnonymizedMessage {
     private float urbanisationLevel;
     private int numberLoadingStations;
     private int numberParkingSpaces;
-    private long startTimeLoading;
-    private long endTimeLoading;
+    private String startTimeLoading;
+    private String endTimeLoading;
     private int loadingTime;
     private float kwh;
     private int loadingPotential;
@@ -25,8 +26,8 @@ public class ChargingStationMessage implements Serializable, AnonymizedMessage {
     @JsonCreator
     public ChargingStationMessage(@JsonProperty("ae_session_id")UUID ae_session_id, @JsonProperty("building_type") String building_type,
                                   @JsonProperty("urbanisation_level") float urbanisation_level, @JsonProperty("number_loading_stations") int number_loading_stations,
-                                  @JsonProperty("number_parking_spaces") int number_parking_spaces, @JsonProperty("start_time_loading")long start_time_loading,
-                                  @JsonProperty("end_time_loading") long end_time_loading, @JsonProperty("loading_time") int loading_time,
+                                  @JsonProperty("number_parking_spaces") int number_parking_spaces, @JsonProperty("start_time_loading")String start_time_loading,
+                                  @JsonProperty("end_time_loading") String end_time_loading, @JsonProperty("loading_time") int loading_time,
                                   @JsonProperty("kwh") float kwh, @JsonProperty("loading_potential")int loading_potential){
         this.aeSessionId = ae_session_id;
         this.buildingType = building_type;
