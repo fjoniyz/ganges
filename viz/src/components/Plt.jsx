@@ -8,8 +8,7 @@ import AccordionDetails from '@mui/material/AccordionDetails';
 import Typography from '@mui/material/Typography';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 
-const Plt = ({ restProxyUrl, topic }) => {
-  const [messages, setMessages] = useState([]);
+const Plt = ({ restProxyUrl, topic, messages }) => {
   const [vizKey, setVizKey] = useState('');
   const [progCheck, setprogCheck] = useState(false);
   const [progResult, setProgResult] = useState('');
@@ -20,45 +19,7 @@ const Plt = ({ restProxyUrl, topic }) => {
   const distributionChartRef = useRef(null);
   const messageListRef = useRef([]);
 
-  const consumerGroup = 'frontend';
-  const consumerInstance = 'viz-react';
   let porgPollIntervalId = null;
-
-  const subscribeToTopic = async (topic) => {
-    try {
-      await axios.post(
-        `http://${restProxyUrl}/consumers/${consumerGroup}/instances/${consumerInstance}/subscription`,
-        {
-          topics: topic,
-        },
-        {
-          headers: {
-            'Content-Type': 'application/vnd.kafka.v2+json',
-          },
-        }
-      );
-    } catch (error) {
-      console.error('Error subscribing to topic:', error);
-    }
-  };
-
-  const fetchMessages = async () => {
-    try {
-
-      const response = await axios.get(
-        `http://${restProxyUrl}/consumers/${consumerGroup}/instances/${consumerInstance}/records`,
-        {
-          headers: {
-            'Accept': 'application/vnd.kafka.json.v2+json',
-            'Content-Type': 'application/vnd.kafka.json.v2+json',
-          },
-        }
-      );
-      return response.data;
-    } catch (error) {
-      console.error('Error fetching messages:', error);
-    }
-  };
 
   const fetchProgResults = async (progApiUrl, topic) => {
     try {
@@ -106,11 +67,8 @@ const Plt = ({ restProxyUrl, topic }) => {
     const form = e.target;
     const formData = new FormData(form);
     const formJson = Object.fromEntries(formData.entries());
-    const compareTopic = formJson.compareTopic;
-    setCompareTopic(compareTopic);
+    setCompareTopic(formJson.compareTopic);
     setMessageIdKey(formJson.idKey);
-
-    subscribeToTopic([topic, compareTopic]);
 
     if (compareChartRef.current) {
       compareChartRef.current = null;
@@ -307,18 +265,6 @@ const Plt = ({ restProxyUrl, topic }) => {
     return { labels, values: binCounts };
   };
 
-  // Poll for new messages
-  useEffect(() => {
-    subscribeToTopic([topic]);
-    const intervalId = setInterval(async () => {
-      const messageResponse = await fetchMessages();
-      if (messageResponse) setMessages((prevMessages) => [...prevMessages, ...messageResponse]);
-    }, 1000);
-
-    return () => {
-      clearInterval(intervalId);
-    };
-  }, []);
 
   return (
     <div>

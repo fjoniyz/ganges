@@ -13,9 +13,11 @@ import LabelIcon from '@mui/icons-material/Label';
 
 const App = () => {
   const [topics, setTopics] = useState([]);
+  const [messages, setMessages] = useState([]);
   const [subscribedTopics, setsubscribedTopics] = useState([]);
   const [restProxyUrl, setRestProxyUrl] = useState('');
   const sleep = ms => new Promise(r => setTimeout(r, ms));
+  let fetchIntervalId = null;
 
   const fetchTopics = async (proxyUrl) => {
     let retrievedTopics = [];
@@ -46,9 +48,8 @@ const App = () => {
     // TODO: Check if consumer already exists
     // If not, create a new consumer
     try {
-      const consumerGroup = 'frontend';
-      await axios.post(`http://${proxyUrl}/consumers/${consumerGroup}`, {
-        "name": "viz-react",
+      await axios.post(`http://${proxyUrl}/consumers/frontend`, {
+        "name": "frontend",
         "format": "json",
         "auto.offset.reset": "earliest",
       },
@@ -63,9 +64,50 @@ const App = () => {
     }
   };
 
+  const subscribeToTopic = async (topics) => {
+    try {
+      await axios.post(
+        `http://${restProxyUrl}/consumers/frontend/instances/frontend/subscription`,
+        {
+          topics: topics,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/vnd.kafka.v2+json',
+          },
+        }
+      );
+    } catch (error) {
+      console.error('Error subscribing to topic:', error);
+    }
+  };
+
+  const fetchMessages = async () => {
+    try {
+
+      const response = await axios.get(
+        `http://${restProxyUrl}/consumers/frontend/instances/frontend/records`,
+        {
+          headers: {
+            'Accept': 'application/vnd.kafka.json.v2+json',
+            'Content-Type': 'application/vnd.kafka.json.v2+json',
+          },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching messages:', error);
+    }
+  };
+
   const handleSubscribe = async (selectedTopic) => {
     setConsumer(restProxyUrl);
     setsubscribedTopics([...subscribedTopics, selectedTopic]);
+    subscribeToTopic([...subscribedTopics, selectedTopic]);
+    fetchIntervalId = setInterval(async () => {
+      const messageResponse = await fetchMessages();
+      if (messageResponse) setMessages((prevMessages) => [...prevMessages, ...messageResponse]);
+    }, 1000);
   };
 
   return (
@@ -114,7 +156,7 @@ const App = () => {
               <ul>
                 {subscribedTopics.map((topic) => (
                   <li class="w-[90vw] border rounded p-5" key={topic}>
-                    <Plt key={topic} topic={topic} restProxyUrl={restProxyUrl} />
+                    <Plt key={topic} topic={topic} restProxyUrl={restProxyUrl} messages={messages} />
                   </li>
                 ))}
               </ul>
