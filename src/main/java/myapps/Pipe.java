@@ -8,6 +8,8 @@ import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 
 import java.util.stream.Collectors;
+
+import com.ganges.lib.castleguard.CastleGuard;
 import serdes.AnonymizedMessage;
 import serdes.Deserializer;
 import serdes.chargingstation.ChargingStationMessage;
@@ -23,6 +25,9 @@ import java.util.*;
 import serdes.emobility.EMobilityStationMessage;
 
 public class Pipe {
+
+    private static CastleGuard castleGuard = new CastleGuard();
+    private static Doca doca = new Doca();
 
     public static AnonymizedMessage createMessage(Class<?> messageClass, Object... values) {
       AnonymizedMessage message = null;
@@ -53,8 +58,9 @@ public class Pipe {
       dataRepository.close();
 
       // Anonymization
-      Doca doca = new Doca();
       Optional<List<Map<String, Double>>> optOutput = doca.anonymize(allSavedValues);
+      //Optional<List<Map<String, Double>>> optOutput = castleGuard.anonymize(allSavedValues);
+
       if (!optOutput.isPresent()) {
         //TODO: Check what to return when no output is present
         return "";

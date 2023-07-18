@@ -34,6 +34,21 @@ public class CastleGuardTest {
     }
 
     /**
+     * creates an item with double Values;
+     * @ param: list of data for given headers
+     */
+    public HashMap<String, Double> createDoubleItem(List<Double> elements){
+        Assert.assertEquals(this.headers.size(), elements.size());
+        HashMap<String, Double> item = new HashMap<>();
+        int i = 0;
+        for (String header: this.headers) {
+            item.put(header, elements.get(i));
+            i++;
+        }
+        return item;
+    }
+
+    /**
      * creates an item;
      * @ param: list of data for given headers
      */
@@ -99,6 +114,38 @@ public class CastleGuardTest {
         clusters = manage.getNonAnonymizedClusters();
         Assert.assertTrue(clusters.isEmpty());
     }
+
+    @Test
+    public void testAnonymize() {
+        preparation(3, 10, 5, 1, 5, 1, 100 * Math.log(2), true);
+        Map<String, Double> dataOne = createDoubleItem(Arrays.asList(1.0, 200.0, 5.0));
+        Map<String, Double> dataTwo = createDoubleItem(Arrays.asList(2.0, 300.0, 5.0));
+        Map<String, Double> dataThree = createDoubleItem(Arrays.asList(3.0, 400.0, 3.0));
+        Map<String, Double> dataFour = createDoubleItem(Arrays.asList(4.0, 500.0, 2.0));
+        Map<String, Double> dataFive = createDoubleItem(Arrays.asList(5.0, 600.0, 1.0));
+        Map<String, Double> dataSix = createDoubleItem(Arrays.asList(6.0, 700.0, 0.0));
+
+        List<Map<String, Double>> inputOne = new ArrayList<>();
+        inputOne.add(dataOne);
+
+        List<Map<String, Double>> inputTwo = new ArrayList<>();
+        inputTwo.add(dataTwo);
+        inputTwo.add(dataThree);
+        inputTwo.add(dataFour);
+
+        List<Map<String, Double>> inputThree = new ArrayList<>();
+        inputThree.add(dataFive);
+        inputThree.add(dataSix);
+
+        castle.anonymize(inputOne);
+        castle.anonymize(inputTwo);
+        castle.anonymize(inputThree);
+
+        Deque<Item> items = this.castle.getItems();
+        System.out.println(items);
+
+    }
+
 
     /**
      * suppressing all elements within CastleGuard algorithm

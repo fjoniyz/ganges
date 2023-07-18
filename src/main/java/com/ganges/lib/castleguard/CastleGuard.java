@@ -40,6 +40,9 @@ public class CastleGuard implements AnonymizationAlgorithm {
 
   private final Logger logger = LoggerFactory.getLogger(CastleGuard.class);
 
+    /**
+     * !Deprecated constructor
+     */
   public CastleGuard(CGConfig config, List<String> headers, String sensitiveAttr) {
     String[] parameters = getParameters();
     this.k = Integer.parseInt(parameters[0]);
@@ -60,6 +63,28 @@ public class CastleGuard implements AnonymizationAlgorithm {
         new ClusterManagement(
             this.k, this.l, mu, this.headers, this.sensitiveAttr);
   }
+
+
+    public CastleGuard() {
+        String[] parameters = getParameters();
+        this.k = Integer.parseInt(parameters[0]);
+        this.delta = Integer.parseInt(parameters[1]);
+        this.beta = Integer.parseInt(parameters[2]);
+        this.bigBeta = Integer.parseInt(parameters[3]);
+        int mu = Integer.parseInt(parameters[4]);
+        this.l = Integer.parseInt(parameters[5]);
+        this.phi = Double.parseDouble(parameters[6]);
+        this.useDiffPrivacy = Boolean.parseBoolean(parameters[7]);
+        this.headers = Arrays.asList(parameters[8].split(","));
+        this.sensitiveAttr = parameters[9];
+
+        for (String header : this.headers) {
+            globalRanges.put(header, null);
+        }
+        this.clusterManagement =
+                new ClusterManagement(
+                        this.k, this.l, mu, this.headers, this.sensitiveAttr);
+    }
 
     public HashMap<String, Range<Float>> getGlobalRanges() {
         return globalRanges;
