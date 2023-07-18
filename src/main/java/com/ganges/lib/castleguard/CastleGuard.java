@@ -101,7 +101,7 @@ public class CastleGuard {
         List<Cluster> splitted =
                 splittable
                         ? this.clusterManagement.splitL(cluster, this.headers, this.globalRanges)
-                        : List.of(cluster);
+                        :Arrays.asList(cluster);
         Iterator<Cluster> clusterIterator = splitted.iterator();
         List<Item> itemsToSuppress = new ArrayList<>();
         while (clusterIterator.hasNext()) {

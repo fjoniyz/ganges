@@ -10,7 +10,7 @@ import datetime
 
 def generate_station_rows() -> Iterable:
     fake = Faker()
-    for station in range(100):
+    for station in range(1000):
         ae_session_id = uuid.uuid4()
         building_type = random.choice(["Residental", 'Commercial', "Healthcare", "Educational"])
         urbanisation_level = random.uniform(0, 1)
@@ -18,19 +18,17 @@ def generate_station_rows() -> Iterable:
         number_parking_spaces = random.randint(1, 50)
         start_time_loading = fake.date_time_between(start_date='-1y', end_date='now')
         end_time_loading = fake.date_time_between(start_date=start_time_loading,
-                                                  end_date=start_time_loading + datetime.timedelta(days=1))
-        loading_time = (end_time_loading-start_time_loading).total_seconds()
+                                                  end_date=start_time_loading + datetime.timedelta(days=1)).timestamp() * 1000
+        start_time_loading_float = start_time_loading.timestamp() * 1000
+        #loading_time = (end_time_loading-start_time_loading).total_seconds()
         kwh = random.uniform(10, 100)
         loading_potential = random.randint(1000, 10000)
-        yield [ae_session_id, building_type,
-               urbanisation_level, number_loading_stations,
-               number_parking_spaces, start_time_loading, end_time_loading, loading_time,
+        yield [start_time_loading_float, end_time_loading,
                kwh, loading_potential]
 
 def get_fields_names():
-    return ["ae_session_id","building_type", "urbanisation_level",
-            "number_loading_stations","number_parking_spaces","start_time_loading","end_time_loading",
-            "loading_time", "kwh", "loading_potential"]
+    return ["start_time_loading","end_time_loading",
+             "kwh", "loading_potential"]
 
 if __name__ == "__main__":
     """ Writes into a electromobilitydata.csv file with random secondly 
