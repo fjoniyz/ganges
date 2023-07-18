@@ -3,12 +3,12 @@ from confluent_kafka import Consumer
 import json
 
 from pandas import Timedelta
-import app.prognose as prognose
+import prognose as prognose
 from types import SimpleNamespace
 from datetime import datetime, timedelta
 
 # Kafka broker configuration
-bootstrap_servers = 'broker:29092'
+bootstrap_servers = 'localhost:9092'
 group_id = 'consumer-group-1'
 topic = 'streams-input'
 
@@ -65,8 +65,7 @@ def generate_prognose():
         # We want 100 messages
         messages = consumer.consume(100, 1)
         messageDict = {}
-        power = [1, 2, 3, 4]
-        
+        power = [1, 2, 3, 4]        
 
         if messages is None:
             return "No message received"
