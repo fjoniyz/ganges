@@ -2,13 +2,9 @@ package myapps;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
+import java.util.*;
 
 import java.io.*;
-import java.util.Map;
-import java.util.Properties;
 
 public class Doca implements AnonymizationAlgorithm {
 
@@ -69,9 +65,9 @@ public class Doca implements AnonymizationAlgorithm {
     }
 
     @Override
-    public List<Map<String, Double>> anonymize(List<Map<String, Double>> X) {
+    public Optional<List<Map<String, Double>> > anonymize(List<Map<String, Double>> X) {
         if (X.size() == 0 || X.get(0).size() == 0) {
-            return new ArrayList<>();
+            return Optional.empty();
         }
 
         // Preserving value order through anonymization input/output
@@ -97,7 +93,7 @@ public class Doca implements AnonymizationAlgorithm {
             }
             outputResult.add(dataRowMap);
         }
-        return outputResult;
+        return Optional.of(outputResult);
     }
 
 

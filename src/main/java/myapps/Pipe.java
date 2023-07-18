@@ -59,25 +59,30 @@ public class Pipe {
     List<Map<String, Double>> allSavedValues = dataRepository.getValuesByKeys(fields);
     dataRepository.close();
 
-    // Anonymization
-    Doca doca = new Doca();
-    if (enableMonitoring) {
-      MetricsCollector.setAnonEntryTimestamps(id, System.currentTimeMillis());
-    }
-    List<Map<String, Double>> output = doca.anonymize(allSavedValues);
-    if (enableMonitoring) {
-      MetricsCollector.setAnonExitTimestamps(id, System.currentTimeMillis());
-    }
-    String outputString =
-        output.stream().map(dataRow -> dataRow.values().toString()).collect(Collectors.joining(
-            ","));
-    if (enableMonitoring) {
-      MetricsCollector.setPipeExitTimestamps(id, System.currentTimeMillis());
-      MetricsCollector.getInstance().saveMetricsToCSV();
-    }
+      // Anonymization
+      Doca doca = new Doca();
+      if (enableMonitoring) {
+        MetricsCollector.setAnonEntryTimestamps(id, System.currentTimeMillis());
+      }
+      Optional<List<Map<String, Double>>> optOutput = doca.anonymize(allSavedValues);
+      if (enableMonitoring) {
+        MetricsCollector.setAnonExitTimestamps(id, System.currentTimeMillis());
+      }
+      if (!optOutput.isPresent()) {
+        //TODO: Check what to return when no output is present
+        return "";
+      }
+      List<Map<String, Double>> output = optOutput.get();
 
-    return outputString;
-  }
+      String outputString =
+          output.stream().map(dataRow -> dataRow.values().toString()).collect(Collectors.joining(
+              ","));
+      if (enableMonitoring) {
+        MetricsCollector.setPipeExitTimestamps(id, System.currentTimeMillis());
+        MetricsCollector.getInstance().saveMetricsToCSV();
+      }
+      return outputString;
+    }
 
   public static String[] getFieldsToAnonymize() throws IOException {
     String userDirectory = System.getProperty("user.dir");
