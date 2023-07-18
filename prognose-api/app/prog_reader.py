@@ -118,3 +118,5 @@ def generate_prognose():
     finally:
         # Close the consumer to release resources
         consumer.close()
+
+generate_prognose()
