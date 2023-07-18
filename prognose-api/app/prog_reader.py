@@ -3,46 +3,35 @@ from confluent_kafka import Consumer
 import json
 
 from pandas import Timedelta
-import prognose as prognose
+import app.prognose as prognose
 from types import SimpleNamespace
 from datetime import datetime, timedelta
 
 # Kafka broker configuration
-bootstrap_servers = 'localhost:9092'
+bootstrap_servers = 'broker:29092'
 group_id = 'consumer-group-1'
-topic = 'streams-input'
+topic = 'input1'
 
 
-def create_TaskSimEvCharging(config, power):
-    # each max is just min value plus one hour
+def create_TaskSimEvCharging(x, power) :
+    #each max is just min value plus one hour
 
     # Define the input date and time string
     # input_start_time_loading = x.start_time_loading
     # dt = datetime.fromisoformat(input_start_time_loading)
     # minutes_start_time_loading = dt.hour * 60 + dt.minute
-
+    #
     # input_end_time_loading = x.end_time_loading
     # dt = datetime.fromisoformat(input_end_time_loading)
     # minutes_end_time_loading = dt.hour * 60 + dt.minute
 
-    min_start = datetime.strptime(
-        config.start_time_loading, '%Y-%m-%dT%H:%M:%S').timestamp()
-
-    max_start = min_start + 3600
-
-    end_time_loading_seconds = datetime.strptime(
-        config.end_time_loading, '%Y-%m-%dT%H:%M:%S').timestamp()
-    start_time_loading_seconds = datetime.strptime(
-        config.start_time_loading, '%Y-%m-%dT%H:%M:%S').timestamp()
-
-    min_duration = end_time_loading_seconds - start_time_loading_seconds
-    max_duration = min_duration + 3600
-
-    min_demand = int(config.kwh)
-    max_demand = int(config.loading_potential)
-
+    min_start = x.start_time_loading
+    max_start = int(min_start) + 60
+    min_duration = x.end_time_loading - x.start_time_loading
+    max_duration = min_duration + 60
+    min_demand = int(x.kwh)
+    max_demand = int(x.loading_potential)
     return prognose.TaskSimEvCharging(min_duration, max_duration, min_demand, max_demand, min_start, max_start, power)
-
 def generate_prognose():
 
     # Set the random seed to the current day of the year to get repeatable results
@@ -106,7 +95,7 @@ def generate_prognose():
             df=df, cfg=task_instance)  # type: ignore
         print(f"Result: {result}")
 
-        return result
+        return result.to_json()
 
     except KeyboardInterrupt:
         # User interrupted
@@ -118,5 +107,3 @@ def generate_prognose():
     finally:
         # Close the consumer to release resources
         consumer.close()
-
-generate_prognose()
