@@ -11,7 +11,7 @@ import datetime
 def generate_station_rows() -> Iterable:
     fake = Faker()
     for station in range(100):
-        ae_session_id = uuid.uuid4()
+        ae_session_id = uuid.uuid4().__str__()
         building_type = random.choice(["Residental", 'Commercial', "Healthcare", "Educational"])
         urbanisation_level = random.uniform(0, 1)
         number_loading_stations = random.randint(1, 50)

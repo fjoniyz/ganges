@@ -1,36 +1,28 @@
-from tracemalloc import start
 from confluent_kafka import Consumer
 import json
+import calendar
+import time
 
-from pandas import Timedelta
 import app.prognose as prognose
-from types import SimpleNamespace
-from datetime import datetime, timedelta
 
 # Kafka broker configuration
 bootstrap_servers = 'broker:29092'
 group_id = 'consumer-group-1'
 
 
-def create_TaskSimEvCharging(x, power) :
-    #each max is just min value plus one hour
+def create_TaskSimEvCharging(x, power):
+    min_start = int(min(x["start_time_loading"]) / 16581777)
+    max_start = int(max(x["start_time_loading"]) / 16581777)
 
-    # Define the input date and time string
-    # input_start_time_loading = x.start_time_loading
-    # dt = datetime.fromisoformat(input_start_time_loading)
-    # minutes_start_time_loading = dt.hour * 60 + dt.minute
-    #
-    # input_end_time_loading = x.end_time_loading
-    # dt = datetime.fromisoformat(input_end_time_loading)
-    # minutes_end_time_loading = dt.hour * 60 + dt.minute
+    min_duration = int(min(x["duration"]))
+    max_duration = int(max(x["duration"]))
 
-    min_start = x.start_time_loading
-    max_start = int(min_start) + 60
-    min_duration = x.end_time_loading - x.start_time_loading
-    max_duration = min_duration + 60
-    min_demand = int(x.kwh)
-    max_demand = int(x.loading_potential)
+    min_demand = int(min(x["kwh"]))
+    max_demand = int(max(x["kwh"]))
+
     return prognose.TaskSimEvCharging(min_duration, max_duration, min_demand, max_demand, min_start, max_start, power)
+
+
 def generate_prognose(topic):
 
     # Set the random seed to the current day of the year to get repeatable results
@@ -50,39 +42,38 @@ def generate_prognose(topic):
     consumer.subscribe([topic])
 
     try:
-        # We want 100 messages
-        messages = consumer.consume(100, 1)
-        messageDict = {}
-        power = [1, 2, 3, 4]        
+        # We want 60 messages
+        messages = []
 
-        if messages is None:
-            return "No message received"
+        while len(messages) < 60:
+            # Poll for messages
+            response = consumer.poll(1.0)
+            if response is None:
+                continue
+            messages.append(response)
 
-        print(f"Received {len(messages)} messages")
-        print(f"Messages: {messages}")
-
-        # Parse the messages
         for i in range(len(messages)):
+            messages[i] = json.loads(messages[i].value().decode('utf-8'))
 
-            config = json.loads(
-                messages[i].value(), object_hook=lambda d: SimpleNamespace(**d))
+        power = [1, 2, 3, 4]
+        data_set = {}
+        data_set["start_time_loading"] = []
+        data_set["end_time_loading"] = []
+        data_set["kwh"] = []
 
-            # Process the message
-            print(f"Received message: {messages[i].value().decode('utf-8')}")
+        for message in messages:
+            data_set["start_time_loading"] += [calendar.timegm(
+                time.strptime(message["start_time_loading"], '%Y-%m-%d %H:%M:%S'))]
+            data_set["end_time_loading"] += [calendar.timegm(
+                time.strptime(message["end_time_loading"], '%Y-%m-%d %H:%M:%S'))]
+            data_set["kwh"] += [int(message["kwh"])]
 
-            
-            task_instance = create_TaskSimEvCharging(config, power)
+        data_set["duration"] = [
+            x - y for x, y in zip(data_set["end_time_loading"], data_set["start_time_loading"])]
 
-            messageDict.update({f"col{i}": [task_instance.max_start, task_instance.min_start, task_instance.min_demand,
-                               task_instance.max_demand, task_instance.min_duration, task_instance.max_duration]})
+        task_instance = create_TaskSimEvCharging(data_set, power)
 
-        df = prognose.DataFrame(data=messageDict)
-
-        config = json.loads(
-                messages[0].value(), object_hook=lambda d: SimpleNamespace(**d))
-        task_instance = create_TaskSimEvCharging(config, power)
-
-        print(f"Dataframe: {df}")
+        """
         print(f"Task instance: {task_instance}")
         print(f"max_demand: {task_instance.max_demand}")
         print(f"min_demand: {task_instance.min_demand}")
@@ -90,7 +81,33 @@ def generate_prognose(topic):
         print(f"min_duration: {task_instance.min_duration}")
         print(f"max_start: {task_instance.max_start}")
         print(f"min_start: {task_instance.min_start}")
-        
+        """
+
+        d = {
+            "col1": [task_instance.max_start, task_instance.min_start, task_instance.min_demand,
+                     task_instance.max_demand, task_instance.min_duration, task_instance.max_duration],
+            "col2": [task_instance.max_start, task_instance.min_start, task_instance.min_demand,
+                     task_instance.max_demand, task_instance.min_duration, task_instance.max_duration],
+            "col3": [task_instance.max_start, task_instance.min_start, task_instance.min_demand,
+                     task_instance.max_demand, task_instance.min_duration, task_instance.max_duration],
+            "col4": [task_instance.max_start, task_instance.min_start, task_instance.min_demand,
+                     task_instance.max_demand, task_instance.min_duration, task_instance.max_duration],
+            "col5": [task_instance.max_start, task_instance.min_start, task_instance.min_demand,
+                     task_instance.max_demand, task_instance.min_duration, task_instance.max_duration],
+            "col7": [task_instance.max_start, task_instance.min_start, task_instance.min_demand,
+                     task_instance.max_demand, task_instance.min_duration, task_instance.max_duration],
+            "col8": [task_instance.max_start, task_instance.min_start, task_instance.min_demand,
+                     task_instance.max_demand, task_instance.min_duration, task_instance.max_duration],
+            "col9": [task_instance.max_start, task_instance.min_start, task_instance.min_demand,
+                     task_instance.max_demand, task_instance.min_duration, task_instance.max_duration],
+            "col10": [task_instance.max_start, task_instance.min_start, task_instance.min_demand,
+                      task_instance.max_demand, task_instance.min_duration, task_instance.max_duration],
+            "col11": [task_instance.max_start, task_instance.min_start, task_instance.min_demand,
+                      task_instance.max_demand, task_instance.min_duration, task_instance.max_duration],
+        }
+
+        df = prognose.DataFrame(data=d)
+
         result = prognose.simulate_ev_forecast(
             df=df, cfg=task_instance)  # type: ignore
         print(f"Result: {result}")
