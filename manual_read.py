@@ -15,6 +15,8 @@ def create_TaskSimEvCharging(x, power) :
     # input_end_time_loading = x.end_time_loading
     # dt = datetime.fromisoformat(input_end_time_loading)
     # minutes_end_time_loading = dt.hour * 60 + dt.minute
+
+    # Problem with implementation, values to big
     min_start = int(min(x["start_time_loading"]) / 16581777)
     max_start = int(max(x["start_time_loading"]) / 16581777)
     print("Min Start", min_start)
@@ -31,23 +33,22 @@ def create_TaskSimEvCharging(x, power) :
     return prognose.TaskSimEvCharging(min_duration, max_duration, min_demand, max_demand, min_start, max_start, power)
 
 def read_csv(file: str):
+    """
+    returns a dataset from csv file with the right datformats and relevant columns
+    """
     print(f"Reading %s ..." % file)
     dataset = pandas.read_csv(file)
-    # TODO: crate array with right datasets
     good_dataset = {}
    
     good_dataset["start_time_loading"] = [calendar.timegm(time.strptime(s, '%Y-%m-%d %H:%M:%S')) for s in dataset.start_time_loading]
     good_dataset["end_time_loading"] = [calendar.timegm(time.strptime(s, '%Y-%m-%d %H:%M:%S')) for s in dataset.end_time_loading]
 
-    #good_dataset["duration"] = good_dataset["end_time_loading"] - good_dataset["start_time_loading"]
     good_dataset["duration"] = [x - y for x, y in zip(good_dataset["end_time_loading"], good_dataset["start_time_loading"])]
    
     good_dataset["kwh"] = [int(s) for s in dataset.kwh]
 
     return good_dataset
 
-# TODO: read csv message
-#x = json.loads(msg.value(), object_hook=lambda d: SimpleNamespace(**d))
 x = read_csv("./data/electromobility_data.csv")
 
 prognose.random.seed(prognose.pd.Timestamp.utcnow().dayofyear)
