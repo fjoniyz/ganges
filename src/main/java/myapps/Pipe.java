@@ -10,6 +10,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.stream.Collectors;
 
 import com.ganges.lib.castleguard.CastleGuard;
+import org.checkerframework.checker.units.qual.A;
 import serdes.AnonymizedMessage;
 import serdes.Deserializer;
 import serdes.chargingstation.ChargingStationMessage;
@@ -26,10 +27,13 @@ import serdes.emobility.EMobilityStationMessage;
 
 public class Pipe {
 
-    private static CastleGuard castleGuard = new CastleGuard();
-    private static Doca doca = new Doca();
+    private static AnonymizationAlgorithm algorithm;
 
-    public static AnonymizedMessage createMessage(Class<?> messageClass, Object... values) {
+    private final static String CASTLEGUARD_KEY = "castleguard";
+    private final static String DOCA_KEY = "doca";
+
+
+  public static AnonymizedMessage createMessage(Class<?> messageClass, Object... values) {
       AnonymizedMessage message = null;
       if (messageClass.equals(EMobilityStationMessage.class)) {
 //        message = new EMobilityStationMessage(values[0], values);
@@ -41,34 +45,42 @@ public class Pipe {
     }
 
 
-    public static <T extends AnonymizedMessage> String processing(T message, DataRepository dataRepository, String[] fields) throws IOException {
+    public static <T extends AnonymizedMessage> String processing(T message,
+                                                                  DataRepository dataRepository,
+                                                                  String[] fields,
+                                                                  boolean addUnanonymizedHistory) throws IOException {
       String id = message.getId();
       Double[] valuesList = message.getValuesListByKeys(fields);
-      dataRepository.open();
+      List<AnonymizationItem> contextValues = new ArrayList<>();
 
-      // Retrieve non-anonymized data from cache
+      // Current message
       HashMap<String, Double> keyValueMap = new HashMap<>();
       for (int i = 0; i < valuesList.length; i++) {
         keyValueMap.put(fields[i], valuesList[i]);
       }
-      dataRepository.saveValues(id, keyValueMap);
 
-      // Here we assume that for one message type the values are stored consistently
-      List<Map<String, Double>> allSavedValues = dataRepository.getValuesByKeys(fields);
-      dataRepository.close();
+      if (addUnanonymizedHistory) {
+        dataRepository.open();
 
+        // Retrieve non-anonymized data from cache
+        dataRepository.saveValues(id, keyValueMap);
+
+        // Here we assume that for one message type the values are stored consistently
+        contextValues = dataRepository.getValuesByKeys(fields);
+        dataRepository.close();
+      } else {
+        contextValues.add(new AnonymizationItem(id, keyValueMap));
+      }
       // Anonymization
-      Optional<List<Map<String, Double>>> optOutput = doca.anonymize(allSavedValues);
-      //Optional<List<Map<String, Double>>> optOutput = castleGuard.anonymize(allSavedValues);
+      List<AnonymizationItem> output = algorithm.anonymize(contextValues);
 
-      if (!optOutput.isPresent()) {
+      if (output.isEmpty()) {
         //TODO: Check what to return when no output is present
         return "";
       }
-      List<Map<String, Double>> output = optOutput.get();
 
       String outputString =
-          output.stream().map(dataRow -> dataRow.values().toString()).collect(Collectors.joining(
+          output.stream().map(dataRow -> dataRow.getValues().toString()).collect(Collectors.joining(
               ","));
       System.out.println("result: " + outputString);
       return outputString;
@@ -143,6 +155,16 @@ public class Pipe {
 
         String inputTopic = props.getProperty("input-topic");
         String outputTopic = props.getProperty("output-topic");
+        String anonymizationAlgoName = props.getProperty("algorithm");
+
+        boolean addUnanonymizedHistory = anonymizationAlgoName.equals(DOCA_KEY);
+        if (anonymizationAlgoName.equals(CASTLEGUARD_KEY)) {
+          algorithm = new CastleGuard();
+        } else if (anonymizationAlgoName.equals(DOCA_KEY)) {
+          algorithm = new Doca();
+        } else {
+          throw new IllegalArgumentException("Unknown anonymization algorithm passed");
+        }
 
         Serializer<EMobilityStationMessage> serializer = new Serializer<>();
         Deserializer<EMobilityStationMessage>
@@ -164,7 +186,7 @@ public class Pipe {
           String[] fields = getFieldsToAnonymize();
           src.mapValues(value -> {
               try {
-                  return processing(value, dataRepository, fields);
+                  return processing(value, dataRepository, fields, addUnanonymizedHistory);
               } catch (IOException e) {
                   throw new RuntimeException(e);
               }

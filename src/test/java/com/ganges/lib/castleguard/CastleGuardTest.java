@@ -1,13 +1,13 @@
 package com.ganges.lib.castleguard;
 
 import com.ganges.lib.castleguard.utils.ClusterManagement;
+import myapps.AnonymizationItem;
 import org.apache.commons.lang3.Range;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.*;
 
-import static org.junit.Assert.*;
 public class CastleGuardTest {
     private ArrayList<String> headers;
     private HashMap<String, Range<Float>> globalRanges;
@@ -125,23 +125,23 @@ public class CastleGuardTest {
         Map<String, Double> dataFive = createDoubleItem(Arrays.asList(5.0, 600.0, 1.0));
         Map<String, Double> dataSix = createDoubleItem(Arrays.asList(6.0, 700.0, 0.0));
 
-        List<Map<String, Double>> inputOne = new ArrayList<>();
-        inputOne.add(dataOne);
+        List<AnonymizationItem> inputOne = new ArrayList<>();
+        inputOne.add(new AnonymizationItem("1", dataOne));
 
-        List<Map<String, Double>> inputTwo = new ArrayList<>();
-        inputTwo.add(dataTwo);
-        inputTwo.add(dataThree);
-        inputTwo.add(dataFour);
+        List<AnonymizationItem> inputTwo = new ArrayList<>();
+        inputTwo.add(new AnonymizationItem("2", dataTwo));
+        inputTwo.add(new AnonymizationItem("3", dataThree));
+        inputTwo.add(new AnonymizationItem("4", dataFour));
 
-        List<Map<String, Double>> inputThree = new ArrayList<>();
-        inputThree.add(dataFive);
-        inputThree.add(dataSix);
+        List<AnonymizationItem> inputThree = new ArrayList<>();
+        inputThree.add(new AnonymizationItem("5", dataFive));
+        inputThree.add(new AnonymizationItem("6", dataSix));
 
         castle.anonymize(inputOne);
         castle.anonymize(inputTwo);
         castle.anonymize(inputThree);
 
-        Deque<Item> items = this.castle.getItems();
+        Deque<CGItem> items = this.castle.getItems();
         System.out.println(items);
 
     }
@@ -166,8 +166,8 @@ public class CastleGuardTest {
         castle.insertData(dataFour);
         castle.insertData(dataFive);
         castle.insertData(dataSix);
-        Deque<Item> items =  this.castle.getItems();
-        for(Item item: items){
+        Deque<CGItem> items =  this.castle.getItems();
+        for(CGItem item: items){
             // before the operation the item is within a cluster
             Assert.assertNotEquals(null, item.getCluster());
             Assert.assertTrue(this.castle.getItems().contains(item));
@@ -196,7 +196,7 @@ public class CastleGuardTest {
     public void suppressNonItemTest() {
         preparation(3, 10, 5, 1, 5, 1, 100 * Math.log(2), true);
         HashMap<String, Float> data = createItem(Arrays.asList(1.0F, 200.0F, 5.0F));
-        Item item = new Item(data, this.headers, null);
+        CGItem item = new CGItem(data, this.headers, null);
 
         castle.suppressItem(item);
 
@@ -222,7 +222,7 @@ public class CastleGuardTest {
         dataOne.put(headers.get(1), 200.0F);
         dataOne.put(headers.get(2), 5.0F);
 
-        Item one = new Item(dataOne, headers, "station");
+        CGItem one = new CGItem(dataOne, headers, "station");
 
         CGConfig config = new CGConfig(3, 10, 5, 1, 5, 1, 100 * Math.log(2), true);
         CastleGuard castle = new CastleGuard(config, headers, null);
@@ -240,7 +240,7 @@ public class CastleGuardTest {
         dataTwo.put(headers.get(1), 300.0F);
         dataTwo.put(headers.get(2), 4.0F);
 
-        Item two = new Item(dataTwo, headers, "station");
+        CGItem two = new CGItem(dataTwo, headers, "station");
         castle.updateGlobalRanges(two);
         Assert.assertEquals(castle.getGlobalRanges(), newGlobalRanges);
       }
