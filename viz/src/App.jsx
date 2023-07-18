@@ -78,6 +78,7 @@ const App = () => {
           <input
             type="text"
             name="proxyUrl"
+            defaultValue="localhost:8082"
             class="p-2 rounded mr-2"
           />
           <button type="submit">Submit</button>

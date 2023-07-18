@@ -22,17 +22,17 @@ while True:
         "urbanisation_level": random.randint(1, 5),
         "number_loading_stations": random.randint(1, 10),
         "number_parking_spaces": random.randint(1, 90),
-        "start_time_loading": 20,
-        "end_time_loading": 230,
+        "start_time_loading": random.randint(10, 90),
+        "end_time_loading": random.randint(100, 240),
         "loading_time": random.randint(10, 250),
         "kwh": random.uniform(15, 60),
         "loading_potential": random.randint(40, 110),
     }
-    producer.produce("input1", value=json.dumps(data))
+    producer.produce("input", value=json.dumps(data))
     
     noise = np.random.laplace(0, 1.0, 1)
     data["kwh"] = data["kwh"] + noise[0]
-    producer.produce("streams-output", value=json.dumps(data))
+    producer.produce("output", value=json.dumps(data))
     
     print(f"Sample #{counter} produced!")
     counter += 1

@@ -93,8 +93,9 @@ const Plt = ({ restProxyUrl, topic }) => {
     if (!progCheck) {
       porgPollIntervalId = setInterval(async () => {
         const messageResponse = await fetchProgResults("localhost:8080", topic);
-        if (messageResponse) setProgResult(messageResponse);
-      }, 1000);
+        const progResult = JSON.parse(messageResponse.result)
+        if (progResult) setProgResult(progResult);
+      }, 1500);
     } else {
       clearInterval(porgPollIntervalId);
     }
@@ -340,15 +341,16 @@ const Plt = ({ restProxyUrl, topic }) => {
         </AccordionDetails>
       </Accordion>
 
-      <label class="my-3 flex items-center">
+      <label class="mt-3  flex items-center">
         <input type="checkbox" class="m-2" checked={progCheck} onChange={handleProgCheckChange} />
-        <span>Execute charging prognose on topic</span>
+        <span>Run prognose-demo on topic</span>
       </label>
 
       {progResult && progCheck && (
         <>
           <h3 class="text-lg">Prognose Result</h3>
-          <p>{JSON.stringify(progResult)}</p>
+          <p>Predicted demand: {(progResult.demand[0].toFixed(2))}</p>
+          <p>Predicted power: {(progResult.power[0]).toFixed(2)}</p>
         </>
       )}
 
@@ -358,7 +360,7 @@ const Plt = ({ restProxyUrl, topic }) => {
         <input
           type="text"
           name="vizKey"
-          defaultValue="value"
+          defaultValue="evUsage"
           class="p-2 rounded mr-2" />
         <br />
         <button type="submit" class="my-2">Submit</button>

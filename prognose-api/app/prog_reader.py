@@ -10,7 +10,6 @@ from datetime import datetime, timedelta
 # Kafka broker configuration
 bootstrap_servers = 'broker:29092'
 group_id = 'consumer-group-1'
-topic = 'input1'
 
 
 def create_TaskSimEvCharging(x, power) :
@@ -32,7 +31,7 @@ def create_TaskSimEvCharging(x, power) :
     min_demand = int(x.kwh)
     max_demand = int(x.loading_potential)
     return prognose.TaskSimEvCharging(min_duration, max_duration, min_demand, max_demand, min_start, max_start, power)
-def generate_prognose():
+def generate_prognose(topic):
 
     # Set the random seed to the current day of the year to get repeatable results
     prognose.random.seed(prognose.pd.Timestamp.utcnow().dayofyear)
@@ -60,6 +59,7 @@ def generate_prognose():
             return "No message received"
 
         print(f"Received {len(messages)} messages")
+        print(f"Messages: {messages}")
 
         # Parse the messages
         for i in range(len(messages)):
