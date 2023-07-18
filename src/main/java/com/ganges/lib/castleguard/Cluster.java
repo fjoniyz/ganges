@@ -132,7 +132,7 @@ public class Cluster {
 
         boolean containsSensitiveAttr = false;
         for (Item e : this.contents) {
-            if (Objects.equals(e.getSensitiveAttr(), element.getSensitiveAttr())) {
+            if (element.getSensitiveAttr() != null && Objects.equals(e.getSensitiveAttr(), element.getSensitiveAttr())) {
                 containsSensitiveAttr = true;
                 break;
             }
