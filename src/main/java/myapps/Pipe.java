@@ -9,6 +9,8 @@ import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 
 import java.util.stream.Collectors;
+
+import com.ganges.lib.castleguard.CastleGuard;
 import serdes.AnonymizedMessage;
 import serdes.Deserializer;
 import serdes.chargingstation.ChargingStationMessage;
@@ -25,62 +27,74 @@ import serdes.emobility.EMobilityStationMessage;
 
 public class Pipe {
 
+    private static AnonymizationAlgorithm algorithm;
+
+    private final static String CASTLEGUARD_KEY = "castleguard";
+    private final static String DOCA_KEY = "doca";
+
   public static AnonymizedMessage createMessage(Class<?> messageClass, Object... values) {
-
-    AnonymizedMessage message = null;
-    if (messageClass.equals(EMobilityStationMessage.class)) {
-      // message = new EMobilityStationMessage(values[0], values);
-      return message;
-    } else {
-      return null; // TODO: add other message types
+      AnonymizedMessage message = null;
+      if (messageClass.equals(EMobilityStationMessage.class)) {
+//        message = new EMobilityStationMessage(values[0], values);
+        return message;
+      }
+      else {
+        return null; // TODO: add other message types
+      }
     }
-  }
 
+    public static <T extends AnonymizedMessage> String processing(T message,
+                                                                  DataRepository dataRepository,
+                                                                  String[] fields,
+                                                                  boolean addUnanonymizedHistory, boolean enableMonitoring
+                                                                  ) throws IOException {
+      String id = message.getId();
+      if (enableMonitoring) {
+        MetricsCollector.setProducerTimestamps(id, Long.parseLong(message.getProducerTimestamp()));
+        MetricsCollector.setPipeEntryTimestamps(id, System.currentTimeMillis());
+      }
+      double[] valuesList = message.getValuesListFromKeys(fields);
+      List<AnonymizationItem> contextValues = new ArrayList<>();
 
-  public static <T extends AnonymizedMessage> String processing(T message,
-                                                                DataRepository dataRepository,
-                                                                String[] fields, boolean enableMonitoring) throws IOException {
-    String id = message.getId();
-    if (enableMonitoring) {
-      MetricsCollector.setProducerTimestamps(id, Long.parseLong(message.getProducerTimestamp()));
-      MetricsCollector.setPipeEntryTimestamps(id, System.currentTimeMillis());
-    }
-    double[] valuesList = message.getValuesListFromKeys(fields);
-    dataRepository.open();
+      // Current message
+      HashMap<String, Double> keyValueMap = new HashMap<>();
+      for (int i = 0; i < valuesList.length; i++) {
+        keyValueMap.put(fields[i], valuesList[i]);
+      }
 
-    // Retrieve non-anonymized data from cache
-    HashMap<String, Double> keyValueMap = new HashMap<>();
-    for (int i = 0; i < valuesList.length; i++) {
-      keyValueMap.put(fields[i], valuesList[i]);
-    }
-    dataRepository.saveValues(id, keyValueMap);
+      if (addUnanonymizedHistory) {
+        dataRepository.open();
 
-    // Here we assume that for one message type the values are stored consistently
-    List<Map<String, Double>> allSavedValues = dataRepository.getValuesByKeys(fields);
-    dataRepository.close();
+        // Retrieve non-anonymized data from cache
+        dataRepository.saveValues(id, keyValueMap);
 
+        // Here we assume that for one message type the values are stored consistently
+        contextValues = dataRepository.getValuesByKeys(fields);
+        dataRepository.close();
+      } else {
+        contextValues.add(new AnonymizationItem(id, keyValueMap));
+      }
       // Anonymization
-      Doca doca = new Doca();
       if (enableMonitoring) {
         MetricsCollector.setAnonEntryTimestamps(id, System.currentTimeMillis());
       }
-      Optional<List<Map<String, Double>>> optOutput = doca.anonymize(allSavedValues);
+      List<AnonymizationItem> output = algorithm.anonymize(contextValues);
       if (enableMonitoring) {
         MetricsCollector.setAnonExitTimestamps(id, System.currentTimeMillis());
       }
-      if (!optOutput.isPresent()) {
+      if (output.isEmpty()) {
         //TODO: Check what to return when no output is present
         return "";
       }
-      List<Map<String, Double>> output = optOutput.get();
 
       String outputString =
-          output.stream().map(dataRow -> dataRow.values().toString()).collect(Collectors.joining(
+          output.stream().map(dataRow -> dataRow.getValues().toString()).collect(Collectors.joining(
               ","));
       if (enableMonitoring) {
         MetricsCollector.setPipeExitTimestamps(id, System.currentTimeMillis());
         MetricsCollector.getInstance().saveMetricsToCSV();
       }
+      System.out.println("result: " + outputString);
       return outputString;
     }
 
@@ -157,6 +171,16 @@ public class Pipe {
     if (enableMonitoring) {
       MetricsCollector.getInstance().setFileName("results_pipe.csv");
     }
+    String anonymizationAlgoName = props.getProperty("algorithm");
+
+    boolean addUnanonymizedHistory = anonymizationAlgoName.equals(DOCA_KEY);
+    if (anonymizationAlgoName.equals(CASTLEGUARD_KEY)) {
+      algorithm = new CastleGuard();
+    } else if (anonymizationAlgoName.equals(DOCA_KEY)) {
+      algorithm = new Doca();
+    } else {
+      throw new IllegalArgumentException("Unknown anonymization algorithm passed");
+    }
 
     Serializer<EMobilityStationMessage> serializer = new Serializer<>();
     Deserializer<EMobilityStationMessage>
@@ -179,7 +203,8 @@ public class Pipe {
       src.mapValues(
               value -> {
                 try {
-                  return processing(value, dataRepository, fields, enableMonitoring);
+                  return processing(value, dataRepository, fields, addUnanonymizedHistory,
+                      enableMonitoring);
                 } catch (IOException e) {
                   throw new RuntimeException(e);
                 }

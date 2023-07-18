@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
+import org.checkerframework.checker.units.qual.A;
 
 /**
  * Repository for cached non-anonymized data that is used to provide state for anonymization algorithms
@@ -64,15 +65,16 @@ public class DataRepository {
         return values;
     }
 
-    public List<Map<String, Double>> getValuesByKeys(String[] entryKeys) {
-        List<Map<String, Double>> entries = new ArrayList<>();
+    public List<AnonymizationItem> getValuesByKeys(String[] entryKeys) {
+        List<AnonymizationItem> entries = new ArrayList<>();
         for (String redisKey : connection.keys("*")) {
             HashMap<String, Double> entry = new HashMap<>();
-            for(int i = 0; i < entryKeys.length; i++) {
+            for (int i = 0; i < entryKeys.length; i++) {
                 entry.put(entryKeys[i], Double.parseDouble(connection.hget(redisKey,
                     entryKeys[i])));
             }
-            entries.add(entry);
+            AnonymizationItem item = new AnonymizationItem(redisKey, entry);
+            entries.add(item);
         }
         return entries;
     }

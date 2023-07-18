@@ -6,21 +6,32 @@ import java.util.List;
 
 import org.checkerframework.checker.nullness.qual.NonNull;
 
-public class Item {
+public class CGItem {
     private HashMap<String, Float> data;
     private List<String> headers;
     private Float sensitiveAttr;
     private Cluster parent;
     private Float pid;
-
-    public Item(HashMap<String, Float> data, List<String> headers, String sensitiveAttr) {
+    private String externalId;
+    public CGItem(String externalId, HashMap<String, Float> data, List<String> headers,
+                  String sensitiveAttr) {
+        this.externalId = externalId;
         this.data = data;
         this.headers = new ArrayList<>(headers);
         this.sensitiveAttr = data.get(sensitiveAttr);
         this.pid = data.get("pid");
     }
 
-    public Item(@NonNull Item another) {
+    public CGItem(HashMap<String, Float> data, List<String> headers,
+                  String sensitiveAttr) {
+        this.externalId = "";
+        this.data = data;
+        this.headers = new ArrayList<>(headers);
+        this.sensitiveAttr = data.get(sensitiveAttr);
+        this.pid = data.get("pid");
+    }
+
+    public CGItem(@NonNull CGItem another) {
         this.data = (HashMap<String, Float>) another.data.clone();
         this.headers = new ArrayList<>(another.getHeaders());
         this.sensitiveAttr = another.sensitiveAttr;
@@ -67,8 +78,12 @@ public class Item {
         this.parent = cluster;
     }
 
-    public Float tupleDistance(Item item) {
+    public Float tupleDistance(CGItem item) {
         // TODO: Implement
         return null;
+    }
+
+    public String getExternalId() {
+        return externalId;
     }
 }

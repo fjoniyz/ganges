@@ -8,7 +8,7 @@ import org.apache.commons.lang3.Range;
 
 public class Cluster {
     private final Utils utils;
-    private List<Item> contents;
+    private List<CGItem> contents;
     private Map<String, Range<Float>> ranges;
     private Set<Float> diversity;
     private Map<String, Float> sampleValues;
@@ -25,13 +25,13 @@ public class Cluster {
         this.utils = new Utils();
     }
 
-    public List<Item> getContents() {
+    public List<CGItem> getContents() {
         return this.contents;
     }
 
-    public void addContents(List<Item> value) {
+    public void addContents(List<CGItem> value) {
         //this.contents = value;
-        for (Item item : value) {
+        for (CGItem item : value) {
             this.insert(item);
         }
     }
@@ -43,7 +43,7 @@ public class Cluster {
         int count = 0;
         Set<Float> pids = new HashSet<>();
 
-        for (Item item : this.contents) {
+        for (CGItem item : this.contents) {
 			pids.add(item.getPid());
         }
 		return pids.size();
@@ -86,7 +86,7 @@ public class Cluster {
      *
      * @param element The element to insert into the cluster
      */
-    public void insert(Item element) {
+    public void insert(CGItem element) {
 
         // checks for an empty cluster
         boolean firstElem = this.contents.isEmpty();
@@ -124,14 +124,14 @@ public class Cluster {
      *
      * @param element: The element to remove from the cluster
      */
-    public void remove(Item element) {
+    public void remove(CGItem element) {
 
         this.contents.remove(element);
 
         element.setCluster(null);
 
         boolean containsSensitiveAttr = false;
-        for (Item e : this.contents) {
+        for (CGItem e : this.contents) {
             if (Objects.equals(e.getSensitiveAttr(), element.getSensitiveAttr())) {
                 containsSensitiveAttr = true;
                 break;
@@ -141,10 +141,10 @@ public class Cluster {
             this.diversity.remove(element.getSensitiveAttr());
         }
 
-        for (Map.Entry<String, Range<Float>> header : this.ranges.entrySet()) {
-            header.setValue(
-                    Range.between(this.findMinimum(header.getKey()), this.findMaximum(header.getKey())));
-        }
+//        for (Map.Entry<String, Range<Float>> header : this.ranges.entrySet()) {
+//            header.setValue(
+//                    Range.between(this.findMinimum(header.getKey()), this.findMaximum(header.getKey())));
+//        }
     }
 
     /**
@@ -154,7 +154,7 @@ public class Cluster {
      * @return: A generalised version of the tuple based on the ranges for this cluster
      */
     // Note: Return value with only Item -> In Cluster.py return value (gen_tuple, item)
-    Item generalise(Item item) {
+    CGItem generalise(CGItem item) {
         for (Map.Entry<String, Range<Float>> header : this.ranges.entrySet()) {
             if (!this.sampleValues.containsKey(header.getKey())) {
                 this.sampleValues.put(
@@ -183,7 +183,7 @@ public class Cluster {
      * @param globalRanges: The globally known ranges for each attribute
      * @return The information loss if we added item into this cluster
      */
-    public float tupleEnlargement(Item item, HashMap<String, Range<Float>> globalRanges) {
+    public float tupleEnlargement(CGItem item, HashMap<String, Range<Float>> globalRanges) {
         float given = this.informationLossGivenT(item, globalRanges);
         float current = this.informationLoss(globalRanges);
         return (given - current) / this.ranges.size();
@@ -202,7 +202,7 @@ public class Cluster {
      * @param global_ranges: The globally known ranges for each attribute
      * @return: The information loss given that we insert item into this cluster
      */
-    float informationLossGivenT(Item item, HashMap<String, Range<Float>> global_ranges) {
+    float informationLossGivenT(CGItem item, HashMap<String, Range<Float>> global_ranges) {
         float loss = 0F;
         if (this.contents.isEmpty()) {
             return 0.0F;
@@ -274,7 +274,7 @@ public class Cluster {
      * @param other: The tuple to calculate the distance to
      * @return: The tuple to calculate the distance to
      */
-    public float distance(Item other) {
+    public float distance(CGItem other) {
         float total_distance = 0;
         for (Map.Entry<String, Range<Float>> header : this.ranges.entrySet()) {
             total_distance +=
@@ -291,7 +291,7 @@ public class Cluster {
      * @param item: The tuple to perform bounds checking on
      * @return: Whether the tuple is within the bounds of the cluster
      */
-    public boolean withinBounds(Item item) {
+    public boolean withinBounds(CGItem item) {
         for (Map.Entry<String, Range<Float>> header : this.ranges.entrySet()) {
             if (!header.getValue().contains(item.getData().get(header.getKey()))) {
                 return false;
@@ -309,7 +309,7 @@ public class Cluster {
     public float findMinimum(String header) {
 
         float minValue = Float.MAX_VALUE;
-        for (Item item : this.getContents()) {
+        for (CGItem item : this.getContents()) {
             float value = item.getData().get(header);
 
             if (value < minValue) {
@@ -328,7 +328,7 @@ public class Cluster {
     public float findMaximum(String header) {
 
         float maxValue = Float.MIN_VALUE;
-        for (Item item : this.getContents()) {
+        for (CGItem item : this.getContents()) {
             float value = item.getData().get(header);
 
             if (value > maxValue) {
