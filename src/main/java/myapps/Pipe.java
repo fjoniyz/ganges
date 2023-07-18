@@ -1,7 +1,10 @@
 package myapps;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Properties;
@@ -21,13 +24,14 @@ import org.apache.kafka.streams.kstream.Produced;
 
 import java.util.*;
 import serdes.emobility.EMobilityStationMessage;
+import serdes.emobility.EMobilityStationSerde;
 
 public class Pipe {
 
     public static AnonymizedMessage createMessage(Class<?> messageClass, Object... values) {
       AnonymizedMessage message = null;
       if (messageClass.equals(EMobilityStationMessage.class)) {
-//        message = new EMobilityStationMessage(values[0], values);
+//        message = new EMobilityStationMessage(values[0], values[1], values[2], values[3]);
         return message;
       }
       else {
@@ -37,6 +41,7 @@ public class Pipe {
 
 
     public static <T extends AnonymizedMessage> String processing(T message, DataRepository dataRepository, String[] fields) throws IOException {
+      EMobilityStationMessage eMobilityStationMessage = (EMobilityStationMessage) message;
       String id = message.getId();
       Double[] valuesList = message.getValuesListByKeys(fields);
       dataRepository.open();
@@ -64,8 +69,10 @@ public class Pipe {
       String outputString =
           output.stream().map(dataRow -> dataRow.values().toString()).collect(Collectors.joining(
               ","));
-      System.out.println("result: " + outputString);
-      return outputString;
+      Serializer<T> serializer = new Serializer<T>();
+      byte[] json = serializer.serialize("output-test", (T) eMobilityStationMessage);
+      System.out.println("result: " + new String(json, StandardCharsets.UTF_8));
+      return new String(json, StandardCharsets.UTF_8);
     }
 
     public static String[] getFieldsToAnonymize() throws IOException {
