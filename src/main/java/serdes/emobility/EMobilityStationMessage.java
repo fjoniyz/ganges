@@ -18,7 +18,7 @@ public class EMobilityStationMessage implements Serializable, AnonymizedMessage 
 
   @JsonCreator
   public EMobilityStationMessage(@JsonProperty("id")String id, @JsonProperty("Timestamp")String timestamp, @JsonProperty("timeseries_id")String timeseriesId,
-                                 @JsonProperty("Seconds_EnergyConsumption")double evUsage) {
+                                 @JsonProperty("evUsage")double evUsage) {
     this.id = id;
     this.timestamp = timestamp;
     this.timeseriesId = timeseriesId;
