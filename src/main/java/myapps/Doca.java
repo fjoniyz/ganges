@@ -38,8 +38,8 @@ public class Doca implements AnonymizationAlgorithm {
     //-----------Parameters for DELTA Phase----------------//
     private static final double GKQError = 0.02;   // Error of the GK Quantile Estimator
     // could be potentially also just used as lower bound (if domains wont get stable)
-    private int processingWindowSize = 50;   // Size that has to be reached before release conditions for stable Domain are checked
-    private final double LAMBDA = 0.15;      // tolerance parameter for domain building
+    private int processingWindowSize = 10;   // Size that has to be reached before release conditions for stable Domain are checked
+    private final double LAMBDA = 0.003;      // tolerance parameter for domain building
 
     //-----------Parameters for DOCA Phase----------------//
     private double eps; // privacy budget
@@ -96,9 +96,17 @@ public class Doca implements AnonymizationAlgorithm {
         for (List<List<Double>> stableDomain : stableDomains) {
             List<Item> itemList = DocaUtil.dataPointsToItems(stableDomain);
 
-            double sensitivity = Math.abs(DocaUtil.getMax(x) - DocaUtil.getMin(x));
+            // TODO: calculate sensitivity for each Header
+            List<Double> maximums = DocaUtil.getMax(x);
+            List<Double> minimums = DocaUtil.getMin(x);
+
+            List<Double> sensitivityList = new ArrayList<>();
+            for (int i = 0; i < maximums.size(); i++) {
+                sensitivityList.add(Math.abs(minimums.get(i) - maximums.get(i) ));
+            }
 
             // If delta is != 0 calculate specific sensitivity
+            /*
             if (delta != 0) {
                 // calculate sensitivity
                 List<Float> firstElem = new ArrayList<>(itemList.get(0).getData().values());
@@ -113,9 +121,10 @@ public class Doca implements AnonymizationAlgorithm {
                 System.out.println("Sensitivity: " + sensitivity);
                 System.out.println("Domain Size: " + itemList.size());
             }
+             */
             List<Item> pertubedItems = new ArrayList<>();
             for (Item item : itemList) {
-                List<Item> returnItems = this.doca(item, sensitivity, false);
+                List<Item> returnItems = this.doca(item, sensitivityList, false);
                 pertubedItems.addAll(returnItems);
 
                 if (returnItems != null) {
@@ -208,10 +217,10 @@ public class Doca implements AnonymizationAlgorithm {
      * if domain is stable, it will be released
      *
      * @param dataTuple   Tuple to be added
-     * @param sensitivity sensitivity of the tuple
+     * @param sensitivities sensitivity of the tuple
      * @return the domain if it is stable, otherwise null
      */
-    protected List<Item> doca(Item dataTuple, double sensitivity, boolean inplace) {
+    protected List<Item> doca(Item dataTuple, List<Double> sensitivities, boolean inplace) {
 
         // Add tuple to best cluster and return expired clusters if any
         Cluster expiringCluster = this.onlineClustering(dataTuple);
@@ -219,7 +228,7 @@ public class Doca implements AnonymizationAlgorithm {
         List<Item> releasedItems = new ArrayList<>();
         // Release Cluster if expired
         if (expiringCluster != null) {
-            releasedItems.addAll(releaseExpiredCluster(expiringCluster, (float) sensitivity));
+            releasedItems.addAll(releaseExpiredCluster(expiringCluster, sensitivities));
         }
 
         // Create Output structure
@@ -356,7 +365,7 @@ public class Doca implements AnonymizationAlgorithm {
      * @param sensitivity    Sensitivity of the pertubation
      * @return True if the cluster was released, false if not
      */
-    private List<Item> releaseExpiredCluster(Cluster expiredCluster, float sensitivity) {
+    private List<Item> releaseExpiredCluster(Cluster expiredCluster, List<Double> sensitivity) {
         // update values
         HashMap<String, Float> dif = DocaUtil.getAttributeDiff(this.rangeMap);
         HashMap<String, Float> dif_cluster = new HashMap<>();
@@ -387,20 +396,25 @@ public class Doca implements AnonymizationAlgorithm {
             mean.put(attrEntry.getKey(), attrEntry.getValue() / expiredCluster.getContents().size());
         }
         //sensitivity = 100f;
-        double scale = (sensitivity / (expiredCluster.getContents().size() * eps));
+        //double scale = (sensitivity / (expiredCluster.getContents().size() * eps));
+        //TODO: Create scale from difference of global ranges
+        //double scale = expiredCluster.getContents().size() * eps;
         HashMap<String, Float> laplace = new HashMap<>();
+        int headerNumber = 0;
         for (String attribute : mean.keySet()) {
-            laplace.put(attribute, (float) (Math.random() - 0.5));
+            //laplace.put(attribute, (float) (Math.random() - 0.5));
+            double scale = (sensitivity.get(headerNumber) / (expiredCluster.getContents().size() * eps));
 
             JDKRandomGenerator rg = new JDKRandomGenerator();
-            LaplaceDistribution laplaceDistribution = new LaplaceDistribution(rg, 0, scale);
+            LaplaceDistribution laplaceDistribution = new LaplaceDistribution(rg, 0,  scale);
             float noise = (float) laplaceDistribution.sample();
             laplace.put(attribute, noise);
         }
+
         List<Float> noise = new ArrayList<>();
 
         for (String attribute : mean.keySet()) {
-            noise.add((float) (scale * laplace.get(attribute)));
+            noise.add((float) (laplace.get(attribute)));
         }
 
         //expiredCluster.getContents().stream().map(Item::getData).collect(Collectors.toList()).stream().filter(data. -> mean.get(item.));
@@ -459,7 +473,7 @@ public class Doca implements AnonymizationAlgorithm {
             }
         }
 
-        double[][] result = (docaInput);
+        double[][] result = addData(docaInput);
 
         if (result == null) {
             return null;
@@ -489,7 +503,8 @@ public class Doca implements AnonymizationAlgorithm {
         int num_instances = x.length;
         int num_attributes = x[0].length;
 
-        double sensitivity = Math.abs((DocaUtil.getMax(x) - DocaUtil.getMin(x)));
+        //double sensitivity = Math.abs((DocaUtil.getMax(x) - DocaUtil.getMin(x)));
+        double sensitivity = 1.0;
 
         List<List<Integer>> clusters = new ArrayList<>();
         List<List<Integer>> clusters_final = new ArrayList<>();

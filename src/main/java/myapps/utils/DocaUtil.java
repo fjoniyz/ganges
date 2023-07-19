@@ -38,14 +38,18 @@ public class DocaUtil {
      * @param X the 2D array of doubles
      * @return the maximum value in the array
      */
-    public static double getMax(double[][] X) {
-        double max = Double.NEGATIVE_INFINITY;
-        for (double[] row : X) {
-            for (double value : row) {
-                max = Math.max(max, value);
+    public static List<Double> getMax(double[][] X) {
+        int numColumns = X[0].length;
+        List<Double> maxList = new ArrayList<>();
+
+        for (int col = 0; col < numColumns; col++) {
+            double max = Double.NEGATIVE_INFINITY;
+            for (int row = 0; row < X.length; row++) {
+                max = Math.max(max, X[row][col]);
             }
+            maxList.add(max);
         }
-        return max;
+        return maxList;
     }
 
     /**
@@ -53,14 +57,19 @@ public class DocaUtil {
      * @param X the 2D array of doubles
      * @return the minimum value in the array
      */
-    public static double getMin(double[][] X) {
-        double min = Double.POSITIVE_INFINITY;
-        for (double[] row : X) {
-            for (double value : row) {
-                min = Math.min(min, value);
+    public static List<Double> getMin(double[][] X) {
+        int numColumns = X[0].length;
+        List<Double> minList = new ArrayList<>();
+
+        for (int col = 0; col < numColumns; col++) {
+            double min = Double.POSITIVE_INFINITY;
+            for (int row = 0; row < X.length; row++) {
+                min = Math.min(min, X[row][col]);
             }
+            minList.add(min);
         }
-        return min;
+
+        return minList;
     }
 
     /**
