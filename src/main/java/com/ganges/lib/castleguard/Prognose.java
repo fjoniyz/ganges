@@ -18,8 +18,8 @@ public class Prognose {
         String currentPath = Paths.get("").toAbsolutePath().toString();
 
         ArrayList<String> headers = new ArrayList<>();
-        headers.add("start_loading_time");
-        headers.add("end_loading_time");
+        headers.add("start_time_loading");
+        headers.add("end_time_loading");
         headers.add("kwh");
         headers.add("loading_potential");
 
@@ -38,13 +38,12 @@ public class Prognose {
                     String header = csvHeaders[i];
                     float value = Float.parseFloat(row[i]);
                     rowData.put(header, value);
-                    castleGuard.insertData(rowData);
-                    Optional<HashMap<String, Float>> anonData = castleGuard.tryGetOutputLine();
-                    if (anonData.isPresent()) {
-                        anonymizedData.put(i,anonData.get());
-                        System.out.println(anonData);
-                    }
                 }
+            castleGuard.insertData(rowData);
+            Optional<HashMap<String, Float>> anonData = castleGuard.tryGetOutputLine();
+            if (anonData.isPresent()) {
+                anonymizedData.put(1,anonData.get());
+                System.out.println(anonData);}
 
             }
         } catch (IOException | CsvValidationException e) {
