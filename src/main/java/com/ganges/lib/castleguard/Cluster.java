@@ -140,11 +140,6 @@ public class Cluster {
         if (!containsSensitiveAttr) {
             this.diversity.remove(element.getSensitiveAttr());
         }
-
-        for (Map.Entry<String, Range<Float>> header : this.ranges.entrySet()) {
-            header.setValue(
-                    Range.between(this.findMinimum(header.getKey()), this.findMaximum(header.getKey())));
-        }
     }
 
     /**
