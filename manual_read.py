@@ -21,8 +21,11 @@ def create_TaskSimEvCharging(x, power) :
     max_start = int(max(x["start_time_loading"]) / 1658177700)
     print("Min Start", min_start)
     print("Max Start", max_start)
-    min_duration = int(min(x["duration"]))
-    max_duration = int(max(x["duration"]))
+#     min_duration = int(min(x["duration"]))
+#     max_duration = int(max(x["duration"]))
+
+    min_duration = int(min(x["start_time_loading"]) / 1658177700) +60
+    max_duration = int(max(x["start_time_loading"]) / 1658177700) +60
     print(min_duration)
     print(max_duration)
 
