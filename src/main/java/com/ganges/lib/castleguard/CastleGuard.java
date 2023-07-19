@@ -125,6 +125,7 @@ public class CastleGuard {
             assert outputDiversity.size() >= config.getL();
 
             this.clusterManagement.addToAnonymizedClusters(cluster);
+            this.clusterManagement.removeFromNonAnonymizedClusters(cluster);
         }
     }
 
