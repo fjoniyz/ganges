@@ -1,3 +1,5 @@
+import math
+
 from confluent_kafka import Consumer, KafkaError
 from datetime import datetime
 import json
@@ -9,7 +11,7 @@ bootstrap_servers = 'localhost:9092'
 group_id = 'my-consumer-group'
 topic = 'output'
 
-def create_TaskSimEvCharging(x, power) :
+def create_TaskSimEvCharging(array_of_messages, power) :
     #each max is just min value plus one hour
 
     # Define the input date and time string
@@ -21,12 +23,23 @@ def create_TaskSimEvCharging(x, power) :
     # dt = datetime.fromisoformat(input_end_time_loading)
     # minutes_end_time_loading = dt.hour * 60 + dt.minute
 
-    min_start = x.startTimeLoading
-    max_start = int(min_start) + 60
-    min_duration = x.endTimeLoading - x.startTimeLoading
-    max_duration = min_duration + 60
-    min_demand = int(x.kwh)
-    max_demand = int(x.loadingPotential)
+    min_duration, min_demand, min_start = math.inf
+    max_duration, max_demand, max_start = -math.inf
+
+    for message in array_of_messages:
+        duration_message = message.start_time_loading - message.end_time_loading
+        if min_start > message.start_time_loading:
+            min_start = int(message.start_time_loading)
+        if max_start < message.start_time_loading:
+            max_start = int(message.start_time_loading)
+        if duration_message < min_duration:
+            min_duration = duration_message
+        if duration_message > max_duration:
+            max_duration = duration_message
+        if min_demand > message.kwh:
+            min_demand = int(message.kwh)
+        if max_demand < message.kwh:
+            max_demand = int(message.kwh)
 
     return prognose.TaskSimEvCharging(min_duration, max_duration, min_demand, max_demand, min_start, max_start, power)
 
