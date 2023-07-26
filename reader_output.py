@@ -11,8 +11,8 @@ bootstrap_servers = 'localhost:9092'
 group_id = 'my-consumer-group'
 topic = 'output'
 
-def create_TaskSimEvCharging(array_of_messages, power) :
-    #each max is just min value plus one hour
+def create_TaskSimEvCharging(message, power):
+    # each max is just min value plus one hour
 
     # Define the input date and time string
     # input_start_time_loading = x.start_time_loading
@@ -23,23 +23,37 @@ def create_TaskSimEvCharging(array_of_messages, power) :
     # dt = datetime.fromisoformat(input_end_time_loading)
     # minutes_end_time_loading = dt.hour * 60 + dt.minute
 
-    min_duration, min_demand, min_start = math.inf
-    max_duration, max_demand, max_start = -math.inf
+    min_start = math.inf
+    min_duration = math.inf
+    min_demand = math.inf
+    max_start = -math.inf
+    max_demand = -math.inf
+    max_duration = -math.inf
 
-    for message in array_of_messages:
-        duration_message = message.start_time_loading - message.end_time_loading
-        if min_start > message.start_time_loading:
-            min_start = int(message.start_time_loading)
-        if max_start < message.start_time_loading:
-            max_start = int(message.start_time_loading)
-        if duration_message < min_duration:
-            min_duration = duration_message
-        if duration_message > max_duration:
-            max_duration = duration_message
-        if min_demand > message.kwh:
-            min_demand = int(message.kwh)
-        if max_demand < message.kwh:
-            max_demand = int(message.kwh)
+    #TODO: the + 60 and + 20 values are just there because we only do one message at a time for the moment
+    #We're going to need something like:
+    # min_start = int(min(x["start_time_loading"]))
+    # max_start = int(max(x["start_time_loading"]))
+    #
+    # min_duration = int(min(x["duration"]))
+    # max_duration = int(max(x["duration"]))
+    #
+    # min_demand = int(min(x["kwh"]))
+    # max_demand = int(max(x["kwh"]))
+
+    duration_message = message.endTimeLoading - message.startTimeLoading
+    if min_start > message.startTimeLoading:
+        min_start = int(message.startTimeLoading)
+    if max_start < message.startTimeLoading:
+        max_start = int(message.startTimeLoading) + 60
+    if duration_message < min_duration:
+        min_duration = duration_message
+    if duration_message > max_duration:
+        max_duration = duration_message + 20
+    if min_demand > message.kwh:
+        min_demand = int(message.kwh)
+    if max_demand < message.kwh:
+        max_demand = int(message.kwh) + 20
 
     return prognose.TaskSimEvCharging(min_duration, max_duration, min_demand, max_demand, min_start, max_start, power)
 
@@ -72,11 +86,10 @@ try:
                 print(f"Error: {msg.error()}")
                 break
         x = json.loads(msg.value(), object_hook=lambda d: SimpleNamespace(**d))
-        print(x)
         # Process the message
         print(f"Received message: {msg.value().decode('utf-8')}")
         prognose.random.seed(prognose.pd.Timestamp.utcnow().dayofyear)
-        power = [1, 2, 3, 4]
+        power = [11.0, 22.0]
         task_instance = create_TaskSimEvCharging(x, power)
         d = {"col1": [task_instance.max_start, task_instance.min_start, task_instance.min_demand,
                       task_instance.max_demand, task_instance.min_duration, task_instance.max_duration],
@@ -99,17 +112,6 @@ try:
              "col11": [task_instance.max_start, task_instance.min_start, task_instance.min_demand,
                       task_instance.max_demand, task_instance.min_duration, task_instance.max_duration],
              }
-        # d = {"col1": [task_instance.max_start],
-        #      "col2": [task_instance.max_start],
-        #      "col3": [task_instance.max_start],
-        #      "col4": [task_instance.max_start],
-        #      "col5": [task_instance.max_start],
-        #      "col7": [task_instance.max_start],
-        #      "col8": [task_instance.max_start],
-        #      "col9": [task_instance.max_start],
-        #      "col10": [task_instance.max_start],
-        #      "col11": [task_instance.max_start],
-        #      }
         df = prognose.DataFrame(data=d)
         print(prognose.simulate_ev_forecast(df=df, cfg=task_instance))
 
