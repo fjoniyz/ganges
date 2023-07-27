@@ -1,4 +1,3 @@
 pyyaml==6.0
 numpy
 kafka-python==2.0.2
-faker
