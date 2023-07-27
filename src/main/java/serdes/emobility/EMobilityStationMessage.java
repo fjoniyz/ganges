@@ -25,6 +25,11 @@ public class EMobilityStationMessage implements Serializable, AnonymizedMessage 
     this.evUsage = evUsage;
   }
 
+  @Override
+  public double[] getValuesListFromKeys(String[] keys) {
+    return new double[0];
+  }
+
   public Double[] getValuesListByKeys(String[] keys) {
     List<Double> values = new ArrayList<>();
     for (String field : keys) {
