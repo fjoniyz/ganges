@@ -94,7 +94,7 @@ public class CastleGuard {
      * @param cluster
      */
     public void checkAndOutputCluster(Cluster cluster) {
-        float outputLoss = 0.0;
+        float outputLoss = 0F;
         Set<Float> outputPids = new HashSet<>();
         Set<Float> outputDiversity = new HashSet<>();
         boolean splittable =

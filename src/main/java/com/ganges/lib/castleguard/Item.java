@@ -12,6 +12,7 @@ public class Item {
     private Float sensitiveAttr;
     private Cluster parent;
     private Float pid;
+    private Float dpLoss = 0F;
 
     public Item(HashMap<String, Float> data, List<String> headers, String sensitiveAttr) {
         this.data = data;
