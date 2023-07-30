@@ -35,12 +35,17 @@ public class Item {
         return data;
     }
 
+    public Float getdpLoss(){
+        return this.dpLoss;
+    }
+
     public void removeData(String elem) {
         this.data.remove(elem);
     }
 
-    public void updateAttributes(String header, Float value) {
+    public void updateAttributes(String header, Float value, Float loss) {
         this.data.put(header, value);
+        this.dpLoss = loss;
     }
 
     public List<String> getHeaders() {

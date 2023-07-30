@@ -94,6 +94,7 @@ public class CastleGuard {
      * @param cluster
      */
     public void checkAndOutputCluster(Cluster cluster) {
+        float outputLoss = 0.0;
         Set<Float> outputPids = new HashSet<>();
         Set<Float> outputDiversity = new HashSet<>();
         boolean splittable =
@@ -107,6 +108,7 @@ public class CastleGuard {
         while (clusterIterator.hasNext()) {
             Cluster sCluster = clusterIterator.next();
             Iterator<Item> itemIterator = sCluster.getContents().iterator();
+            outputLoss += sCluster.informationLoss(global_ranges)
             while (itemIterator.hasNext()) {
                 Item item = itemIterator.next();
                 Item generalized = sCluster.generalise(item);
@@ -115,6 +117,8 @@ public class CastleGuard {
                 outputPids.add(item.getData().get("pid"));
                 outputDiversity.add(item.getSensitiveAttr());
                 itemsToSuppress.add(item);
+                outputLoss += item.getdpLoss();
+                
             }
             itemsToSuppress.forEach(this::suppressItem);
 
@@ -216,7 +220,7 @@ public class CastleGuard {
         // Add noise to original value
         float originalValue = data.get(header);
         float perturbedValue = originalValue + noise;
-        item.updateAttributes(header, perturbedValue);
+        item.updateAttributes(header, perturbedValue, noise);
       }
     }
   }
