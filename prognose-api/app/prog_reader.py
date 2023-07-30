@@ -45,7 +45,7 @@ def generate_prognose(topic):
         # We want 60 messages
         messages = []
 
-        while len(messages) < 60:
+        while len(messages) < 30:
             # Poll for messages
             response = consumer.poll(1.0)
             if response is None:

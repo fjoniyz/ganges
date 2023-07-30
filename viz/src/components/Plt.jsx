@@ -49,16 +49,18 @@ const Plt = ({ restProxyUrl, topic, messages }) => {
     }
   };
 
-  const handleProgCheckChange = () => {
+  const handleProgCheckChange = async () => {
     setprogCheck(!progCheck);
     if (!progCheck) {
-      porgPollIntervalId = setInterval(async () => {
+      (async function pollProgResults() {
         const messageResponse = await fetchProgResults("localhost:8080", topic);
         const progResult = JSON.parse(messageResponse.result)
         if (progResult) setProgResult(progResult);
-      }, 1500);
+        setTimeout(pollProgResults, 1);
+      })();
+
     } else {
-      clearInterval(porgPollIntervalId);
+      //clearInterval(porgPollIntervalId);
     }
   };
 
