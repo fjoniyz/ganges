@@ -11,6 +11,7 @@ import logging
 import os
 from generators_list import GENERATORS_LIST
 import time
+from tqdm import tqdm
 
 def preprocess_value(value):
     if type(value) == datetime.datetime:
@@ -28,7 +29,7 @@ def send_dataset(bootstrap_servers: List[str], dataset: Iterable, topic: str, he
     logging.info(f"Sending messages to topic '{topic}' on {bootstrap_servers} in 3 seconds")
     sleep(3)
 
-    for instance in dataset:
+    for instance in tqdm(dataset):
         instance_dict = {headers[i]: preprocess_value(instance[i]) for i in range(len(instance))}
         instance_dict['producer_timestamp'] = str(int(time.time() * 1000))
         msg = json.dumps(instance_dict)

@@ -31,15 +31,18 @@ public class PerformanceBenchmark {
 
     MetricsCollector metricsCollector = MetricsCollector.getInstance();
     metricsCollector.setFileName("consumer_results.csv");
+
     while (true) {
       ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
       for (ConsumerRecord<String, String> record : records) {
-        long consumerTimestamp = System.currentTimeMillis();
 
-        MetricsCollector.setConsumerTimestamps(record.key(), consumerTimestamp); // TODO: put the
-        // id into the
-        // record key
-        metricsCollector.saveMetricsToCSV();
+        if (!record.value().isEmpty()) {
+          long consumerTimestamp = System.currentTimeMillis();
+          for (String key : record.value().split(",")) {
+            MetricsCollector.setConsumerTimestamps(key, consumerTimestamp);
+          }
+          metricsCollector.saveMetricsToCSV();
+        }
 
         System.out.printf("offset = %d, key = %s, value = %s%n", record.offset(), record.key(), record.value());
       }

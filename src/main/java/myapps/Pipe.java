@@ -75,27 +75,33 @@ public class Pipe {
         contextValues.add(new AnonymizationItem(id, keyValueMap));
       }
       // Anonymization
+
       if (enableMonitoring) {
         MetricsCollector.setAnonEntryTimestamps(id, System.currentTimeMillis());
       }
       List<AnonymizationItem> output = algorithm.anonymize(contextValues);
       if (enableMonitoring) {
-        MetricsCollector.setAnonExitTimestamps(id, System.currentTimeMillis());
+        for (AnonymizationItem item : output) {
+          MetricsCollector.setAnonExitTimestamps(item.getId(), System.currentTimeMillis());
+        }
       }
       if (output.isEmpty()) {
         //TODO: Check what to return when no output is present
         return "";
       }
 
-      String outputString =
-          output.stream().map(dataRow -> dataRow.getValues().toString()).collect(Collectors.joining(
+      String idString =
+          output.stream().map(AnonymizationItem::getId).collect(Collectors.joining(
               ","));
+      String outputString = output.stream().map(dataRow -> dataRow.getValues().toString()).collect(Collectors.joining(","));
       if (enableMonitoring) {
-        MetricsCollector.setPipeExitTimestamps(id, System.currentTimeMillis());
+        for (AnonymizationItem item : output) {
+          MetricsCollector.setPipeExitTimestamps(item.getId(), System.currentTimeMillis());
+        }
         MetricsCollector.getInstance().saveMetricsToCSV();
       }
       System.out.println("result: " + outputString);
-      return outputString;
+      return idString;
     }
 
   public static String[] getFieldsToAnonymize() throws IOException {
@@ -216,6 +222,7 @@ public class Pipe {
               })
           .to(outputTopic, produced);
       Topology topology = streamsBuilder.build();
+
 
       try (KafkaStreams streams = new KafkaStreams(topology, props)) {
         final CountDownLatch latch = new CountDownLatch(1);
