@@ -7,6 +7,5 @@ public interface AnonymizedMessage {
 
   double[] getValuesListFromKeys(String[] keys);
 
-    public Double[] getValuesListByKeys(String[] keys);
-
+  public Double[] getValuesListByKeys(String[] keys);
 }
