@@ -1,6 +1,5 @@
 package myapps;
 
-import customSerdes.ChargingStationSerde;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -11,7 +10,6 @@ import java.util.concurrent.CountDownLatch;
 import customSerdes.ChargingStationDeserializer;
 import customSerdes.ChargingStationMessage;
 import customSerdes.ChargingStationSerializer;
-import org.apache.kafka.common.serialization.Deserializer;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.common.serialization.Serializer;
@@ -128,6 +126,7 @@ public class Pipe {
       ChargingStationSerializer<ChargingStationMessage> chargingStationSerializer = new ChargingStationSerializer<>();
       ChargingStationDeserializer<ChargingStationMessage> chargingStationDeserializer = new ChargingStationDeserializer<>(ChargingStationMessage.class);
       Serde<ChargingStationMessage> chargingStationMessageSerde = Serdes.serdeFrom(chargingStationSerializer, chargingStationDeserializer);
+
 
       props.load(inputStream);
       props.put(StreamsConfig.METADATA_MAX_AGE_CONFIG, "1000"); // Needed to prevent timeouts during broker startup.
