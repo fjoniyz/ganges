@@ -3,9 +3,14 @@ package com.ganges.lib.castleguard;
 import com.ganges.lib.castleguard.utils.ClusterManagement;
 import com.ganges.lib.castleguard.utils.LogUtils;
 import com.ganges.lib.castleguard.utils.Utils;
-
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
-
+import java.util.stream.Collectors;
+import myapps.AnonymizationAlgorithm;
+import myapps.AnonymizationItem;
 import org.apache.commons.lang3.Range;
 import org.apache.commons.math3.distribution.LaplaceDistribution;
 import org.apache.commons.math3.random.JDKRandomGenerator;
@@ -13,46 +18,136 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class CastleGuard {
-  private final CGConfig config;
-  private List<String> headers;
-  private String sensitiveAttr;
-  private Deque<Item> items = new ArrayDeque<>(); // a.k.a. global_tuples in castle.py
-  private HashMap<String, Range<Float>> globalRanges = new HashMap<>();
-  private double tau = Double.POSITIVE_INFINITY;
-  private ClusterManagement clusterManagement;
-  private Deque<Item> outputQueue = new ArrayDeque<>();
+public class CastleGuard implements AnonymizationAlgorithm {
 
   private final Logger logger = LoggerFactory.getLogger(CastleGuard.class);
+  private final List<String> headers;
+  private final String sensitiveAttr;
+  private final Deque<CGItem> items = new ArrayDeque<>(); // a.k.a. global_tuples in castle.py
+  private final HashMap<String, Range<Float>> globalRanges = new HashMap<>();
+  private final double tau = Double.POSITIVE_INFINITY;
+  private final int delta;
+  private final int beta;
+  private final int bigBeta;
+  private final double phi;
+  private final int k;
+  private final int l;
+  private final boolean useDiffPrivacy;
+  private final ClusterManagement clusterManagement;
+  private final Deque<CGItem> outputQueue = new ArrayDeque<>();
 
+    /**
+     * !Deprecated constructor
+     */
   public CastleGuard(CGConfig config, List<String> headers, String sensitiveAttr) {
-    this.config = config;
-    this.headers = headers;
-    this.sensitiveAttr = sensitiveAttr;
-    for (String header : headers) {
+    String[] parameters = getParameters();
+    this.k = Integer.parseInt(parameters[0]);
+    this.delta = Integer.parseInt(parameters[1]);
+    this.beta = Integer.parseInt(parameters[2]);
+    this.bigBeta = Integer.parseInt(parameters[3]);
+    int mu = Integer.parseInt(parameters[4]);
+    this.l = Integer.parseInt(parameters[5]);
+    this.phi = Double.parseDouble(parameters[6]);
+    this.useDiffPrivacy = Boolean.parseBoolean(parameters[7]);
+    this.headers = Arrays.asList(parameters[8].split(","));
+    this.sensitiveAttr = parameters[9];
+
+    for (String header : this.headers) {
       globalRanges.put(header, null);
     }
     this.clusterManagement =
         new ClusterManagement(
-            this.config.getK(), this.config.getL(), this.config.getMu(), headers, sensitiveAttr);
+            this.k, this.l, mu, this.headers, this.sensitiveAttr);
   }
+
+
+    public CastleGuard() {
+        String[] parameters = getParameters();
+        this.k = Integer.parseInt(parameters[0]);
+        this.delta = Integer.parseInt(parameters[1]);
+        this.beta = Integer.parseInt(parameters[2]);
+        this.bigBeta = Integer.parseInt(parameters[3]);
+        int mu = Integer.parseInt(parameters[4]);
+        this.l = Integer.parseInt(parameters[5]);
+        this.phi = Double.parseDouble(parameters[6]);
+        this.useDiffPrivacy = Boolean.parseBoolean(parameters[7]);
+        this.headers = Arrays.asList(parameters[8].split(","));
+        this.sensitiveAttr = parameters[9];
+
+        for (String header : this.headers) {
+            globalRanges.put(header, null);
+        }
+        this.clusterManagement =
+                new ClusterManagement(
+                        this.k, this.l, mu, this.headers, this.sensitiveAttr);
+    }
+
+    public static String[] getParameters() {
+        String[] result = new String[10];
+        String userDirectory = System.getProperty("user.dir");
+        try(InputStream inputStream = Files.newInputStream(Paths.get(userDirectory+"/src/main/resources/castleguard.properties"))){
+            Properties properties = new Properties();
+            properties.load(inputStream);
+            result[0] = properties.getProperty("k");
+            result[1] = properties.getProperty("delta");
+            result[2] = properties.getProperty("beta");
+            result[3] = properties.getProperty("bigBeta");
+            result[4] = properties.getProperty("mu");
+            result[5] = properties.getProperty("l");
+            result[6] = properties.getProperty("phi");
+            result[7] = properties.getProperty("useDiffPrivacy");
+            result[8] = properties.getProperty("headers");
+            result[9] = properties.getProperty("sensitive_attribute");
+            return result;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     public HashMap<String, Range<Float>> getGlobalRanges() {
         return globalRanges;
     }
+
     public ClusterManagement getClusterManagement() {
         return clusterManagement;
     }
-    public Deque<Item> getItems() {
+
+    public Deque<CGItem> getItems() {
         return items;
     }
-    public Optional<HashMap<String, Float>> tryGetOutputLine() {
+
+    public Optional<CGItem> tryGetOutputLine() {
         if (outputQueue.isEmpty()) {
             return Optional.empty();
         }
-        Item output = outputQueue.pop();
-        return Optional.of(output.getData());
+        CGItem output = outputQueue.pop();
+        return Optional.of(output);
     }
+
+    @Override
+    public List<AnonymizationItem> anonymize(List<AnonymizationItem> X) {
+        for (AnonymizationItem dataPoint : X) {
+            HashMap<String, Float> data = new HashMap<>();
+            for (String header : headers) {
+                float floatData = dataPoint.getValues().get(header).floatValue();
+                data.put(header, floatData);
+            }
+            CGItem item = new CGItem(dataPoint.getId(), data, this.headers,
+                this.sensitiveAttr);
+            insertData(item);
+        }
+        List<AnonymizationItem> outputItems = outputQueue.stream().map(cgItem -> {
+          //TODO: Unify value data type to avoid this mess
+                      Map<String, Double> values = cgItem.getData().entrySet().stream()
+                      .collect(Collectors.toMap(Map.Entry::getKey,
+                                                e -> e.getValue().doubleValue()));
+              return new AnonymizationItem(cgItem.getExternalId(), values);
+            }
+        ).toList();
+        outputQueue.clear();
+        return outputItems;
+    }
+
   /**
    * Inserts a new piece of data into the algorithm and updates the state, checking whether data
    * needs to be output as well
@@ -60,32 +155,37 @@ public class CastleGuard {
    * @param data: The element of data to insert into the algorithm
    */
     public void insertData(HashMap<String, Float> data) {
-        Random rand = new Random();
-        if (config.isUseDiffPrivacy() && rand.nextDouble() > config.getBigBeta()) {
-            logger.info("Suppressing the item");
-            return;
-        }
-        Item item = new Item(data, this.headers, this.sensitiveAttr);
-        updateGlobalRanges(item);
+        CGItem item = new CGItem("", data, this.headers, this.sensitiveAttr);
+        insertData(item);
+    }
 
-        if (config.isUseDiffPrivacy()) {
-            perturb(item);
-        }
-        Optional<Cluster> cluster = bestSelection(item);
-        if (!cluster.isPresent()) {
-            // Create new cluster
-            Cluster newCluster = new Cluster(this.headers);
-            this.clusterManagement.addToNonAnonymizedClusters(newCluster);
-            newCluster.insert(item);
-        } else {
-            cluster.get().insert(item);
-        }
+    public void insertData(CGItem item) {
+      Random rand = new Random();
+      if (this.useDiffPrivacy && rand.nextDouble() > this.bigBeta) {
+        logger.info("Suppressing the item");
+        return;
+      }
 
-        items.add(item);
-        if (items.size() > config.getDelta()) {
-            delayConstraint(items.pop());
-        }
-        this.clusterManagement.updateTau(this.globalRanges);
+      updateGlobalRanges(item);
+
+      if (this.useDiffPrivacy) {
+        perturb(item);
+      }
+      Optional<Cluster> cluster = bestSelection(item);
+      if (!cluster.isPresent()) {
+        // Create new cluster
+        Cluster newCluster = new Cluster(this.headers);
+        this.clusterManagement.addToNonAnonymizedClusters(newCluster);
+        newCluster.insert(item);
+      } else {
+        cluster.get().insert(item);
+      }
+
+      items.add(item);
+      if (items.size() > this.delta) {
+        delayConstraint(items.pop());
+      }
+      this.clusterManagement.updateTau(this.globalRanges);
     }
 
     /**
@@ -97,19 +197,19 @@ public class CastleGuard {
         Set<Float> outputPids = new HashSet<>();
         Set<Float> outputDiversity = new HashSet<>();
         boolean splittable =
-                cluster.getKSize() >= 2 * config.getK() && cluster.getDiversitySize() >= config.getL();
+                cluster.getKSize() >= 2 * this.k && cluster.getDiversitySize() >= this.l;
         List<Cluster> splitted =
                 splittable
                         ? this.clusterManagement.splitL(cluster, this.headers, this.globalRanges)
                         : List.of(cluster);
         Iterator<Cluster> clusterIterator = splitted.iterator();
-        List<Item> itemsToSuppress = new ArrayList<>();
+        List<CGItem> itemsToSuppress = new ArrayList<>();
         while (clusterIterator.hasNext()) {
             Cluster sCluster = clusterIterator.next();
-            Iterator<Item> itemIterator = sCluster.getContents().iterator();
+            Iterator<CGItem> itemIterator = sCluster.getContents().iterator();
             while (itemIterator.hasNext()) {
-                Item item = itemIterator.next();
-                Item generalized = sCluster.generalise(item);
+                CGItem item = itemIterator.next();
+                CGItem generalized = sCluster.generalise(item);
                 outputItem(generalized);
 
                 outputPids.add(item.getData().get("pid"));
@@ -121,8 +221,8 @@ public class CastleGuard {
             // Calculate loss
             this.clusterManagement.updateLoss(sCluster, globalRanges);
 
-            assert outputPids.size() >= config.getK();
-            assert outputDiversity.size() >= config.getL();
+            assert outputPids.size() >= this.k;
+            assert outputDiversity.size() >= this.l;
 
             this.clusterManagement.addToAnonymizedClusters(cluster);
         }
@@ -133,13 +233,13 @@ public class CastleGuard {
      *
      * @param item : The tuple to make decisions based on
      */
-    private void delayConstraint(@NonNull Item item) {
+    private void delayConstraint(@NonNull CGItem item) {
         List<Cluster> nonAnonClusters = this.clusterManagement.getNonAnonymizedClusters();
         List<Cluster> anonClusters = this.clusterManagement.getAnonymizedClusters();
 
         Cluster itemCluster = item.getCluster();
-        if (this.config.getK() <= itemCluster.getSize()
-                && this.config.getL() < itemCluster.getDiversitySize()) {
+        if (this.k <= itemCluster.getSize()
+                && this.l < itemCluster.getDiversitySize()) {
             checkAndOutputCluster(itemCluster);
             return;
         }
@@ -147,7 +247,7 @@ public class CastleGuard {
         Optional<Cluster> randomCluster =
                 anonClusters.stream().filter(c -> c.withinBounds(item)).findAny();
         if (randomCluster.isPresent()) {
-            Item generalised = randomCluster.get().generalise(item);
+            CGItem generalised = randomCluster.get().generalise(item);
             suppressItem(item);
             outputItem(generalised);
             return;
@@ -167,7 +267,7 @@ public class CastleGuard {
         checkAndOutputCluster(merged);
     }
 
-    private void outputItem(Item item) {
+    private void outputItem(CGItem item) {
         outputQueue.push(item);
     }
   
@@ -177,7 +277,7 @@ public class CastleGuard {
    *
    * @param item: The tuple to suppress
    */
-  public void suppressItem(Item item) {
+  public void suppressItem(CGItem item) {
       if (this.items.contains(item)) {
           List<Cluster> nonAnonClusters = this.clusterManagement.getNonAnonymizedClusters();
           this.items.remove(item);
@@ -195,7 +295,7 @@ public class CastleGuard {
    *
    * @param item: The tuple to be perturbed
    */
-  private void perturb(Item item) {
+  private void perturb(CGItem item) {
     HashMap<String, Float> data = item.getData();
 
     for (String header : this.headers) {
@@ -206,7 +306,7 @@ public class CastleGuard {
         double min_value = this.globalRanges.get(header).getMinimum();
 
         // Calaculate scale
-        double scale = Math.max((max_value - min_value), 1) / this.config.getPhi();
+        double scale = Math.max((max_value - min_value), 1) / this.phi;
 
         // Draw random noise from Laplace distribution
         JDKRandomGenerator rg = new JDKRandomGenerator();
@@ -228,7 +328,7 @@ public class CastleGuard {
      * @return Either a cluster for item to be inserted into, or null if a new cluster should be
      * created
      */
-    private Optional<Cluster> bestSelection(Item item) {
+    private Optional<Cluster> bestSelection(CGItem item) {
         List<Cluster> notAnonClusters = this.clusterManagement.getNonAnonymizedClusters();
 
         // Need to be tested
@@ -263,7 +363,7 @@ public class CastleGuard {
         }
 
         if (setCok.isEmpty()) {
-            if (this.config.getBeta() <= notAnonClusters.size()) {
+            if (this.beta <= notAnonClusters.size()) {
                 Random rand = new Random();
                 int randomIndex = rand.nextInt(setCmin.size());
                 List<Cluster> setCminList = new ArrayList<>(setCmin);
@@ -279,7 +379,7 @@ public class CastleGuard {
         return Optional.of(setCokList.get(randomIndex));
     }
 
-    void updateGlobalRanges(Item item) {
+    void updateGlobalRanges(CGItem item) {
         for (Map.Entry<String, Float> header : item.getData().entrySet()) {
             if (this.globalRanges.get(header.getKey()) == null) {
                 this.globalRanges.put(header.getKey(), Range.is(header.getValue()));
@@ -294,4 +394,6 @@ public class CastleGuard {
         // globalRanges.replaceAll(
         //        (h, v) -> Utils.updateRange(globalRanges.get(h), item.getData().get(h)));
     }
+
+
 }

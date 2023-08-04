@@ -24,7 +24,7 @@ public class ClusterManagementTest {
     private String sensitiveAttributeHeader;
 
 
-    private Item createItem(List<String> headers, Float pid, Float loadingTime, Float kwh, Float loadingPotential, Float sensitiveAttribute) {
+    private CGItem createItem(List<String> headers, Float pid, Float loadingTime, Float kwh, Float loadingPotential, Float sensitiveAttribute) {
         HashMap<String, Float> data = new HashMap<>();
         data.put("pid", pid);
         data.put("loading_time", loadingTime);
@@ -32,7 +32,7 @@ public class ClusterManagementTest {
         data.put("kwH", kwh);
         data.put("building_type", sensitiveAttribute);
 
-        return new Item(data, headers, this.sensitiveAttributeHeader);
+        return new CGItem(data, headers, this.sensitiveAttributeHeader);
     }
 
     @Before
@@ -56,19 +56,19 @@ public class ClusterManagementTest {
 
 
         // Set up dummy data for clusters
-        Item item1 = createItem(this.headers, 1F, 7000F, 44.5F, 7000F, 1F);
-        Item item2 = createItem(this.headers, 2F, 8000F, 55.5F, 9000F, 1F);
-        Item item3 = createItem(this.headers, 3F, 9000F, 66.5F, 9000F, 1F);
+        CGItem item1 = createItem(this.headers, 1F, 7000F, 44.5F, 7000F, 1F);
+        CGItem item2 = createItem(this.headers, 2F, 8000F, 55.5F, 9000F, 1F);
+        CGItem item3 = createItem(this.headers, 3F, 9000F, 66.5F, 9000F, 1F);
 
-        Item item4 = createItem(this.headers, 4F, 10000F, 77.5F, 12000F, 2F);
-        Item item5 = createItem(this.headers, 5F, 6000F, 38.5F, 20000F, 2F);
-        Item item6 = createItem(this.headers, 6F, 7000F, 44.5F, 15000F, 3F);
-        Item item7 = createItem(this.headers, 2F, 2000F, 10.5F, 9000F, 1F);
+        CGItem item4 = createItem(this.headers, 4F, 10000F, 77.5F, 12000F, 2F);
+        CGItem item5 = createItem(this.headers, 5F, 6000F, 38.5F, 20000F, 2F);
+        CGItem item6 = createItem(this.headers, 6F, 7000F, 44.5F, 15000F, 3F);
+        CGItem item7 = createItem(this.headers, 2F, 2000F, 10.5F, 9000F, 1F);
 
 
-        List<Item> c1_items = new ArrayList<>();
-        List<Item> c2_items = new ArrayList<>();
-        List<Item> c3_items = new ArrayList<>();
+        List<CGItem> c1_items = new ArrayList<>();
+        List<CGItem> c2_items = new ArrayList<>();
+        List<CGItem> c3_items = new ArrayList<>();
 
 
         c1_items.add(item1);
@@ -116,15 +116,15 @@ public class ClusterManagementTest {
         Cluster c1 = new Cluster(this.headers);
 
         // Set up dummy data for clusters
-        Item item1 = createItem(this.headers, 1F, 7000F, 44.5F, 7000F, 1F);
-        Item item2 = createItem(this.headers, 2F, 8000F, 55.5F, 9000F, 1F);
-        Item item3 = createItem(this.headers, 3F, 9000F, 66.5F, 9000F, 1F);
-        Item item4 = createItem(this.headers, 4F, 10000F, 77.5F, 12000F, 2F);
-        Item item5 = createItem(this.headers, 5F, 6000F, 38.5F, 20000F, 2F);
-        Item item6 = createItem(this.headers, 6F, 7000F, 44.5F, 15000F, 3F);
-        Item item7 = createItem(this.headers, 2F, 2000F, 10.5F, 9000F, 1F);
+        CGItem item1 = createItem(this.headers, 1F, 7000F, 44.5F, 7000F, 1F);
+        CGItem item2 = createItem(this.headers, 2F, 8000F, 55.5F, 9000F, 1F);
+        CGItem item3 = createItem(this.headers, 3F, 9000F, 66.5F, 9000F, 1F);
+        CGItem item4 = createItem(this.headers, 4F, 10000F, 77.5F, 12000F, 2F);
+        CGItem item5 = createItem(this.headers, 5F, 6000F, 38.5F, 20000F, 2F);
+        CGItem item6 = createItem(this.headers, 6F, 7000F, 44.5F, 15000F, 3F);
+        CGItem item7 = createItem(this.headers, 2F, 2000F, 10.5F, 9000F, 1F);
 
-        List<Item> c1_items = new ArrayList<>();
+        List<CGItem> c1_items = new ArrayList<>();
 
         c1_items.add(item1);
         c1_items.add(item2);
@@ -164,19 +164,19 @@ public class ClusterManagementTest {
         Cluster c1 = new Cluster(this.headers);
 
         // Set up dummy data for clusters
-        Item item1 = createItem(this.headers, 2F, 1000F, 44.5F, 7000F, 0F);
-        Item item2 = createItem(this.headers, 3F, 1000F, 44.5F, 7000F, 0F);
-        Item item3 = createItem(this.headers, 3F, 1000F, 44.5F, 7000F, 0F);
-        Item item4 = createItem(this.headers, 1F, 1000F, 44.5F, 7000F, 0F);
-        Item item5 = createItem(this.headers, 1F, 1000F, 44.5F, 7000F, 0F);
-        Item item6 = createItem(this.headers, 4F, 1000F, 44.5F, 7000F, 0F);
-        Item item7 = createItem(this.headers, 1F, 1000F, 44.5F, 7000F, 0F);
-        Item item8 = createItem(this.headers, 1F, 1000F, 44.5F, 7000F, 0F);
-        Item item9 = createItem(this.headers, 5F, 1000F, 44.5F, 7000F, 0F);
-        Item item10 = createItem(this.headers, 1F, 1000F, 44.5F, 7000F, 0F);
+        CGItem item1 = createItem(this.headers, 2F, 1000F, 44.5F, 7000F, 0F);
+        CGItem item2 = createItem(this.headers, 3F, 1000F, 44.5F, 7000F, 0F);
+        CGItem item3 = createItem(this.headers, 3F, 1000F, 44.5F, 7000F, 0F);
+        CGItem item4 = createItem(this.headers, 1F, 1000F, 44.5F, 7000F, 0F);
+        CGItem item5 = createItem(this.headers, 1F, 1000F, 44.5F, 7000F, 0F);
+        CGItem item6 = createItem(this.headers, 4F, 1000F, 44.5F, 7000F, 0F);
+        CGItem item7 = createItem(this.headers, 1F, 1000F, 44.5F, 7000F, 0F);
+        CGItem item8 = createItem(this.headers, 1F, 1000F, 44.5F, 7000F, 0F);
+        CGItem item9 = createItem(this.headers, 5F, 1000F, 44.5F, 7000F, 0F);
+        CGItem item10 = createItem(this.headers, 1F, 1000F, 44.5F, 7000F, 0F);
 
 
-        List<Item> c1_items = new ArrayList<>();
+        List<CGItem> c1_items = new ArrayList<>();
 
         c1_items.add(item1);
         c1_items.add(item2);
@@ -219,29 +219,29 @@ public class ClusterManagementTest {
         Cluster c1 = new Cluster(this.headers);
 
         // Set up dummy data for clusters
-        Item item1 = createItem(this.headers, 1F, 7000F, 44.5F, 7000F, 0F);
-        Item item2 = createItem(this.headers, 2F, 8000F, 55.5F, 9000F, 0F);
-        Item item3 = createItem(this.headers, 3F, 9000F, 66.5F, 9000F, 0F);
-        Item item4 = createItem(this.headers, 4F, 10000F, 77.5F, 12000F, 0F);
-        Item item5 = createItem(this.headers, 5F, 6000F, 38.5F, 20000F, 0F);
-        Item item6 = createItem(this.headers, 6F, 7000F, 44.5F, 15000F, 0F);
-        Item item7 = createItem(this.headers, 7F, 2000F, 10.5F, 9000F, 0F);
-        Item item8 = createItem(this.headers, 8F, 2300F, 30.5F, 9000F, 0F);
-        Item item9 = createItem(this.headers, 9F, 5000F, 20.5F, 9000F, 0F);
-        Item item10 = createItem(this.headers, 10F, 1000F, 17.5F, 9000F, 0F);
-        Item item11 = createItem(this.headers, 1F, 1000F, 17.5F, 9000F, 1F);
-        Item item12 = createItem(this.headers, 2F, 1000F, 17.5F, 9000F, 1F);
-        Item item13 = createItem(this.headers, 3F, 1000F, 17.5F, 9000F, 1F);
-        Item item14 = createItem(this.headers, 4F, 1000F, 17.5F, 9000F, 1F);
-        Item item15 = createItem(this.headers, 5F, 1000F, 17.5F, 9000F, 1F);
-        Item item16 = createItem(this.headers, 6F, 1000F, 17.5F, 9000F, 1F);
-        Item item17 = createItem(this.headers, 7F, 1000F, 17.5F, 9000F, 1F);
-        Item item18 = createItem(this.headers, 8F, 1000F, 17.5F, 9000F, 1F);
-        Item item19 = createItem(this.headers, 9F, 1000F, 17.5F, 9000F, 1F);
-        Item item20 = createItem(this.headers, 10F, 1000F, 17.5F, 9000F, 1F);
+        CGItem item1 = createItem(this.headers, 1F, 7000F, 44.5F, 7000F, 0F);
+        CGItem item2 = createItem(this.headers, 2F, 8000F, 55.5F, 9000F, 0F);
+        CGItem item3 = createItem(this.headers, 3F, 9000F, 66.5F, 9000F, 0F);
+        CGItem item4 = createItem(this.headers, 4F, 10000F, 77.5F, 12000F, 0F);
+        CGItem item5 = createItem(this.headers, 5F, 6000F, 38.5F, 20000F, 0F);
+        CGItem item6 = createItem(this.headers, 6F, 7000F, 44.5F, 15000F, 0F);
+        CGItem item7 = createItem(this.headers, 7F, 2000F, 10.5F, 9000F, 0F);
+        CGItem item8 = createItem(this.headers, 8F, 2300F, 30.5F, 9000F, 0F);
+        CGItem item9 = createItem(this.headers, 9F, 5000F, 20.5F, 9000F, 0F);
+        CGItem item10 = createItem(this.headers, 10F, 1000F, 17.5F, 9000F, 0F);
+        CGItem item11 = createItem(this.headers, 1F, 1000F, 17.5F, 9000F, 1F);
+        CGItem item12 = createItem(this.headers, 2F, 1000F, 17.5F, 9000F, 1F);
+        CGItem item13 = createItem(this.headers, 3F, 1000F, 17.5F, 9000F, 1F);
+        CGItem item14 = createItem(this.headers, 4F, 1000F, 17.5F, 9000F, 1F);
+        CGItem item15 = createItem(this.headers, 5F, 1000F, 17.5F, 9000F, 1F);
+        CGItem item16 = createItem(this.headers, 6F, 1000F, 17.5F, 9000F, 1F);
+        CGItem item17 = createItem(this.headers, 7F, 1000F, 17.5F, 9000F, 1F);
+        CGItem item18 = createItem(this.headers, 8F, 1000F, 17.5F, 9000F, 1F);
+        CGItem item19 = createItem(this.headers, 9F, 1000F, 17.5F, 9000F, 1F);
+        CGItem item20 = createItem(this.headers, 10F, 1000F, 17.5F, 9000F, 1F);
 
 
-        List<Item> c1_items = new ArrayList<>();
+        List<CGItem> c1_items = new ArrayList<>();
 
         c1_items.add(item1);
         c1_items.add(item2);
@@ -294,38 +294,38 @@ public class ClusterManagementTest {
         Cluster c1 = new Cluster(this.headers);
 
         // Set up dummy data for clusters
-        Item item1 = createItem(this.headers, 1F, 7000F, 44.5F, 7000F, 0F);
-        Item item2 = createItem(this.headers, 2F, 8000F, 55.5F, 9000F, 0F);
-        Item item3 = createItem(this.headers, 3F, 9000F, 66.5F, 9000F, 0F);
-        Item item4 = createItem(this.headers, 4F, 10000F, 77.5F, 12000F, 0F);
-        Item item5 = createItem(this.headers, 5F, 6000F, 38.5F, 20000F, 0F);
-        Item item6 = createItem(this.headers, 6F, 7000F, 44.5F, 15000F, 0F);
-        Item item7 = createItem(this.headers, 7F, 2000F, 10.5F, 9000F, 0F);
-        Item item8 = createItem(this.headers, 8F, 2300F, 30.5F, 9000F, 0F);
-        Item item9 = createItem(this.headers, 9F, 5000F, 20.5F, 9000F, 0F);
-        Item item10 = createItem(this.headers, 10F, 1000F, 7.5F, 9000F, 0F);
-        Item item11 = createItem(this.headers, 1F, 1000F, 10.5F, 9000F, 1F);
-        Item item12 = createItem(this.headers, 2F, 1000F, 13.5F, 9000F, 1F);
-        Item item13 = createItem(this.headers, 3F, 1000F, 16.5F, 9000F, 1F);
-        Item item14 = createItem(this.headers, 4F, 1000F, 11.5F, 9000F, 1F);
-        Item item15 = createItem(this.headers, 5F, 1000F, 19.5F, 9000F, 1F);
-        Item item16 = createItem(this.headers, 6F, 1342F, 9.5F, 9000F, 1F);
-        Item item17 = createItem(this.headers, 7F, 1230F, 16.5F, 9000F, 1F);
-        Item item18 = createItem(this.headers, 6F, 1120F, 15.5F, 9000F, 1F);
-        Item item19 = createItem(this.headers, 7F, 1020F, 17.5F, 9000F, 1F);
-        Item item20 = createItem(this.headers, 5F, 1030F, 17.5F, 9000F, 1F);
-        Item item21 = createItem(this.headers, 2F, 1030F, 17.5F, 9000F, 1F);
-        Item item22 = createItem(this.headers, 15F, 1300F, 17.5F, 9000F, 1F);
-        Item item23 = createItem(this.headers, 14F, 1500F, 17.5F, 9000F, 1F);
-        Item item24 = createItem(this.headers, 13F, 1200F, 37.5F, 9000F, 1F);
-        Item item25 = createItem(this.headers, 13F, 1400F, 57.5F, 9000F, 1F);
-        Item item26 = createItem(this.headers, 12F, 7700F, 44.5F, 15000F, 0F);
-        Item item27 = createItem(this.headers, 12F, 2800F, 10.5F, 9000F, 0F);
-        Item item28 = createItem(this.headers, 12F, 2600F, 30.5F, 9000F, 3F);
-        Item item29 = createItem(this.headers, 12F, 5500F, 20.5F, 9000F, 3F);
-        Item item30 = createItem(this.headers, 11F, 1200F, 17.5F, 9000F, 3F);
+        CGItem item1 = createItem(this.headers, 1F, 7000F, 44.5F, 7000F, 0F);
+        CGItem item2 = createItem(this.headers, 2F, 8000F, 55.5F, 9000F, 0F);
+        CGItem item3 = createItem(this.headers, 3F, 9000F, 66.5F, 9000F, 0F);
+        CGItem item4 = createItem(this.headers, 4F, 10000F, 77.5F, 12000F, 0F);
+        CGItem item5 = createItem(this.headers, 5F, 6000F, 38.5F, 20000F, 0F);
+        CGItem item6 = createItem(this.headers, 6F, 7000F, 44.5F, 15000F, 0F);
+        CGItem item7 = createItem(this.headers, 7F, 2000F, 10.5F, 9000F, 0F);
+        CGItem item8 = createItem(this.headers, 8F, 2300F, 30.5F, 9000F, 0F);
+        CGItem item9 = createItem(this.headers, 9F, 5000F, 20.5F, 9000F, 0F);
+        CGItem item10 = createItem(this.headers, 10F, 1000F, 7.5F, 9000F, 0F);
+        CGItem item11 = createItem(this.headers, 1F, 1000F, 10.5F, 9000F, 1F);
+        CGItem item12 = createItem(this.headers, 2F, 1000F, 13.5F, 9000F, 1F);
+        CGItem item13 = createItem(this.headers, 3F, 1000F, 16.5F, 9000F, 1F);
+        CGItem item14 = createItem(this.headers, 4F, 1000F, 11.5F, 9000F, 1F);
+        CGItem item15 = createItem(this.headers, 5F, 1000F, 19.5F, 9000F, 1F);
+        CGItem item16 = createItem(this.headers, 6F, 1342F, 9.5F, 9000F, 1F);
+        CGItem item17 = createItem(this.headers, 7F, 1230F, 16.5F, 9000F, 1F);
+        CGItem item18 = createItem(this.headers, 6F, 1120F, 15.5F, 9000F, 1F);
+        CGItem item19 = createItem(this.headers, 7F, 1020F, 17.5F, 9000F, 1F);
+        CGItem item20 = createItem(this.headers, 5F, 1030F, 17.5F, 9000F, 1F);
+        CGItem item21 = createItem(this.headers, 2F, 1030F, 17.5F, 9000F, 1F);
+        CGItem item22 = createItem(this.headers, 15F, 1300F, 17.5F, 9000F, 1F);
+        CGItem item23 = createItem(this.headers, 14F, 1500F, 17.5F, 9000F, 1F);
+        CGItem item24 = createItem(this.headers, 13F, 1200F, 37.5F, 9000F, 1F);
+        CGItem item25 = createItem(this.headers, 13F, 1400F, 57.5F, 9000F, 1F);
+        CGItem item26 = createItem(this.headers, 12F, 7700F, 44.5F, 15000F, 0F);
+        CGItem item27 = createItem(this.headers, 12F, 2800F, 10.5F, 9000F, 0F);
+        CGItem item28 = createItem(this.headers, 12F, 2600F, 30.5F, 9000F, 3F);
+        CGItem item29 = createItem(this.headers, 12F, 5500F, 20.5F, 9000F, 3F);
+        CGItem item30 = createItem(this.headers, 11F, 1200F, 17.5F, 9000F, 3F);
 
-        List<Item> c1_items = new ArrayList<>();
+        List<CGItem> c1_items = new ArrayList<>();
 
         c1_items.add(item1);
         c1_items.add(item2);

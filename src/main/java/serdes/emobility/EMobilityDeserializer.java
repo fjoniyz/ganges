@@ -1,11 +1,12 @@
 package serdes.emobility;
 
-import java.util.Map;
-import org.apache.kafka.common.serialization.Deserializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.Map;
 import org.apache.commons.lang3.SerializationException;
+import org.apache.kafka.common.serialization.Deserializer;
+
 public class EMobilityDeserializer<T> implements Deserializer<T> {
-  private ObjectMapper om = new ObjectMapper();
+  private final ObjectMapper om = new ObjectMapper();
   private Class<T> type;
 
   public EMobilityDeserializer(Class<T> type){

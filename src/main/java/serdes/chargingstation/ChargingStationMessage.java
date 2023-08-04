@@ -1,10 +1,9 @@
 package serdes.chargingstation;
-import java.io.Serializable;
-import java.util.UUID;
-
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonRootName;
+import java.io.Serializable;
+import java.util.UUID;
 import lombok.Data;
 import serdes.AnonymizedMessage;
 

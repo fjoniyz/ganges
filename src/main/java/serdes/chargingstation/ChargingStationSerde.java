@@ -1,10 +1,9 @@
 package serdes.chargingstation;
 
-import org.apache.kafka.common.serialization.Serde;
-
 import java.util.Map;
-import serdes.Serializer;
+import org.apache.kafka.common.serialization.Serde;
 import serdes.Deserializer;
+import serdes.Serializer;
 
 public class ChargingStationSerde implements Serde<ChargingStationMessage> {
     final private Serializer<ChargingStationMessage> serializer;

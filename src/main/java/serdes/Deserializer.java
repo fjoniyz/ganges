@@ -1,12 +1,11 @@
 package serdes;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.Map;
 import org.apache.commons.lang3.SerializationException;
 
-import java.util.Map;
-
 public class Deserializer<T> implements org.apache.kafka.common.serialization.Deserializer<T> {
-    private ObjectMapper om = new ObjectMapper();
+    private final ObjectMapper om = new ObjectMapper();
     private Class<T> type;
 
     public Deserializer(Class<T> type){
