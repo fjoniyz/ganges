@@ -3,6 +3,8 @@ package myapps;
 import com.lambdaworks.redis.RedisClient;
 import com.lambdaworks.redis.RedisConnection;
 import com.lambdaworks.redis.RedisURI;
+
+import java.util.Collections;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -37,43 +39,46 @@ public class DataRepository {
 
     /**
      * Save value in cache
-     * @param value value to be saved
+     * @param values
      */
-    public void saveValue(String value) {
-        String key = Integer.toString(ThreadLocalRandom.current().nextInt(0, 1000 + 1));
-        connection.set(key, value);
-    }
-
-    public void saveValues(String key, HashMap<String, Double> values) {
+    public void saveValues(HashMap<String, Double> values) {
+        int lastKey = getHighestKey();
+        String key = Integer.toString(lastKey + 1);
         for (Map.Entry<String, Double> value : values.entrySet()) {
             connection.hset(key, value.getKey(), value.getValue().toString());
         }
     }
 
-    /**
-     * Get all saved values from cache
-     * @return array of saved values
-     */
-    public List<String> getValues(){
+    public List<AnonymizationItem> getValuesByKeys(String[] valueKeys) {
         List<String> keys = connection.keys("*");
-        List<String> values = new ArrayList<>();
+        List<Integer> keysAsInts = new ArrayList<>();
         for(String key: keys){
-            values.add(connection.get(key));
+            keysAsInts.add(Integer.parseInt(key));
+        }
+        Collections.sort(keysAsInts);
+        List<AnonymizationItem> values = new ArrayList<>();
+        for (Integer redisKey : keysAsInts) {
+            HashMap<String, Double> entry = new HashMap<>();
+            String id = redisKey.toString();
+            AnonymizationItem anonymizationItem = new AnonymizationItem(id, entry);
+            for(int i = 0; i < valueKeys.length; i++) {
+                entry.put(valueKeys[i], Double.parseDouble(connection.hget(Integer.toString(redisKey),
+                        valueKeys[i])));
+            }
+            values.add(anonymizationItem);
         }
         return values;
     }
 
-    public List<AnonymizationItem> getValuesByKeys(String[] entryKeys) {
-        List<AnonymizationItem> entries = new ArrayList<>();
-        for (String redisKey : connection.keys("*")) {
-            HashMap<String, Double> entry = new HashMap<>();
-            for (int i = 0; i < entryKeys.length; i++) {
-                entry.put(entryKeys[i], Double.parseDouble(connection.hget(redisKey,
-                    entryKeys[i])));
+    public int getHighestKey() {
+        List<String> keys = connection.keys("*");
+        int maxKey = 0;
+        for(String s : keys){
+            int key = Integer.parseInt(s);
+            if(key > maxKey){
+                maxKey = key;
             }
-            AnonymizationItem item = new AnonymizationItem(redisKey, entry);
-            entries.add(item);
         }
-        return entries;
+        return maxKey;
     }
 }

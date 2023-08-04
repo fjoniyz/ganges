@@ -3,6 +3,7 @@ package myapps;
 import com.ganges.lib.castleguard.CastleGuard;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
@@ -57,7 +58,7 @@ public class Pipe {
         dataRepository.open();
 
         // Retrieve non-anonymized data from cache
-        dataRepository.saveValues(id, keyValueMap);
+        dataRepository.saveValues(keyValueMap);
 
         // Here we assume that for one message type the values are stored consistently
         contextValues = dataRepository.getValuesByKeys(fields);
@@ -67,18 +68,26 @@ public class Pipe {
       }
       // Anonymization
       List<AnonymizationItem> output = algorithm.anonymize(contextValues);
-
+      Map<String, Double> lastItem = output.get(output.size() - 1).getValues();
       if (output.isEmpty()) {
         //TODO: Check what to return when no output is present
-        return "";
+        return "Output was empty";
       }
 
-
-      String outputString =
-          output.stream().map(dataRow -> dataRow.getValues().toString()).collect(Collectors.joining(
-              ","));
-      System.out.println("result: " + outputString);
-      return outputString;
+      if(message instanceof ChargingStationMessage) {
+          ((ChargingStationMessage) message).setKwh(lastItem.get("kwh").floatValue());
+          ((ChargingStationMessage) message).setLoadingPotential((int) lastItem.get("loading_potential").floatValue());
+          Serializer<ChargingStationMessage> serializer = new Serializer<>();
+          byte[] json = serializer.serialize("output", (ChargingStationMessage) message);
+          return new String(json, StandardCharsets.UTF_8);
+      }else if(message instanceof EMobilityStationMessage){
+          ((EMobilityStationMessage) message).setEvUsage(lastItem.get("evUsage").floatValue());
+          Serializer<EMobilityStationMessage> serializer = new Serializer<>();
+          byte[] json = serializer.serialize("output", (EMobilityStationMessage) message);
+          System.out.println(new String(json, StandardCharsets.UTF_8));
+          return new String(json, StandardCharsets.UTF_8);
+      }
+      return "";
     }
 
     public static String[] getFieldsToAnonymize() throws IOException {
