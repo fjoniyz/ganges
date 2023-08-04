@@ -1,14 +1,12 @@
-package myapps;
+package com.ganges.lib.doca;
 
+import com.ganges.lib.AnonymizationAlgorithm;
+import com.ganges.lib.AnonymizationItem;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
+import java.util.*;
 
 import java.io.*;
-import java.util.Map;
-import java.util.Properties;
 
 public class Doca implements AnonymizationAlgorithm {
 
@@ -68,7 +66,6 @@ public class Doca implements AnonymizationAlgorithm {
         }
     }
 
-    @Override
     public List<Map<String, Double>> anonymize(List<Map<String, Double>> X) {
         if (X.size() == 0 || X.get(0).size() == 0) {
             return new ArrayList<>();
@@ -99,6 +96,39 @@ public class Doca implements AnonymizationAlgorithm {
         }
         return outputResult;
     }
+
+    public List<AnonymizationItem> anonymizeItem(List<AnonymizationItem> X) {
+        if (X.size() == 0 || X.get(0).getValues().size() == 0) {
+            return new ArrayList<>();
+        }
+
+        // Preserving value order through anonymization input/output
+        ArrayList<String> headers = new ArrayList<>(X.get(0).getValues().keySet());
+
+        // Convert map to double array
+        double[][] docaInput = new double[X.size()][];
+        for (int i = 0; i < X.size(); i++) {
+            docaInput[i] = new double[X.get(i).getValues().size()];
+            for (int headerId = 0; headerId < headers.size(); headerId++) {
+                docaInput[i][headerId] = X.get(i).getValues().get(headers.get(headerId));
+            }
+        }
+
+        double[][] result = anonymize(docaInput);
+
+        // Convert double array to map
+        List<AnonymizationItem> outputResult = new ArrayList<>();
+        for (int i = 0; i < result.length; i++) {
+            Map<String, Double> dataRowMap = new LinkedHashMap<>();
+            for (int headerId = 0; headerId < headers.size(); headerId++) {
+                dataRowMap.put(headers.get(headerId), result[i][headerId]);
+            }
+            AnonymizationItem item = new AnonymizationItem(X.get(i).getId(), dataRowMap);
+            outputResult.add(item);
+        }
+        return outputResult;
+    }
+
 
 
     public double[][] anonymize(
