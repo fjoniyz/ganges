@@ -119,8 +119,8 @@ public class CastleGuardTest {
         castle.insertData(dataFour);
         castle.insertData(dataFive);
         castle.insertData(dataSix);
-        Deque<Item> items =  this.castle.getItems();
-        for(Item item: items){
+        Deque<CGItem> items =  this.castle.getItems();
+        for(CGItem item: items){
             // before the operation the item is within a cluster
             Assert.assertNotEquals(null, item.getCluster());
             Assert.assertTrue(this.castle.getItems().contains(item));
@@ -149,7 +149,7 @@ public class CastleGuardTest {
     public void suppressNonItemTest() {
         preparation(3, 10, 5, 1, 5, 1, 100 * Math.log(2), true);
         HashMap<String, Float> data = createItem(Arrays.asList(1.0F, 200.0F, 5.0F));
-        Item item = new Item(data, this.headers, null);
+        CGItem item = new CGItem(data, this.headers, null);
 
         castle.suppressItem(item);
 
@@ -175,7 +175,7 @@ public class CastleGuardTest {
         dataOne.put(headers.get(1), 200.0F);
         dataOne.put(headers.get(2), 5.0F);
 
-        Item one = new Item(dataOne, headers, "station");
+        CGItem one = new CGItem(dataOne, headers, "station");
 
         CGConfig config = new CGConfig(3, 10, 5, 1, 5, 1, 100 * Math.log(2), true);
         CastleGuard castle = new CastleGuard(config, headers, null);
@@ -193,7 +193,7 @@ public class CastleGuardTest {
         dataTwo.put(headers.get(1), 300.0F);
         dataTwo.put(headers.get(2), 4.0F);
 
-        Item two = new Item(dataTwo, headers, "station");
+        CGItem two = new CGItem(dataTwo, headers, "station");
         castle.updateGlobalRanges(two);
         Assert.assertEquals(castle.getGlobalRanges(), newGlobalRanges);
       }
