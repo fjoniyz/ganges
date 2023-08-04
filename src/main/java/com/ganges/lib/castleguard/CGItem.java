@@ -3,13 +3,12 @@ package com.ganges.lib.castleguard;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 public class CGItem {
-    private HashMap<String, Float> data;
-    private List<String> headers;
-    private Float sensitiveAttr;
+    private final HashMap<String, Float> data;
+    private final List<String> headers;
+    private final Float sensitiveAttr;
     private Cluster parent;
     private Float pid;
     private String externalId;

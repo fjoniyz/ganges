@@ -2,11 +2,10 @@ package com.ganges.lib.doca;
 
 import com.ganges.lib.AnonymizationAlgorithm;
 import com.ganges.lib.AnonymizationItem;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
-
-import java.io.*;
 
 public class Doca implements AnonymizationAlgorithm {
 

@@ -1,24 +1,22 @@
 package com.ganges.lib.castleguard.utils;
 
+import com.ganges.lib.castleguard.CGItem;
+import com.ganges.lib.castleguard.Cluster;
 import java.util.*;
 import java.util.stream.Collectors;
-
 import org.apache.commons.lang3.Range;
-
-import com.ganges.lib.castleguard.Cluster;
-import com.ganges.lib.castleguard.CGItem;
 
 public class ClusterManagement {
 
-    private int k;
-    private int l;
-    private int mu;
-    private List<Cluster> bigGamma = new ArrayList<>(); // Set of non-ks anonymised clusters
-    private List<Cluster> bigOmega = new ArrayList<>(); // Set of ks anonymised clusters
-    private List<String> headers;
-    private String sensitiveAttribute;
+    private final int k;
+    private final int l;
+    private final int mu;
+    private final List<Cluster> bigGamma = new ArrayList<>(); // Set of non-ks anonymised clusters
+    private final List<Cluster> bigOmega = new ArrayList<>(); // Set of ks anonymised clusters
+    private final List<String> headers;
+    private final String sensitiveAttribute;
     private double tau;
-    private List<Float> recentLosses = new ArrayList<>();
+    private final List<Float> recentLosses = new ArrayList<>();
 
     public ClusterManagement(int k, int l, int mu, List<String> headers, String sensitiveAttribute) {
         this.k = k;

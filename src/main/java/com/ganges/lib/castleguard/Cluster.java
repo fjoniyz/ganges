@@ -1,14 +1,12 @@
 package com.ganges.lib.castleguard;
 
 import com.ganges.lib.castleguard.utils.Utils;
-
 import java.util.*;
-
 import org.apache.commons.lang3.Range;
 
 public class Cluster {
     private final Utils utils;
-    private List<CGItem> contents;
+    private final List<CGItem> contents;
     private Map<String, Range<Float>> ranges;
     private Set<Float> diversity;
     private Map<String, Float> sampleValues;
@@ -158,7 +156,7 @@ public class Cluster {
         for (Map.Entry<String, Range<Float>> header : this.ranges.entrySet()) {
             if (!this.sampleValues.containsKey(header.getKey())) {
                 this.sampleValues.put(
-                        header.getKey(), this.utils.randomChoice(this.contents).getData().get(header.getKey()));
+                        header.getKey(), Utils.randomChoice(this.contents).getData().get(header.getKey()));
             }
             item.removeHeaders("pid");
             item.getData().put("min" + header.getKey(), header.getValue().getMinimum());

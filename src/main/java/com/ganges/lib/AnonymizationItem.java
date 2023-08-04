@@ -4,8 +4,8 @@ import java.util.Map;
 import java.util.Objects;
 
 public class AnonymizationItem {
-  private String id;
-  private Map<String, Double> values;
+  private final String id;
+  private final Map<String, Double> values;
 
   public AnonymizationItem(String id, Map<String, Double> values) {
     this.id = id;

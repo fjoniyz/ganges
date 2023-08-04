@@ -1,18 +1,16 @@
 package com.ganges.lib.castleguard;
 
+import com.ganges.lib.AnonymizationAlgorithm;
+import com.ganges.lib.AnonymizationItem;
 import com.ganges.lib.castleguard.utils.ClusterManagement;
 import com.ganges.lib.castleguard.utils.LogUtils;
 import com.ganges.lib.castleguard.utils.Utils;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
-
-import com.ganges.lib.AnonymizationAlgorithm;
-import com.ganges.lib.AnonymizationItem;
 import org.apache.commons.lang3.Range;
 import org.apache.commons.math3.distribution.LaplaceDistribution;
 import org.apache.commons.math3.random.JDKRandomGenerator;
@@ -22,23 +20,21 @@ import org.slf4j.LoggerFactory;
 
 public class CastleGuard implements AnonymizationAlgorithm {
 
-  private List<String> headers;
-  private String sensitiveAttr;
-  private Deque<CGItem> items = new ArrayDeque<>(); // a.k.a. global_tuples in castle.py
-  private HashMap<String, Range<Float>> globalRanges = new HashMap<>();
-  private double tau = Double.POSITIVE_INFINITY;
-  private int delta;
-  private int beta;
-  private double bigBeta;
-  private double phi;
-  private int k;
-  private int l;
-  private boolean useDiffPrivacy;
-
-  private ClusterManagement clusterManagement;
-  private Deque<CGItem> outputQueue = new ArrayDeque<>();
-
   private final Logger logger = LoggerFactory.getLogger(CastleGuard.class);
+  private final List<String> headers;
+  private final String sensitiveAttr;
+  private final Deque<CGItem> items = new ArrayDeque<>(); // a.k.a. global_tuples in castle.py
+  private final HashMap<String, Range<Float>> globalRanges = new HashMap<>();
+  private final double tau = Double.POSITIVE_INFINITY;
+  private final int delta;
+  private final int beta;
+  private final double bigBeta;
+  private final double phi;
+  private final int k;
+  private final int l;
+  private final boolean useDiffPrivacy;
+  private final ClusterManagement clusterManagement;
+  private final Deque<CGItem> outputQueue = new ArrayDeque<>();
 
     /**
      * !Deprecated constructor
@@ -86,15 +82,40 @@ public class CastleGuard implements AnonymizationAlgorithm {
                         this.k, this.l, mu, this.headers, this.sensitiveAttr);
     }
 
+    public static String[] getParameters() {
+        String[] result = new String[10];
+        String userDirectory = System.getProperty("user.dir");
+        try(InputStream inputStream = Files.newInputStream(Paths.get(userDirectory+"/src/main/resources/castleguard.properties"))){
+            Properties properties = new Properties();
+            properties.load(inputStream);
+            result[0] = properties.getProperty("k");
+            result[1] = properties.getProperty("delta");
+            result[2] = properties.getProperty("beta");
+            result[3] = properties.getProperty("bigBeta");
+            result[4] = properties.getProperty("mu");
+            result[5] = properties.getProperty("l");
+            result[6] = properties.getProperty("phi");
+            result[7] = properties.getProperty("useDiffPrivacy");
+            result[8] = properties.getProperty("headers");
+            result[9] = properties.getProperty("sensitive_attribute");
+            return result;
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     public HashMap<String, Range<Float>> getGlobalRanges() {
         return globalRanges;
     }
+
     public ClusterManagement getClusterManagement() {
         return clusterManagement;
     }
+
     public Deque<CGItem> getItems() {
         return items;
     }
+
     public Optional<CGItem> tryGetOutputLine() {
         if (outputQueue.isEmpty()) {
             return Optional.empty();
@@ -132,29 +153,6 @@ public class CastleGuard implements AnonymizationAlgorithm {
     outputQueue.clear();
     return outputItems;
   }
-
-
-    public static String[] getParameters() {
-        String[] result = new String[10];
-        String userDirectory = System.getProperty("user.dir");
-        try(InputStream inputStream = Files.newInputStream(Paths.get(userDirectory+"/src/main/resources/castleguard.properties"))){
-            Properties properties = new Properties();
-            properties.load(inputStream);
-            result[0] = properties.getProperty("k");
-            result[1] = properties.getProperty("delta");
-            result[2] = properties.getProperty("beta");
-            result[3] = properties.getProperty("bigBeta");
-            result[4] = properties.getProperty("mu");
-            result[5] = properties.getProperty("l");
-            result[6] = properties.getProperty("phi");
-            result[7] = properties.getProperty("useDiffPrivacy");
-            result[8] = properties.getProperty("headers");
-            result[9] = properties.getProperty("sensitive_attribute");
-            return result;
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-    }
 
   /**
    * Inserts a new piece of data into the algorithm and updates the state, checking whether data
