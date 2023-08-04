@@ -1,7 +1,6 @@
 package myapps;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ganges.lib.doca.Doca;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -24,7 +23,6 @@ import org.apache.kafka.streams.kstream.Produced;
 
 import java.util.*;
 import serdes.emobility.EMobilityStationMessage;
-import serdes.emobility.EMobilityStationSerde;
 
 public class Pipe {
 

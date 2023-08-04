@@ -1,25 +1,22 @@
 package com.ganges.lib.castleguard.utils;
 
-import java.sql.Array;
+import com.ganges.lib.castleguard.CGItem;
+import com.ganges.lib.castleguard.Cluster;
 import java.util.*;
 import java.util.stream.Collectors;
-
 import org.apache.commons.lang3.Range;
-
-import com.ganges.lib.castleguard.Cluster;
-import com.ganges.lib.castleguard.Item;
 
 public class ClusterManagement {
 
-    private int k;
-    private int l;
-    private int mu;
-    private List<Cluster> bigGamma = new ArrayList<>(); // Set of non-ks anonymised clusters
-    private List<Cluster> bigOmega = new ArrayList<>(); // Set of ks anonymised clusters
-    private List<String> headers;
-    private String sensitiveAttribute;
+    private final int k;
+    private final int l;
+    private final int mu;
+    private final List<Cluster> bigGamma = new ArrayList<>(); // Set of non-ks anonymised clusters
+    private final List<Cluster> bigOmega = new ArrayList<>(); // Set of ks anonymised clusters
+    private final List<String> headers;
+    private final String sensitiveAttribute;
     private double tau;
-    private List<Float> recentLosses = new ArrayList<>();
+    private final List<Float> recentLosses = new ArrayList<>();
 
     public ClusterManagement(int k, int l, int mu, List<String> headers, String sensitiveAttribute) {
         this.k = k;
@@ -66,7 +63,7 @@ public class ClusterManagement {
         List<Cluster> sc = new ArrayList<>();
 
         // Group every tuple by the sensitive attribute and pid
-        Map<Float, List<Item>> buckets = generateBuckets(c);
+        Map<Float, List<CGItem>> buckets = generateBuckets(c);
 
         // If number of buckets (sensitive Attributes) is smaller than l, return the cluster
         if (buckets.size() < l) {
@@ -76,8 +73,8 @@ public class ClusterManagement {
 
         // Check the number of distinct PIDs in the buckets
         Set<Float> availablePids = new HashSet<>();
-        for (List<Item> bucket : buckets.values()) {
-            Set<Float> ids = bucket.stream().map(Item::getPid).collect(Collectors.toSet());
+        for (List<CGItem> bucket : buckets.values()) {
+            Set<Float> ids = bucket.stream().map(CGItem::getPid).collect(Collectors.toSet());
             availablePids.addAll(ids);
         }
 
@@ -91,8 +88,8 @@ public class ClusterManagement {
             Random random = new Random();
             Float randomSensitiveAttribute = bucketKeys.get(random.nextInt(bucketKeys.size()));
 
-            List<Item> bucket = buckets.get(randomSensitiveAttribute);
-            Item t = bucket.remove(random.nextInt(bucket.size()));
+            List<CGItem> bucket = buckets.get(randomSensitiveAttribute);
+            CGItem t = bucket.remove(random.nextInt(bucket.size()));
 
             // Create a new subcluster over t
             Cluster cnew = new Cluster(headers);
@@ -106,19 +103,19 @@ public class ClusterManagement {
             List<Float> emptyBuckets = new ArrayList<>();
 
             // Go through each bucket. Sort the bucket by the enlargement value of that cluster. Insert the calculated amount of tuples in a new cluster
-            for (Map.Entry<Float, List<Item>> entry : buckets.entrySet()) {
+            for (Map.Entry<Float, List<CGItem>> entry : buckets.entrySet()) {
                 Float currentSensitiveAttribute = entry.getKey();
-                List<Item> currentBucket = entry.getValue();
+                List<CGItem> currentBucket = entry.getValue();
 
                 // Sort the bucket by the enlargement value of that cluster - use only the tuples with available PIDs (unused in this bucket/distinct)
-                List<Item> availableTuples = currentBucket.stream()
+                List<CGItem> availableTuples = currentBucket.stream()
                         .filter(item -> availablePids.contains(item.getPid()))
                         .sorted(Comparator.comparingDouble(tuple -> cnew.tupleEnlargement(tuple, globalRanges)))
                         .collect(Collectors.toList());
 
                 // Count the number of tuples we have
                 int totalTuples = 0;
-                for (List<Item> b : buckets.values()) {
+                for (List<CGItem> b : buckets.values()) {
                     totalTuples += b.size();
 
                     // EXPERIMENTAL - count only the tuples with available PIDs
@@ -132,10 +129,10 @@ public class ClusterManagement {
                 // int chosenCount = (int) Math.max(k * (availableTuples.size() / (double) totalTuples), 1);
 
                 // Get subset Tj of "choosenCount" tuples from the bucket
-                List<Item> subset = availableTuples.subList(0, Math.min(chosenCount, availableTuples.size()));
+                List<CGItem> subset = availableTuples.subList(0, Math.min(chosenCount, availableTuples.size()));
 
                 // Insert the top Tj tuples in a new cluster
-                for (Item item : subset) {
+                for (CGItem item : subset) {
                     availablePids.remove(item.getPid());
                     cnew.insert(item);
                     currentBucket.remove(item);
@@ -154,8 +151,8 @@ public class ClusterManagement {
 
             // Reset the available PIDs and the count
             availablePids.clear();
-            for (List<Item> b : buckets.values()) {
-                List<Float> ids = b.stream().map(Item::getPid).collect(Collectors.toList());
+            for (List<CGItem> b : buckets.values()) {
+                List<Float> ids = b.stream().map(CGItem::getPid).collect(Collectors.toList());
                 availablePids.addAll(ids);
             }
             count = availablePids.size();
@@ -164,7 +161,7 @@ public class ClusterManagement {
             if (cnew.getKSize() >= k &&  cnew.getDiversity().size() >= l) {
                 sc.add(cnew);
             } else {
-                for (Item item : cnew.getContents()) {
+                for (CGItem item : cnew.getContents()) {
                     if (!buckets.containsKey(item.getSensitiveAttr())) {
                         buckets.put(item.getSensitiveAttr(), new ArrayList<>());
                     }
@@ -179,8 +176,8 @@ public class ClusterManagement {
         }
 
         // Add all remaining tuples from the buckets to the nearest newly created cluster
-        for (List<Item> bucket : buckets.values()) {
-            for (Item t : bucket) {
+        for (List<CGItem> bucket : buckets.values()) {
+            for (CGItem t : bucket) {
                 Cluster cluster = Collections.min(sc, Comparator.comparingDouble(cluster1 -> cluster1.distance(t)));
                 cluster.insert(t);
             }
@@ -190,10 +187,10 @@ public class ClusterManagement {
 
         // Add remaining tuples from old cluster to clusters that contain tuple(s) with identical pid
         for (Cluster splittedCluster : sc) {
-            List<Item> tuplesWithSamePID = new ArrayList<>();
-            for (Item tuple : splittedCluster.getContents()) {
-                List<Item> itemsToRemove = new ArrayList<>();
-                for (Item tupleFromOriginalCluster : c.getContents()) {
+            List<CGItem> tuplesWithSamePID = new ArrayList<>();
+            for (CGItem tuple : splittedCluster.getContents()) {
+                List<CGItem> itemsToRemove = new ArrayList<>();
+                for (CGItem tupleFromOriginalCluster : c.getContents()) {
                     if (tupleFromOriginalCluster.getPid().equals(tuple.getPid())) {
                         tuplesWithSamePID.add(tupleFromOriginalCluster);
                         itemsToRemove.add(tupleFromOriginalCluster);
@@ -201,7 +198,7 @@ public class ClusterManagement {
                 }
                 c.getContents().removeAll(itemsToRemove);
             }
-            for (Item t : tuplesWithSamePID) {
+            for (CGItem t : tuplesWithSamePID) {
                 splittedCluster.insert(t);
             }
             // Add the new cluster to the bigGamma
@@ -219,13 +216,13 @@ public class ClusterManagement {
      * @param cluster: The cluster to generate the buckets for
      * @return: A dictionary of attribute values to lists of items with those values
      */
-    private Map<Float, List<Item>> generateBuckets(Cluster cluster) {
-        Map<Float, List<Item>> buckets;
+    private Map<Float, List<CGItem>> generateBuckets(Cluster cluster) {
+        Map<Float, List<CGItem>> buckets;
         buckets = new HashMap<>();
 
         Set<Float> pids = new HashSet<>();
         int numberOfPids = cluster.getContents().stream()
-                .map(Item::getPid)
+                .map(CGItem::getPid)
                 .collect(Collectors.toSet())
                 .size();
 
@@ -233,7 +230,7 @@ public class ClusterManagement {
         // !! Each PID is only picked once !!
         while (pids.size() < numberOfPids) {
             Random random = new Random();
-            Item t = cluster.getContents().get(random.nextInt(cluster.getSize()));
+            CGItem t = cluster.getContents().get(random.nextInt(cluster.getSize()));
 
             // Get the value for the sensitive attribute for this tuple
             Float sensitiveValue = t.getData().get(this.sensitiveAttribute);
@@ -262,13 +259,13 @@ public class ClusterManagement {
      * @param cluster
      * @return
      */
-    private Map<Float, List<Item>> generateBucketsExperimental(Cluster cluster) {
-        Map<Float, List<Item>> buckets;
+    private Map<Float, List<CGItem>> generateBucketsExperimental(Cluster cluster) {
+        Map<Float, List<CGItem>> buckets;
         buckets = new HashMap<>();
 
         // put each tuple, that refers the same sensitive Attribute in a bucket
         // !! Each bucket represent all cluster entries with the same sensitive attribute (PID is ignored)!!
-        for (Item t : cluster.getContents()) {
+        for (CGItem t : cluster.getContents()) {
             // Get the value for the sensitive attribute for this tuple
             Float sensitiveValue = t.getData().get(this.sensitiveAttribute);
 
@@ -293,15 +290,18 @@ public class ClusterManagement {
     public Cluster mergeClusters(Cluster c, HashMap<String, Range<Float>> globalRanges) {
         List<Cluster> gamma_c = new ArrayList<>(this.bigGamma);
         gamma_c.remove(c);
+        if (gamma_c.size() == 0) {
+            return c;
+        }
 
         while (c.getContents().size() < this.k || c.getDiversity().size() < this.l) {
             // Get the cluster with the lowest enlargement value
             Cluster lowestEnlargementCluster =
                     Collections.min(
                             gamma_c, Comparator.comparingDouble(cl -> cl.clusterEnlargement(cl, globalRanges)));
-            List<Item> items = new ArrayList<>(lowestEnlargementCluster.getContents());
+            List<CGItem> items = new ArrayList<>(lowestEnlargementCluster.getContents());
 
-            for (Item t : items) {
+            for (CGItem t : items) {
                 c.insert(t);
             }
 
