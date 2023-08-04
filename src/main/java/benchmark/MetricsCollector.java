@@ -7,7 +7,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -68,39 +67,59 @@ public class MetricsCollector {
   public void saveMetricsToCSV() throws IOException {
 
     File file = new File(fileName);
+    boolean newFile = !file.exists();
 
     try {
       // create FileWriter object with file as parameter
-      FileWriter outputfile = new FileWriter(file);
+      FileWriter outputfile = new FileWriter(file, true);
 
       // create CSVWriter object filewriter object as parameter
       CSVWriter writer = new CSVWriter(outputfile);
 
-      // adding header to csv
-      String[] header = { "ID", "ProducerTimestamp", "EntryPipeTimestamp",
-          "EntryAnonymizationTimestamp", "ExitAnonymizationTimestamp", "ExitPipeTimestamp",
-          "ConsumerTimestamp"};
-      writer.writeNext(header);
+      if (newFile) {
+        // adding header to csv
+        String[] header = {
+          "ID",
+          "ProducerTimestamp",
+          "EntryPipeTimestamp",
+          "EntryAnonymizationTimestamp",
+          "ExitAnonymizationTimestamp",
+          "ExitPipeTimestamp",
+          "ConsumerTimestamp"
+        };
+        writer.writeNext(header);
+      }
 
       for (String id : allIds) {
         List<String> dataList = new ArrayList<>();
+        String[] data = new String[0];
+        if (producerTimestamps.containsKey(id)
+            && pipeEntryTimestamps.containsKey(id)
+            && pipeExitTimestamps.containsKey(id)
+            && anonEntryTimestamps.containsKey(id)
+            && anonExitTimestamps.containsKey(id)) {
+          data = new String[] {
+              id,
+              producerTimestamps.get(id).toString(),
+              pipeEntryTimestamps.get(id).toString(),
+              anonEntryTimestamps.get(id).toString(),
+              anonExitTimestamps.get(id).toString(),
+              pipeExitTimestamps.get(id).toString(),
+          };
+          producerTimestamps.remove(id);
+          pipeEntryTimestamps.remove(id);
+          pipeExitTimestamps.remove(id);
+          anonEntryTimestamps.remove(id);
+          anonExitTimestamps.remove(id);
+        }
 
-        String producerTimestamp = producerTimestamps.containsKey(id)
-            ? producerTimestamps.get(id).toString() : "";
-        String pipeEntryTimestamp = pipeEntryTimestamps.containsKey(id)
-            ? pipeEntryTimestamps.get(id).toString() : "";
-        String pipeExitTimestamp = pipeExitTimestamps.containsKey(id)
-            ? pipeExitTimestamps.get(id).toString() : "";
-        String anonEntryTimestamp = anonEntryTimestamps.containsKey(id)
-            ? anonEntryTimestamps.get(id).toString() : "";
-        String anonExitTimestamp = anonExitTimestamps.containsKey(id)
-            ? anonExitTimestamps.get(id).toString() : "";
-        String consumerTimestamp = consumerTimestamps.containsKey(id)
-            ? consumerTimestamps.get(id).toString() : "";
-
-        String[] data = {id, producerTimestamp, pipeEntryTimestamp, anonEntryTimestamp,
-            anonExitTimestamp, pipeExitTimestamp, consumerTimestamp };
-        writer.writeNext(data);
+        if (consumerTimestamps.containsKey(id)) {
+          data = new String[] {id, consumerTimestamps.get(id).toString()};
+          consumerTimestamps.remove(id);
+        }
+        if (data.length > 0) {
+          writer.writeNext(data);
+        }
       }
       // closing writer connection
       writer.close();

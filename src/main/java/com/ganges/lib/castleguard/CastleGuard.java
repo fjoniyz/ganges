@@ -29,7 +29,7 @@ public class CastleGuard implements AnonymizationAlgorithm {
   private double tau = Double.POSITIVE_INFINITY;
   private int delta;
   private int beta;
-  private int bigBeta;
+  private double bigBeta;
   private double phi;
   private int k;
   private int l;
@@ -70,7 +70,7 @@ public class CastleGuard implements AnonymizationAlgorithm {
         this.k = Integer.parseInt(parameters[0]);
         this.delta = Integer.parseInt(parameters[1]);
         this.beta = Integer.parseInt(parameters[2]);
-        this.bigBeta = Integer.parseInt(parameters[3]);
+        this.bigBeta = Double.parseDouble(parameters[3]);
         int mu = Integer.parseInt(parameters[4]);
         this.l = Integer.parseInt(parameters[5]);
         this.phi = Double.parseDouble(parameters[6]);
@@ -117,7 +117,8 @@ public class CastleGuard implements AnonymizationAlgorithm {
         }
         List<AnonymizationItem> outputItems = outputQueue.stream().map(cgItem -> {
           //TODO: Unify value data type to avoid this mess
-                      Map<String, Double> values = cgItem.getData().entrySet().stream()
+                      Map<String, Double> values =
+                          cgItem.getData().entrySet().stream().filter(e -> e.getValue() != null)
                       .collect(Collectors.toMap(Map.Entry::getKey,
                                                 e -> e.getValue().doubleValue()));
               return new AnonymizationItem(cgItem.getExternalId(), values);
@@ -227,6 +228,7 @@ public class CastleGuard implements AnonymizationAlgorithm {
             assert outputDiversity.size() >= this.l;
 
             this.clusterManagement.addToAnonymizedClusters(cluster);
+            this.clusterManagement.removeFromNonAnonymizedClusters(cluster);
         }
     }
 

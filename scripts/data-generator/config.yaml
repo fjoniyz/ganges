@@ -2,4 +2,4 @@ bootstrap_servers: ["localhost:9092"]
 # For streamable mode: 'sanierungsdata', 'mieterstromdata', 'electro-mobility' 
 dataset_topic: {"data/emobilitydata.csv" : "electromobility"}
 streaming: false
-delay: 0.1
+delay: 0.005

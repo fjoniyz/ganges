@@ -98,7 +98,9 @@ public class Pipe {
         for (AnonymizationItem item : output) {
           MetricsCollector.setPipeExitTimestamps(item.getId(), System.currentTimeMillis());
         }
-        MetricsCollector.getInstance().saveMetricsToCSV();
+        if (!output.isEmpty()) {
+          MetricsCollector.getInstance().saveMetricsToCSV();
+        }
       }
       System.out.println("result: " + outputString);
       return idString;
