@@ -1,5 +1,6 @@
-package myapps;
+package com.ganges.lib;
 
+import com.ganges.lib.AnonymizationItem;
 import com.lambdaworks.redis.RedisClient;
 import com.lambdaworks.redis.RedisConnection;
 import com.lambdaworks.redis.RedisURI;
@@ -9,7 +10,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Repository for cached non-anonymized data that is used to provide state for anonymization algorithms

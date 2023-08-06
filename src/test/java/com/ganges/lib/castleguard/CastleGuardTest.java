@@ -1,7 +1,7 @@
 package com.ganges.lib.castleguard;
 
 import com.ganges.lib.castleguard.utils.ClusterManagement;
-import myapps.AnonymizationItem;
+import com.ganges.lib.AnonymizationItem;
 import org.apache.commons.lang3.Range;
 import org.junit.Assert;
 import org.junit.Test;

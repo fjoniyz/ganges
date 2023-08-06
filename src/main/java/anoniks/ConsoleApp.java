@@ -1,4 +1,4 @@
-package myapps;
+package anoniks;
 
 import com.ganges.lib.castleguard.CGConfig;
 import com.ganges.lib.castleguard.CGItem;

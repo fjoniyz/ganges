@@ -1,7 +1,11 @@
-package myapps;
+package anoniks;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.ganges.lib.AnonymizationAlgorithm;
+import com.ganges.lib.AnonymizationItem;
+import com.ganges.lib.DataRepository;
+import com.ganges.lib.doca.Doca;
 import com.ganges.lib.castleguard.CastleGuard;
 import java.io.IOException;
 import java.io.InputStream;

@@ -1,4 +1,4 @@
-package myapps;
+package com.ganges.lib;
 
 import java.util.Map;
 import java.util.Objects;
