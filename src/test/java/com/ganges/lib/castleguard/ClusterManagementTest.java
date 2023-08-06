@@ -119,6 +119,7 @@ public class ClusterManagementTest {
         CGItem item1 = createItem(this.headers, 1F, 7000F, 44.5F, 7000F, 1F);
         CGItem item2 = createItem(this.headers, 2F, 8000F, 55.5F, 9000F, 1F);
         CGItem item3 = createItem(this.headers, 3F, 9000F, 66.5F, 9000F, 1F);
+
         CGItem item4 = createItem(this.headers, 4F, 10000F, 77.5F, 12000F, 2F);
         CGItem item5 = createItem(this.headers, 5F, 6000F, 38.5F, 20000F, 2F);
         CGItem item6 = createItem(this.headers, 6F, 7000F, 44.5F, 15000F, 3F);

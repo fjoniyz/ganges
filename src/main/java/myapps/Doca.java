@@ -98,7 +98,7 @@ public class Doca implements AnonymizationAlgorithm {
 
 
     public double[][] anonymize(
-        double[][] x) {
+            double[][] x) {
         String[] parameters = getParameters();
         double eps = Double.parseDouble(parameters[0]);
         int delay_constraint = Integer.parseInt(parameters[1]);
