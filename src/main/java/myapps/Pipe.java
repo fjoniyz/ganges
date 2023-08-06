@@ -1,26 +1,24 @@
 package myapps;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.ganges.lib.castleguard.CastleGuard;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
-import java.util.stream.Collectors;
+
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.*;
 import org.apache.kafka.streams.kstream.Consumed;
 import org.apache.kafka.streams.kstream.KStream;
 import org.apache.kafka.streams.kstream.Produced;
-import serdes.AnonymizedMessage;
 import serdes.Deserializer;
 import serdes.Serializer;
-import serdes.chargingstation.ChargingStationMessage;
-import serdes.emobility.EMobilityStationMessage;
 
 public class Pipe {
 
@@ -28,24 +26,22 @@ public class Pipe {
     private final static String DOCA_KEY = "doca";
     private static AnonymizationAlgorithm algorithm;
 
-  public static AnonymizedMessage createMessage(Class<?> messageClass, Object... values) {
-      AnonymizedMessage message = null;
-      if (messageClass.equals(EMobilityStationMessage.class)) {
-//        message = new EMobilityStationMessage(values[0], values[1], values[2], values[3]);
-        return message;
-      }
-      else {
-        return null; // TODO: add other message types
-      }
+    public static Double[] getValuesListByKeys(JsonNode jsonNode, String[] fields){
+        List<Double> values = new ArrayList<>();
+        for (String field : fields) {
+            if (field.equals("Seconds_EnergyConsumption")) {
+                values.add(jsonNode.get("Seconds_EnergyConsumption").doubleValue());
+            } else {
+                System.out.println("Invalid field in config file: " + field);
+            }
+        }
+        return values.toArray(new Double[values.size()]);
     }
 
 
-    public static <T extends AnonymizedMessage> String processing(T message,
-                                                                  DataRepository dataRepository,
-                                                                  String[] fields,
-                                                                  boolean addUnanonymizedHistory) throws IOException {
-      String id = message.getId();
-      Double[] valuesList = message.getValuesListByKeys(fields);
+    public static JsonNode processing(JsonNode message, DataRepository dataRepository, String[] fields, boolean addUnanonymizedHistory) throws IOException {
+      String id = message.get("id").textValue();
+      Double[] valuesList = getValuesListByKeys(message, fields);
       List<AnonymizationItem> contextValues = new ArrayList<>();
 
       // Current message
@@ -71,23 +67,9 @@ public class Pipe {
       Map<String, Double> lastItem = output.get(output.size() - 1).getValues();
       if (output.isEmpty()) {
         //TODO: Check what to return when no output is present
-        return "Output was empty";
       }
 
-      if(message instanceof ChargingStationMessage) {
-          ((ChargingStationMessage) message).setKwh(lastItem.get("kwh").floatValue());
-          ((ChargingStationMessage) message).setLoadingPotential((int) lastItem.get("loading_potential").floatValue());
-          Serializer<ChargingStationMessage> serializer = new Serializer<>();
-          byte[] json = serializer.serialize("output", (ChargingStationMessage) message);
-          return new String(json, StandardCharsets.UTF_8);
-      }else if(message instanceof EMobilityStationMessage){
-          ((EMobilityStationMessage) message).setEvUsage(lastItem.get("evUsage").floatValue());
-          Serializer<EMobilityStationMessage> serializer = new Serializer<>();
-          byte[] json = serializer.serialize("output", (EMobilityStationMessage) message);
-          System.out.println(new String(json, StandardCharsets.UTF_8));
-          return new String(json, StandardCharsets.UTF_8);
-      }
-      return "";
+      return ((ObjectNode)message).put("Seconds_EnergyConsumption", lastItem.get("Seconds_EnergyConsumption").floatValue());
     }
 
     public static String[] getFieldsToAnonymize() throws IOException {
@@ -104,41 +86,41 @@ public class Pipe {
         }
     }
 
-    public static double[] createValuesList(String[] fields, ChargingStationMessage chargingStationMessage) {
+    public static double[] createValuesList(String[] fields, JsonNode message) {
         List<Double> values = new ArrayList<>();
         for (String field : fields) {
             switch (field) {
                 case "urbanisation_level":
-                    System.out.println("urb level: " + chargingStationMessage.getUrbanisationLevel());
-                    values.add((double) chargingStationMessage.getUrbanisationLevel());
+                    System.out.println("urb level: " + message.get("urbanisation_level"));
+                    values.add(message.get("urbanisation_level").doubleValue());
                     break;
                 case "number_loading_stations":
-                    System.out.println("number load stat: " + chargingStationMessage.getNumberLoadingStations());
-                    values.add((double) chargingStationMessage.getNumberLoadingStations());
+                    System.out.println("number load stat: " + message.get("number_loading_stations"));
+                    values.add(message.get("number_loading_stations").doubleValue());
                     break;
                 case "number_parking_spaces":
-                    System.out.println("parking spaces" + chargingStationMessage.getNumberParkingSpaces());
-                    values.add((double) chargingStationMessage.getNumberParkingSpaces());
+                    System.out.println("parking spaces" + message.get("number_parking_spaces").doubleValue());
+                    values.add(message.get("number_parking_spaces").doubleValue());
                     break;
                 case "start_time_loading":
-                    System.out.println("loading time start" + chargingStationMessage.getStartTimeLoading());
-                    values.add((double) chargingStationMessage.getStartTimeLoading());
+                    System.out.println("loading time start" + message.get("start_time_loading").doubleValue());
+                    values.add(message.get("start_time_loading").doubleValue());
                     break;
                 case "end_time_loading":
-                    System.out.println("load time end" + chargingStationMessage.getEndTimeLoading());
-                    values.add((double) chargingStationMessage.getEndTimeLoading());
+                    System.out.println("load time end" + message.get("end_time_loading").doubleValue());
+                    values.add(message.get("end_time_loading").doubleValue());
                     break;
                 case "loading_time":
-                    System.out.println("loading time" + chargingStationMessage.getLoadingTime());
-                    values.add((double) chargingStationMessage.getLoadingTime());
+                    System.out.println("loading time" + message.get("loading_time").doubleValue());
+                    values.add(message.get("loading_time").doubleValue());
                     break;
                 case "kwh":
-                    System.out.println("kwh: " + chargingStationMessage.getKwh());
-                    values.add((double) chargingStationMessage.getKwh());
+                    System.out.println("kwh: " + message.get("kwh").doubleValue());
+                    values.add(message.get("kwh").doubleValue());
                     break;
                 case "loading_potential":
-                    System.out.println("load potential " + chargingStationMessage.getLoadingPotential());
-                    values.add((double) chargingStationMessage.getLoadingPotential());
+                    System.out.println("load potential " + message.get("loading_potential").doubleValue());
+                    values.add(message.get("loading_potential").doubleValue());
                     break;
                 default:
                     System.out.println("Invalid field in config file: " + field);
@@ -169,22 +151,19 @@ public class Pipe {
         } else {
           throw new IllegalArgumentException("Unknown anonymization algorithm passed");
         }
-
-        Serializer<EMobilityStationMessage> serializer = new Serializer<>();
-        Deserializer<EMobilityStationMessage>
-            emobilityDeserializer = new Deserializer<>(EMobilityStationMessage.class);
-        Serde<EMobilityStationMessage> emobilitySerde = Serdes.serdeFrom(serializer, emobilityDeserializer);
-
+        Serializer<JsonNode> serializer = new Serializer<>();
+        Deserializer deserializer = new Deserializer();
+        Serde<JsonNode> jsonSerde = Serdes.serdeFrom(serializer, deserializer);
         try (InputStream inputStream = Files.newInputStream(Paths.get(userDirectory + "/src/main/resources/kafka.properties"))) {
           props.load(inputStream);
           props.put(StreamsConfig.METADATA_MAX_AGE_CONFIG, "1000"); // Needed to prevent timeouts during broker startup.
           props.put(StreamsConfig.DEFAULT_KEY_SERDE_CLASS_CONFIG, Serdes.String().getClass());
-          props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, emobilitySerde.getClass());
+          props.put(StreamsConfig.DEFAULT_VALUE_SERDE_CLASS_CONFIG, jsonSerde.getClass());
 
           // Create anonymization stream and use it with Kafka
           StreamsBuilder streamsBuilder = new StreamsBuilder();
-          KStream<String, EMobilityStationMessage> src = streamsBuilder.stream(inputTopic, Consumed.with(Serdes.String(), emobilitySerde));
-          Produced<String, String> produced = Produced.with(Serdes.String(), Serdes.String());
+          KStream<String, JsonNode> src = streamsBuilder.stream(inputTopic, Consumed.with(Serdes.String(), jsonSerde));
+          Produced<String, JsonNode> produced = Produced.with(Serdes.String(), jsonSerde);
 
           DataRepository dataRepository = new DataRepository();
           String[] fields = getFieldsToAnonymize();

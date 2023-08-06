@@ -1,38 +1,26 @@
 package serdes;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.io.IOException;
 import java.util.Map;
-import org.apache.commons.lang3.SerializationException;
 
-public class Deserializer<T> implements org.apache.kafka.common.serialization.Deserializer<T> {
-    private final ObjectMapper om = new ObjectMapper();
-    private Class<T> type;
-
-    public Deserializer(Class<T> type){
-        this.type = type;
-    }
-
-    @SuppressWarnings("unchecked")
+public class Deserializer implements org.apache.kafka.common.serialization.Deserializer<com.fasterxml.jackson.databind.JsonNode> {
+    private final ObjectMapper mapper = new ObjectMapper();
     @Override
-    public void configure(Map<String, ?> configs, boolean isKey) {
-        if (type == null) {
-            type = (Class<T>) configs.get("type");
-        }
-    }
-
-    @Override
-    public T deserialize(String s, byte[] bytes) {
-        T data = null;
-        if (bytes == null || bytes.length == 0) {
+    public com.fasterxml.jackson.databind.JsonNode deserialize(String topic, byte[] data) {
+        try {
+            return mapper.readValue(data, com.fasterxml.jackson.databind.JsonNode.class);
+        } catch (IOException e) {
             return null;
         }
+    }
 
-        try {
-            data = om.readValue(bytes, type);
-        } catch (Exception e) {
-            throw new SerializationException(e);
-        }
+    @Override
+    public void configure(Map<String, ?> configs, boolean isKey) {
+    }
 
-        return data;
+    @Override
+    public void close() {
     }
 }
