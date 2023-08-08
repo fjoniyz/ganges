@@ -225,6 +225,7 @@ public class CastleGuard implements AnonymizationAlgorithm {
             assert outputDiversity.size() >= this.l;
 
             this.clusterManagement.addToAnonymizedClusters(cluster);
+            this.clusterManagement.removeFromNonAnonymizedClusters(cluster);
         }
     }
 
