@@ -1,12 +1,14 @@
 package anoniks;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.NullNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ganges.lib.AnonymizationAlgorithm;
 import com.ganges.lib.AnonymizationItem;
 import com.ganges.lib.DataRepository;
-import com.ganges.lib.doca.Doca;
 import com.ganges.lib.castleguard.CastleGuard;
+import com.ganges.lib.doca.Doca;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -47,7 +49,7 @@ public class Pipe {
       String id = message.get("id").textValue();
       Double[] valuesList = getValuesListByKeys(message, fields);
       List<AnonymizationItem> contextValues = new ArrayList<>();
-
+      System.out.println(message);
       // Current message
       HashMap<String, Double> keyValueMap = new HashMap<>();
       for (int i = 0; i < valuesList.length; i++) {
@@ -68,12 +70,20 @@ public class Pipe {
       }
       // Anonymization
       List<AnonymizationItem> output = algorithm.anonymize(contextValues);
-      Map<String, Double> lastItem = output.get(output.size() - 1).getValues();
       if (output.isEmpty()) {
-        //TODO: Check what to return when no output is present
+        ObjectMapper mapper = new ObjectMapper();
+        return mapper.nullNode();
       }
 
-      return ((ObjectNode)message).put("Seconds_EnergyConsumption", lastItem.get("Seconds_EnergyConsumption").floatValue());
+      // TODO: return list of values for CastleGuard (preserve non-anonymized data)
+      Map<String, Double> lastItem = output.get(output.size() - 1).getValues();
+      // + handle headers that start with 'spc'
+      JsonNode outputMessage = message.deepCopy();
+      for (String field : fields) {
+        ((ObjectNode)outputMessage).put(field, lastItem.get(
+            field).floatValue());
+      }
+      return outputMessage;
     }
 
     public static String[] getFieldsToAnonymize() throws IOException {
@@ -88,49 +98,6 @@ public class Pipe {
             }
             return docaFields;
         }
-    }
-
-    public static double[] createValuesList(String[] fields, JsonNode message) {
-        List<Double> values = new ArrayList<>();
-        for (String field : fields) {
-            switch (field) {
-                case "urbanisation_level":
-                    System.out.println("urb level: " + message.get("urbanisation_level"));
-                    values.add(message.get("urbanisation_level").doubleValue());
-                    break;
-                case "number_loading_stations":
-                    System.out.println("number load stat: " + message.get("number_loading_stations"));
-                    values.add(message.get("number_loading_stations").doubleValue());
-                    break;
-                case "number_parking_spaces":
-                    System.out.println("parking spaces" + message.get("number_parking_spaces").doubleValue());
-                    values.add(message.get("number_parking_spaces").doubleValue());
-                    break;
-                case "start_time_loading":
-                    System.out.println("loading time start" + message.get("start_time_loading").doubleValue());
-                    values.add(message.get("start_time_loading").doubleValue());
-                    break;
-                case "end_time_loading":
-                    System.out.println("load time end" + message.get("end_time_loading").doubleValue());
-                    values.add(message.get("end_time_loading").doubleValue());
-                    break;
-                case "loading_time":
-                    System.out.println("loading time" + message.get("loading_time").doubleValue());
-                    values.add(message.get("loading_time").doubleValue());
-                    break;
-                case "kwh":
-                    System.out.println("kwh: " + message.get("kwh").doubleValue());
-                    values.add(message.get("kwh").doubleValue());
-                    break;
-                case "loading_potential":
-                    System.out.println("load potential " + message.get("loading_potential").doubleValue());
-                    values.add(message.get("loading_potential").doubleValue());
-                    break;
-                default:
-                    System.out.println("Invalid field in config file: " + field);
-            }
-        }
-        return values.stream().mapToDouble(d -> d).toArray();
     }
 
     public static void main(final String[] args) {
