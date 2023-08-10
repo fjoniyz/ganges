@@ -92,7 +92,6 @@ public class Pipe {
 
       // Anonymization
       List<AnonymizationItem> output = algorithm.anonymize(contextValues);
-      // TODO: handle headers that start with 'spc'
 
       ArrayNode outputMessage = getJsonFromItems(output);
       System.out.println("OUTPUT " + outputMessage);

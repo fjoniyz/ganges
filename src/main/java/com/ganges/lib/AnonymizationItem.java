@@ -5,7 +5,7 @@ import java.util.Objects;
 
 public class AnonymizationItem {
   private final String id;
-  private final Map<String, Double> values;
+  private Map<String, Double> values;
 
   private final Map<String, String> nonAnonymizedValues;
 
@@ -17,6 +17,10 @@ public class AnonymizationItem {
 
   public Map<String, Double> getValues() {
     return values;
+  }
+
+  public void setValues(Map<String, Double> values) {
+    this.values = values;
   }
 
   public Map<String, String> getNonAnonymizedValues() {

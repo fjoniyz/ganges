@@ -146,7 +146,21 @@ public class CastleGuard implements AnonymizationAlgorithm {
                 }
         ).toList();
         outputQueue.clear();
-        return outputItems;
+
+        // Filter out median of cluster values. TODO: Check if we only need this median, or if we want min, max or spc as well
+        List<AnonymizationItem> updatedOutput = outputItems.stream()
+                .map(item -> {
+                    Map<String, Double> hashMap = item.getValues();
+                    Map<String, Double> newHashMap = new HashMap<>();
+                    for (String header : headers) {
+                        double headerValue = hashMap.getOrDefault(header, 0.0);
+                        newHashMap.put(header, headerValue); // Create a new HashMap with only the "Header" key
+                    }
+                    return new AnonymizationItem(item.getId(), newHashMap, item.getNonAnonymizedValues());
+                  })
+                .collect(Collectors.toList());
+
+        return updatedOutput;
     }
 
     /**

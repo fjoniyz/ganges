@@ -159,16 +159,21 @@ public class Cluster {
                         header.getKey(), Utils.randomChoice(this.contents).getData().get(header.getKey()));
             }
             item.removeHeaders("pid");
-            item.getData().put("min" + header.getKey(), header.getValue().getMinimum());
+            float min = header.getValue().getMinimum();
+            float max = header.getValue().getMaximum();
+            item.getData().put("min" + header.getKey(), min);
             item.getData().put("spc" + header.getKey(), this.sampleValues.get(header.getKey()));
-            item.getData().put("max" + header.getKey(), header.getValue().getMaximum());
+            item.getData().put("max" + header.getKey(), max);
+
+            item.getData().put(header.getKey(), (min + max) / 2); // Median of the range
 
             item.addHeaders("min" + header.getKey());
             item.addHeaders("spc" + header.getKey());
             item.addHeaders("max" + header.getKey());
 
-            item.removeHeaders(header.getKey());
-            item.removeData(header.getKey());
+            //TODO: are these removals necessary, cluster should be thrown out after generilaziation anyways?
+            //item.removeHeaders(header.getKey());
+            //item.removeData(header.getKey());
             // item.removeHeaders("pid");
         }
         return item;
