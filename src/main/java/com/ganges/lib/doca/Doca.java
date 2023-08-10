@@ -72,7 +72,8 @@ public class Doca implements AnonymizationAlgorithm {
             return new ArrayList<>();
         }
 
-        // Preserving value order through anonymization input/output
+        // Preserving fields order through anonymization input/output, since doca doesnt handle
+        // field names in any way
         ArrayList<String> headers = new ArrayList<>(X.get(0).getValues().keySet());
 
         // Convert map to double array
@@ -86,7 +87,9 @@ public class Doca implements AnonymizationAlgorithm {
 
         double[][] result = anonymize(docaInput);
 
-        // Convert double array to map
+        // Convert double array to Anonymization Items
+        // Doca outputs values in the same order as input, so we can use data from items with
+        // same index in input list
         List<AnonymizationItem> outputResult = new ArrayList<>();
         for (int i = 0; i < result.length; i++) {
             Map<String, Double> dataRowMap = new LinkedHashMap<>();
@@ -100,6 +103,7 @@ public class Doca implements AnonymizationAlgorithm {
         if (outputResult.isEmpty()) {
             return outputResult;
         } else {
+            // We return only one last item, since previous were output in previous calls
             return List.of(outputResult.get(outputResult.size()-1));
         }
     }
