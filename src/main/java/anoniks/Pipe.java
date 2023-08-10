@@ -1,7 +1,7 @@
 package anoniks;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.NullNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ganges.lib.AnonymizationAlgorithm;
@@ -46,6 +46,8 @@ public class Pipe {
 
 
     public static JsonNode processing(JsonNode message, DataRepository dataRepository, String[] fields, boolean addUnanonymizedHistory) throws IOException {
+      ObjectMapper mapper = new ObjectMapper();
+
       String id = message.get("id").textValue();
       Double[] valuesList = getValuesListByKeys(message, fields);
       List<AnonymizationItem> contextValues = new ArrayList<>();
@@ -70,19 +72,22 @@ public class Pipe {
       }
       // Anonymization
       List<AnonymizationItem> output = algorithm.anonymize(contextValues);
-      if (output.isEmpty()) {
-        ObjectMapper mapper = new ObjectMapper();
-        return mapper.nullNode();
-      }
+      ArrayNode outputMessage = mapper.createArrayNode();
 
-      // TODO: return list of values for CastleGuard (preserve non-anonymized data)
-      Map<String, Double> lastItem = output.get(output.size() - 1).getValues();
-      // + handle headers that start with 'spc'
-      JsonNode outputMessage = message.deepCopy();
-      for (String field : fields) {
-        ((ObjectNode)outputMessage).put(field, lastItem.get(
-            field).floatValue());
+      // TODO: preserve non-anonymized data for CASTLEGUARD
+      // TODO: + handle headers that start with 'spc'
+      for (AnonymizationItem item : output) {
+        ObjectNode itemNode = mapper.createObjectNode();
+        itemNode.put("id", item.getId());
+
+        Map<String, Double> itemValues = item.getValues();
+        for (String key : itemValues.keySet()) {
+          itemNode.put(key, itemValues.get(
+              key).floatValue());
+        }
+        outputMessage.add(itemNode);
       }
+      System.out.println("OUTPUT " + outputMessage);
       return outputMessage;
     }
 

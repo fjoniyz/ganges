@@ -96,7 +96,11 @@ public class Doca implements AnonymizationAlgorithm {
             AnonymizationItem item = new AnonymizationItem(X.get(i).getId(), dataRowMap);
             outputResult.add(item);
         }
-        return outputResult;
+        if (outputResult.isEmpty()) {
+            return outputResult;
+        } else {
+            return List.of(outputResult.get(outputResult.size()-1));
+        }
     }
 
 
