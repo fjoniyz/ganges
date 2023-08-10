@@ -60,7 +60,8 @@ public class DataRepository {
         for (Integer redisKey : keysAsInts) {
             HashMap<String, Double> entry = new HashMap<>();
             String id = redisKey.toString();
-            AnonymizationItem anonymizationItem = new AnonymizationItem(id, entry);
+            // TODO: get anonymizable and non-anonymizable fields
+            AnonymizationItem anonymizationItem = new AnonymizationItem(id, entry, new HashMap<>());
             for(int i = 0; i < valueKeys.length; i++) {
                 entry.put(valueKeys[i], Double.parseDouble(connection.hget(Integer.toString(redisKey),
                         valueKeys[i])));

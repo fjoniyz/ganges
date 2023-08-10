@@ -32,58 +32,79 @@ public class Pipe {
     private final static String DOCA_KEY = "doca";
     private static AnonymizationAlgorithm algorithm;
 
-    public static Double[] getValuesListByKeys(JsonNode jsonNode, String[] fields){
-        List<Double> values = new ArrayList<>();
+    public static HashMap<String, Double> getValuesListByKeys(JsonNode jsonNode, String[] fields){
+        HashMap<String, Double> values = new HashMap<>();
         for (String field : fields) {
-            if (field.equals("Seconds_EnergyConsumption")) {
-                values.add(jsonNode.get("Seconds_EnergyConsumption").doubleValue());
+            JsonNode value = jsonNode.get(field);
+            if (value != null) {
+                values.put(field,value.doubleValue());
             } else {
-                System.out.println("Invalid field in config file: " + field);
+                throw new IllegalArgumentException("Invalid field in config file: " + field);
             }
         }
-        return values.toArray(new Double[values.size()]);
+        return values;
+    }
+
+    public static HashMap<String, String> getNonAnonymizedValuesByKeys(
+        JsonNode jsonNode, String[] fields) {
+        HashMap<String, String> values = new HashMap<>();
+        List<String> fieldsList = Arrays.asList(fields);
+        Iterator<Map.Entry<String, JsonNode>> it = jsonNode.fields();
+        while (it.hasNext()) {
+            Map.Entry<String, JsonNode> jsonEntry = it.next();
+            if (!fieldsList.contains(jsonEntry.getKey())) {
+                values.put(jsonEntry.getKey(), jsonEntry.getValue().textValue());
+            }
+        }
+        return values;
     }
 
 
     public static JsonNode processing(JsonNode message, DataRepository dataRepository, String[] fields, boolean addUnanonymizedHistory) throws IOException {
       ObjectMapper mapper = new ObjectMapper();
 
-      String id = message.get("id").textValue();
-      Double[] valuesList = getValuesListByKeys(message, fields);
-      List<AnonymizationItem> contextValues = new ArrayList<>();
-      System.out.println(message);
       // Current message
-      HashMap<String, Double> keyValueMap = new HashMap<>();
-      for (int i = 0; i < valuesList.length; i++) {
-        keyValueMap.put(fields[i], valuesList[i]);
-      }
+      String id = message.get("id").textValue();
+      HashMap<String, Double> valuesMap = getValuesListByKeys(message, fields);
+      HashMap<String, String> nonAnonymizedValuesMap = getNonAnonymizedValuesByKeys(message,
+          fields);
+      System.out.println(message);
 
+
+      List<AnonymizationItem> contextValues = new ArrayList<>();
       if (addUnanonymizedHistory) {
         dataRepository.open();
 
         // Retrieve non-anonymized data from cache
-        dataRepository.saveValues(keyValueMap);
+        dataRepository.saveValues(valuesMap);
 
-        // Here we assume that for one message type the values are stored consistently
+        // Here we assume that for one message type the values are stored consistently (all
+        // fields are present in cache)
         contextValues = dataRepository.getValuesByKeys(fields);
         dataRepository.close();
       } else {
-        contextValues.add(new AnonymizationItem(id, keyValueMap));
+        contextValues.add(new AnonymizationItem(id, valuesMap, nonAnonymizedValuesMap));
       }
+
       // Anonymization
       List<AnonymizationItem> output = algorithm.anonymize(contextValues);
       ArrayNode outputMessage = mapper.createArrayNode();
 
-      // TODO: preserve non-anonymized data for CASTLEGUARD
-      // TODO: + handle headers that start with 'spc'
+      // TODO: handle headers that start with 'spc'
       for (AnonymizationItem item : output) {
         ObjectNode itemNode = mapper.createObjectNode();
         itemNode.put("id", item.getId());
 
+        // Add anonymized values
         Map<String, Double> itemValues = item.getValues();
         for (String key : itemValues.keySet()) {
           itemNode.put(key, itemValues.get(
               key).floatValue());
+        }
+
+        // Add non-anonymized values
+        for (Map.Entry<String, String> entry : item.getNonAnonymizedValues().entrySet()) {
+          itemNode.put(entry.getKey(), entry.getValue());
         }
         outputMessage.add(itemNode);
       }

@@ -132,7 +132,8 @@ public class CastleGuard implements AnonymizationAlgorithm {
                 float floatData = dataPoint.getValues().get(header).floatValue();
                 data.put(header, floatData);
             }
-            CGItem item = new CGItem(dataPoint.getId(), data, this.headers,
+            CGItem item = new CGItem(dataPoint.getId(), data, dataPoint.getNonAnonymizedValues(),
+                this.headers,
                     this.sensitiveAttr);
             insertData(item);
         }
@@ -141,7 +142,7 @@ public class CastleGuard implements AnonymizationAlgorithm {
                     Map<String, Double> values = cgItem.getData().entrySet().stream()
                             .collect(Collectors.toMap(Map.Entry::getKey,
                                     e -> e.getValue().doubleValue()));
-                    return new AnonymizationItem(cgItem.getExternalId(), values);
+                    return new AnonymizationItem(cgItem.getExternalId(), values, cgItem.getNonAnonymizedData());
                 }
         ).toList();
         outputQueue.clear();
@@ -155,7 +156,7 @@ public class CastleGuard implements AnonymizationAlgorithm {
      * @param data: The element of data to insert into the algorithm
      */
     public void insertData(HashMap<String, Float> data) {
-        CGItem item = new CGItem("", data, this.headers, this.sensitiveAttr);
+        CGItem item = new CGItem("", data, new HashMap<>(), this.headers, this.sensitiveAttr);
         insertData(item);
     }
 
@@ -297,7 +298,7 @@ public class CastleGuard implements AnonymizationAlgorithm {
      * @param item: The tuple to be perturbed
      */
     private void perturb(CGItem item) {
-        HashMap<String, Float> data = item.getData();
+        Map<String, Float> data = item.getData();
 
         for (String header : this.headers) {
             // Check if header has a range

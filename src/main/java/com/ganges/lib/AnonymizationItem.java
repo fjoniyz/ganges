@@ -7,13 +7,20 @@ public class AnonymizationItem {
   private final String id;
   private final Map<String, Double> values;
 
-  public AnonymizationItem(String id, Map<String, Double> values) {
+  private final Map<String, String> nonAnonymizedValues;
+
+  public AnonymizationItem(String id, Map<String, Double> values, Map<String, String> nonAnonymizedValues) {
     this.id = id;
     this.values = values;
+    this.nonAnonymizedValues = nonAnonymizedValues;
   }
 
   public Map<String, Double> getValues() {
     return values;
+  }
+
+  public Map<String, String> getNonAnonymizedValues() {
+    return nonAnonymizedValues;
   }
 
   public String getId() {

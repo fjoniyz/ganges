@@ -93,7 +93,8 @@ public class Doca implements AnonymizationAlgorithm {
             for (int headerId = 0; headerId < headers.size(); headerId++) {
                 dataRowMap.put(headers.get(headerId), result[i][headerId]);
             }
-            AnonymizationItem item = new AnonymizationItem(X.get(i).getId(), dataRowMap);
+            AnonymizationItem item = new AnonymizationItem(X.get(i).getId(), dataRowMap,
+                new HashMap<>());
             outputResult.add(item);
         }
         if (outputResult.isEmpty()) {
