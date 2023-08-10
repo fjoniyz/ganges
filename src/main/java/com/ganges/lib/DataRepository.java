@@ -41,15 +41,15 @@ public class DataRepository {
      * Save value in cache
      * @param values
      */
-    public void saveValues(HashMap<String, Double> values) {
+    public void saveValues(Map<String, String> values) {
         int lastKey = getHighestKey();
         String key = Integer.toString(lastKey + 1);
-        for (Map.Entry<String, Double> value : values.entrySet()) {
-            connection.hset(key, value.getKey(), value.getValue().toString());
+        for (Map.Entry<String, String> value : values.entrySet()) {
+            connection.hset(key, value.getKey(), value.getValue());
         }
     }
 
-    public List<AnonymizationItem> getValuesByKeys(String[] valueKeys) {
+    public List<AnonymizationItem> getValuesByKeys(List<String> valueKeys) {
         List<String> keys = connection.keys("*");
         List<Integer> keysAsInts = new ArrayList<>();
         for(String key: keys){
@@ -58,14 +58,21 @@ public class DataRepository {
         Collections.sort(keysAsInts);
         List<AnonymizationItem> values = new ArrayList<>();
         for (Integer redisKey : keysAsInts) {
-            HashMap<String, Double> entry = new HashMap<>();
             String id = redisKey.toString();
-            // TODO: get anonymizable and non-anonymizable fields
-            AnonymizationItem anonymizationItem = new AnonymizationItem(id, entry, new HashMap<>());
-            for(int i = 0; i < valueKeys.length; i++) {
-                entry.put(valueKeys[i], Double.parseDouble(connection.hget(Integer.toString(redisKey),
-                        valueKeys[i])));
+
+            Map<String, String> entryValues = connection.hgetall(Integer.toString(redisKey));
+            HashMap<String, Double> anonymizedValues = new HashMap<>();
+            HashMap<String, String> nonAnonymizedValues = new HashMap<>();
+
+            for (Map.Entry<String, String> value : entryValues.entrySet()) {
+                if (valueKeys.contains(value.getKey())) {
+                    anonymizedValues.put(value.getKey(), Double.parseDouble(value.getValue()));
+                } else {
+                    nonAnonymizedValues.put(value.getKey(), value.getValue());
+                }
             }
+
+            AnonymizationItem anonymizationItem = new AnonymizationItem(id, anonymizedValues, nonAnonymizedValues);
             values.add(anonymizationItem);
         }
         return values;

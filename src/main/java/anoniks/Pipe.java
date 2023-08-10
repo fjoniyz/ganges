@@ -1,5 +1,6 @@
 package anoniks;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -32,7 +33,8 @@ public class Pipe {
     private final static String DOCA_KEY = "doca";
     private static AnonymizationAlgorithm algorithm;
 
-    public static HashMap<String, Double> getValuesListByKeys(JsonNode jsonNode, String[] fields){
+    private static HashMap<String, Double> getValuesListByKeys(JsonNode jsonNode,
+                                                              List<String> fields){
         HashMap<String, Double> values = new HashMap<>();
         for (String field : fields) {
             JsonNode value = jsonNode.get(field);
@@ -45,14 +47,13 @@ public class Pipe {
         return values;
     }
 
-    public static HashMap<String, String> getNonAnonymizedValuesByKeys(
-        JsonNode jsonNode, String[] fields) {
+    private static HashMap<String, String> getNonAnonymizedValuesByKeys(
+        JsonNode jsonNode, List<String> fields) {
         HashMap<String, String> values = new HashMap<>();
-        List<String> fieldsList = Arrays.asList(fields);
         Iterator<Map.Entry<String, JsonNode>> it = jsonNode.fields();
         while (it.hasNext()) {
             Map.Entry<String, JsonNode> jsonEntry = it.next();
-            if (!fieldsList.contains(jsonEntry.getKey())) {
+            if (!fields.contains(jsonEntry.getKey())) {
                 values.put(jsonEntry.getKey(), jsonEntry.getValue().textValue());
             }
         }
@@ -60,27 +61,30 @@ public class Pipe {
     }
 
 
-    public static JsonNode processing(JsonNode message, DataRepository dataRepository, String[] fields, boolean addUnanonymizedHistory) throws IOException {
+    private static JsonNode processing(JsonNode message, DataRepository dataRepository,
+                                 String[] anonFields, boolean addUnanonymizedHistory) throws IOException {
       ObjectMapper mapper = new ObjectMapper();
+      Map<String, String> messageMap = mapper.convertValue(message, new TypeReference<>() {});
 
-      // Current message
+      // Get values of current message
       String id = message.get("id").textValue();
-      HashMap<String, Double> valuesMap = getValuesListByKeys(message, fields);
+      List<String> anonFieldsList = List.of(anonFields);
+      HashMap<String, Double> valuesMap = getValuesListByKeys(message, anonFieldsList);
       HashMap<String, String> nonAnonymizedValuesMap = getNonAnonymizedValuesByKeys(message,
-          fields);
+          anonFieldsList);
       System.out.println(message);
 
-
+      // Get all entries needed for anonymization
       List<AnonymizationItem> contextValues = new ArrayList<>();
       if (addUnanonymizedHistory) {
         dataRepository.open();
 
         // Retrieve non-anonymized data from cache
-        dataRepository.saveValues(valuesMap);
+        dataRepository.saveValues(messageMap);
 
         // Here we assume that for one message type the values are stored consistently (all
         // fields are present in cache)
-        contextValues = dataRepository.getValuesByKeys(fields);
+        contextValues = dataRepository.getValuesByKeys(anonFieldsList);
         dataRepository.close();
       } else {
         contextValues.add(new AnonymizationItem(id, valuesMap, nonAnonymizedValuesMap));
@@ -88,31 +92,38 @@ public class Pipe {
 
       // Anonymization
       List<AnonymizationItem> output = algorithm.anonymize(contextValues);
-      ArrayNode outputMessage = mapper.createArrayNode();
-
       // TODO: handle headers that start with 'spc'
-      for (AnonymizationItem item : output) {
-        ObjectNode itemNode = mapper.createObjectNode();
-        itemNode.put("id", item.getId());
 
-        // Add anonymized values
-        Map<String, Double> itemValues = item.getValues();
-        for (String key : itemValues.keySet()) {
-          itemNode.put(key, itemValues.get(
-              key).floatValue());
-        }
-
-        // Add non-anonymized values
-        for (Map.Entry<String, String> entry : item.getNonAnonymizedValues().entrySet()) {
-          itemNode.put(entry.getKey(), entry.getValue());
-        }
-        outputMessage.add(itemNode);
-      }
+      ArrayNode outputMessage = getJsonFromItems(output);
       System.out.println("OUTPUT " + outputMessage);
       return outputMessage;
     }
 
-    public static String[] getFieldsToAnonymize() throws IOException {
+  private static ArrayNode getJsonFromItems(List<AnonymizationItem> output) {
+    ObjectMapper mapper = new ObjectMapper();
+    ArrayNode outputMessage = mapper.createArrayNode();
+    for (AnonymizationItem item : output) {
+      ObjectNode itemNode = mapper.createObjectNode();
+      itemNode.put("id", item.getId());
+
+      // Add anonymized values
+      Map<String, Double> itemValues = item.getValues();
+      for (String key : itemValues.keySet()) {
+        itemNode.put(key, itemValues.get(
+            key).floatValue());
+      }
+
+      // Add non-anonymized values
+      for (Map.Entry<String, String> entry : item.getNonAnonymizedValues().entrySet()) {
+        itemNode.put(entry.getKey(), entry.getValue());
+      }
+      outputMessage.add(itemNode);
+    }
+    return outputMessage;
+  }
+
+  public static String[] getFieldsToAnonymize() throws IOException {
+        // TODO: generalize for CastleGuard (use different config)
         String userDirectory = System.getProperty("user.dir");
         try (InputStream inputStream = Files.newInputStream(Paths.get(userDirectory + "/src/main/resources/doca.properties"))) {
             Properties properties = new Properties();
