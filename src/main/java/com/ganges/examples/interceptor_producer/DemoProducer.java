@@ -1,11 +1,10 @@
 package com.ganges.examples.interceptor_producer;
 
+import java.util.Properties;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.StringSerializer;
-
-import java.util.Properties;
 
 public class DemoProducer {
   static final String BOOTSTRAP_SERVER = "127.0.0.1:9092";
