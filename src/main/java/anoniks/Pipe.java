@@ -96,7 +96,8 @@ public class Pipe {
    * Processes a JSON message for anonymization and generates an output JSON message with
    * anonymized data.
    *
-   * @param message                The input JSON message to be processed and anonymized.
+   * @param message                The input JSON message to be processed and anonymized. Must have
+   *                               flat structure (no nesting)
    * @param dataRepository         The redis repository for retrieving context information needed
    *                               for anonymization.
    * @param anonFields             An array of field names representing the data fields
@@ -177,25 +178,21 @@ public class Pipe {
   }
 
   /**
-   * Retrieves an array of fields to be anonymized based on configuration file.
+   * Retrieves an array of fields to be anonymized based on configuration file pipe.properties.
    *
    * @return An array of field names to be anonymized.
    * @throws IOException If an I/O error occurs while reading the configuration file.
    */
   public static String[] getFieldsToAnonymize() throws IOException {
-    // TODO: generalize for CastleGuard (use different config) -- Maybe use pipe config to store
-    //  fields to anonymize instead of doca/castleguard.properties
     String userDirectory = System.getProperty("user.dir");
     try (InputStream inputStream = Files.newInputStream(
-        Paths.get(userDirectory + "/src/main/resources/doca.properties"))) {
+        Paths.get(userDirectory + "/src/main/resources/pipe.properties"))) {
       Properties properties = new Properties();
       properties.load(inputStream);
-      String docaFieldsString = properties.getProperty("doca_fields");
-      String[] docaFields = docaFieldsString.split(",");
-      for (String field : docaFields) {
-        System.out.println(field);
-      }
-      return docaFields;
+      String docaFieldsString = properties.getProperty("anonymized_fields");
+      String[] anonFields = docaFieldsString.split(",");
+      System.out.println("Fields to be anonymized: " + String.join(" ", anonFields));
+      return anonFields;
     }
   }
 
