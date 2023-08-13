@@ -64,28 +64,23 @@ public class Pipe {
     return values;
   }
 
-  //TODO: Is this the correct description?
-
   /**
-   * This method extracts values from a JSON message for the specified keys that are not marked for
+   * This method extracts values from a JSON message for the fields that are not marked for
    * anonymization.
-   * Each key represents a header, and the associated non-anonymized value is retrieved from the
-   * JSON message.
-   * The method iterates through the JSON fields and includes only those that are not present in
-   * the list of configured headers.
+   * Fields specified by anonFields are excluded from the output.
    *
    * @param jsonNode   The root node of the incoming JSON message.
-   * @param fields     A list of keys representing the headers to be excluded from anonymization.
+   * @param anonFields A list of fields representing the headers to be anonymized.
    * @return A mapping of header names to their corresponding non-anonymized values
    *                     from the JSON message.
    */
   private static HashMap<String, String> getNonAnonymizedValuesByKeys(JsonNode jsonNode,
-                                                                      List<String> fields) {
+                                                                      List<String> anonFields) {
     HashMap<String, String> values = new HashMap<>();
     Iterator<Map.Entry<String, JsonNode>> it = jsonNode.fields();
     while (it.hasNext()) {
       Map.Entry<String, JsonNode> jsonEntry = it.next();
-      if (!fields.contains(jsonEntry.getKey())) {
+      if (!anonFields.contains(jsonEntry.getKey())) {
         values.put(jsonEntry.getKey(), jsonEntry.getValue().textValue());
       }
     }
