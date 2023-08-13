@@ -19,10 +19,6 @@ public class AnonymizationItem {
     return values;
   }
 
-  public void setValues(Map<String, Double> values) {
-    this.values = values;
-  }
-
   public Map<String, String> getNonAnonymizedValues() {
     return nonAnonymizedValues;
   }
