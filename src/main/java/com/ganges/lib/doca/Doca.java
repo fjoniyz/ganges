@@ -1,14 +1,12 @@
-package myapps;
+package com.ganges.lib.doca;
 
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
+import com.ganges.lib.AnonymizationAlgorithm;
+import com.ganges.lib.AnonymizationItem;
 
 import java.io.*;
-import java.util.Map;
-import java.util.Properties;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.util.*;
 
 public class Doca implements AnonymizationAlgorithm {
 
@@ -69,40 +67,50 @@ public class Doca implements AnonymizationAlgorithm {
     }
 
     @Override
-    public List<Map<String, Double>> anonymize(List<Map<String, Double>> X) {
-        if (X.size() == 0 || X.get(0).size() == 0) {
+    public List<AnonymizationItem> anonymize(List<AnonymizationItem> X) {
+        if (X.size() == 0 || X.get(0).getValues().size() == 0) {
             return new ArrayList<>();
         }
 
-        // Preserving value order through anonymization input/output
-        ArrayList<String> headers = new ArrayList<>(X.get(0).keySet());
+        // Preserving fields order through anonymization input/output, since doca doesnt handle
+        // field names in any way
+        ArrayList<String> headers = new ArrayList<>(X.get(0).getValues().keySet());
 
         // Convert map to double array
         double[][] docaInput = new double[X.size()][];
         for (int i = 0; i < X.size(); i++) {
-            docaInput[i] = new double[X.get(i).size()];
+            docaInput[i] = new double[X.get(i).getValues().size()];
             for (int headerId = 0; headerId < headers.size(); headerId++) {
-                docaInput[i][headerId] = X.get(i).get(headers.get(headerId));
+                docaInput[i][headerId] = X.get(i).getValues().get(headers.get(headerId));
             }
         }
 
         double[][] result = anonymize(docaInput);
 
-        // Convert double array to map
-        List<Map<String, Double>> outputResult = new ArrayList<>();
-        for (double[] dataRow : result) {
+        // Convert double array to Anonymization Items
+        // Doca outputs values in the same order as input, so we can use data from items with
+        // same index in input list
+        List<AnonymizationItem> outputResult = new ArrayList<>();
+        for (int i = 0; i < result.length; i++) {
             Map<String, Double> dataRowMap = new LinkedHashMap<>();
             for (int headerId = 0; headerId < headers.size(); headerId++) {
-                dataRowMap.put(headers.get(headerId), dataRow[headerId]);
+                dataRowMap.put(headers.get(headerId), result[i][headerId]);
             }
-            outputResult.add(dataRowMap);
+            AnonymizationItem item = new AnonymizationItem(X.get(i).getId(), dataRowMap,
+                X.get(i).getNonAnonymizedValues());
+            outputResult.add(item);
         }
-        return outputResult;
+        if (outputResult.isEmpty()) {
+            return outputResult;
+        } else {
+            // We return only one last item, since previous were output in previous calls
+            return List.of(outputResult.get(outputResult.size()-1));
+        }
     }
 
 
     public double[][] anonymize(
-        double[][] x) {
+            double[][] x) {
         String[] parameters = getParameters();
         double eps = Double.parseDouble(parameters[0]);
         int delay_constraint = Integer.parseInt(parameters[1]);

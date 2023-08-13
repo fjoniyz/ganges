@@ -1,10 +1,9 @@
 package com.ganges.examples.interceptor_producer;
 
+import java.util.Map;
 import org.apache.kafka.clients.producer.ProducerInterceptor;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.clients.producer.RecordMetadata;
-
-import java.util.Map;
 
 public class DemoProducerInterceptor implements ProducerInterceptor<String, String> {
   @Override

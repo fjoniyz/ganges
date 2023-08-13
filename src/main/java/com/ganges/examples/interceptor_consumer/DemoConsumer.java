@@ -1,14 +1,14 @@
 // package com.example.kafka;
 package com.ganges.examples.interceptor_consumer;
 
-import java.util.Properties;
-import java.util.Arrays;
 import java.time.Duration;
-
+import java.util.Arrays;
+import java.util.List;
+import java.util.Properties;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
+import org.apache.kafka.clients.consumer.KafkaConsumer;
 
 public class DemoConsumer {
   public static void main(String[] args) {
@@ -24,7 +24,7 @@ public class DemoConsumer {
     props.setProperty(
         ConsumerConfig.INTERCEPTOR_CLASSES_CONFIG, DemoConsumerInterceptor.class.getName());
     KafkaConsumer<String, String> consumer = new KafkaConsumer<>(props);
-    consumer.subscribe(Arrays.asList("energy-usage"));
+    consumer.subscribe(List.of("energy-usage"));
     while (true) {
       ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
       for (ConsumerRecord<String, String> record : records)
