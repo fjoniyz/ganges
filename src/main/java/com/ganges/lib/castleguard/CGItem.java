@@ -3,45 +3,43 @@ package com.ganges.lib.castleguard;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 public class CGItem {
-    private final HashMap<String, Float> data;
+    private final Map<String, Float> data;
+    private final Map<String, String> nonAnonymizedData;
     private final List<String> headers;
     private final Float sensitiveAttr;
     private Cluster parent;
     private Float pid;
     private String externalId;
-    public CGItem(String externalId, HashMap<String, Float> data, List<String> headers,
+    public CGItem(String externalId, Map<String, Float> data,
+                  Map<String, String> nonAnonymizedData, List<String> headers,
                   String sensitiveAttr) {
         this.externalId = externalId;
         this.data = data;
+        this.nonAnonymizedData = nonAnonymizedData;
         this.headers = new ArrayList<>(headers);
         this.sensitiveAttr = data.get(sensitiveAttr);
         this.pid = data.get("pid");
     }
 
-    public CGItem(HashMap<String, Float> data, List<String> headers,
+    public CGItem(Map<String, Float> data, List<String> headers,
                   String sensitiveAttr) {
         this.externalId = "";
         this.data = data;
+        this.nonAnonymizedData = new HashMap<>();
         this.headers = new ArrayList<>(headers);
         this.sensitiveAttr = data.get(sensitiveAttr);
         this.pid = data.get("pid");
-    }
-
-    public CGItem(@NonNull CGItem another) {
-        this.data = (HashMap<String, Float>) another.data.clone();
-        this.headers = new ArrayList<>(another.getHeaders());
-        this.sensitiveAttr = another.sensitiveAttr;
-        this.parent = another.parent;
     }
 
     public Float getPid() {
         return this.pid;
     }
 
-    public HashMap<String, Float> getData() {
+    public Map<String, Float> getData() {
         return data;
     }
 
@@ -84,5 +82,9 @@ public class CGItem {
 
     public String getExternalId() {
         return externalId;
+    }
+
+    public Map<String, String> getNonAnonymizedData() {
+        return nonAnonymizedData;
     }
 }

@@ -1,7 +1,5 @@
 package com.ganges.lib.castleguard;
 
-import com.ganges.lib.AnonymizationAlgorithm;
-import com.ganges.lib.AnonymizationItem;
 import com.ganges.lib.castleguard.utils.ClusterManagement;
 import com.ganges.lib.castleguard.utils.LogUtils;
 import com.ganges.lib.castleguard.utils.Utils;
@@ -11,6 +9,8 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
+import com.ganges.lib.AnonymizationAlgorithm;
+import com.ganges.lib.AnonymizationItem;
 import org.apache.commons.lang3.Range;
 import org.apache.commons.math3.distribution.LaplaceDistribution;
 import org.apache.commons.math3.random.JDKRandomGenerator;
@@ -20,45 +20,45 @@ import org.slf4j.LoggerFactory;
 
 public class CastleGuard implements AnonymizationAlgorithm {
 
-  private final Logger logger = LoggerFactory.getLogger(CastleGuard.class);
-  private final List<String> headers;
-  private final String sensitiveAttr;
-  private final Deque<CGItem> items = new ArrayDeque<>(); // a.k.a. global_tuples in castle.py
-  private final HashMap<String, Range<Float>> globalRanges = new HashMap<>();
-  private final double tau = Double.POSITIVE_INFINITY;
-  private final int delta;
-  private final int beta;
-  private final double bigBeta;
-  private final double phi;
-  private final int k;
-  private final int l;
-  private final boolean useDiffPrivacy;
-  private final ClusterManagement clusterManagement;
-  private final Deque<CGItem> outputQueue = new ArrayDeque<>();
+    private final Logger logger = LoggerFactory.getLogger(CastleGuard.class);
+    private final List<String> headers;
+    private final String sensitiveAttr;
+    private final Deque<CGItem> items = new ArrayDeque<>(); // a.k.a. global_tuples in castle.py
+    private final HashMap<String, Range<Float>> globalRanges = new HashMap<>();
+    private final double tau = Double.POSITIVE_INFINITY;
+    private final int delta;
+    private final int beta;
+    private final int bigBeta;
+    private final double phi;
+    private final int k;
+    private final int l;
+    private final boolean useDiffPrivacy;
+    private final ClusterManagement clusterManagement;
+    private final Deque<CGItem> outputQueue = new ArrayDeque<>();
 
     /**
      * !Deprecated constructor
      */
-  public CastleGuard(CGConfig config, List<String> headers, String sensitiveAttr) {
-    String[] parameters = getParameters();
-    this.k = Integer.parseInt(parameters[0]);
-    this.delta = Integer.parseInt(parameters[1]);
-    this.beta = Integer.parseInt(parameters[2]);
-    this.bigBeta = Integer.parseInt(parameters[3]);
-    int mu = Integer.parseInt(parameters[4]);
-    this.l = Integer.parseInt(parameters[5]);
-    this.phi = Double.parseDouble(parameters[6]);
-    this.useDiffPrivacy = Boolean.parseBoolean(parameters[7]);
-    this.headers = Arrays.asList(parameters[8].split(","));
-    this.sensitiveAttr = parameters[9];
+    public CastleGuard(CGConfig config, List<String> headers, String sensitiveAttr) {
+        String[] parameters = getParameters();
+        this.k = Integer.parseInt(parameters[0]);
+        this.delta = Integer.parseInt(parameters[1]);
+        this.beta = Integer.parseInt(parameters[2]);
+        this.bigBeta = Integer.parseInt(parameters[3]);
+        int mu = Integer.parseInt(parameters[4]);
+        this.l = Integer.parseInt(parameters[5]);
+        this.phi = Double.parseDouble(parameters[6]);
+        this.useDiffPrivacy = Boolean.parseBoolean(parameters[7]);
+        this.headers = Arrays.asList(parameters[8].split(","));
+        this.sensitiveAttr = parameters[9];
 
-    for (String header : this.headers) {
-      globalRanges.put(header, null);
+        for (String header : this.headers) {
+            globalRanges.put(header, null);
+        }
+        this.clusterManagement =
+                new ClusterManagement(
+                        this.k, this.l, mu, this.headers, this.sensitiveAttr);
     }
-    this.clusterManagement =
-        new ClusterManagement(
-            this.k, this.l, mu, this.headers, this.sensitiveAttr);
-  }
 
 
     public CastleGuard() {
@@ -66,7 +66,7 @@ public class CastleGuard implements AnonymizationAlgorithm {
         this.k = Integer.parseInt(parameters[0]);
         this.delta = Integer.parseInt(parameters[1]);
         this.beta = Integer.parseInt(parameters[2]);
-        this.bigBeta = Double.parseDouble(parameters[3]);
+        this.bigBeta = Integer.parseInt(parameters[3]);
         int mu = Integer.parseInt(parameters[4]);
         this.l = Integer.parseInt(parameters[5]);
         this.phi = Double.parseDouble(parameters[6]);
@@ -124,74 +124,83 @@ public class CastleGuard implements AnonymizationAlgorithm {
         return Optional.of(output);
     }
 
-  public List<Map<String, Double>> anonymize(List<Map<String, Double>> X) {
-    // DONT USE IT, DONT IMPLEMENT IT, JUST A BETWEEN STATE
-    return null;
-  }
-
-  @Override
-  public List<AnonymizationItem> anonymizeItem(List<AnonymizationItem> X) {
-    for (AnonymizationItem dataPoint : X) {
-      HashMap<String, Float> data = new HashMap<>();
-      for (String header : headers) {
-        float floatData = dataPoint.getValues().get(header).floatValue();
-        data.put(header, floatData);
-      }
-      CGItem item = new CGItem(dataPoint.getId(), data, this.headers,
-          this.sensitiveAttr);
-      insertData(item);
-    }
-    List<AnonymizationItem> outputItems = outputQueue.stream().map(cgItem -> {
-          //TODO: Unify value data type to avoid this mess
-          Map<String, Double> values =
-              cgItem.getData().entrySet().stream().filter(e -> e.getValue() != null)
-                  .collect(Collectors.toMap(Map.Entry::getKey,
-                      e -> e.getValue().doubleValue()));
-          return new AnonymizationItem(cgItem.getExternalId(), values);
+    @Override
+    public List<AnonymizationItem> anonymize(List<AnonymizationItem> X) {
+        for (AnonymizationItem dataPoint : X) {
+            HashMap<String, Float> data = new HashMap<>();
+            for (String header : headers) {
+                float floatData = dataPoint.getValues().get(header).floatValue();
+                data.put(header, floatData);
+            }
+            CGItem item = new CGItem(dataPoint.getId(), data, dataPoint.getNonAnonymizedValues(),
+                this.headers,
+                    this.sensitiveAttr);
+            insertData(item);
         }
-    ).toList();
-    outputQueue.clear();
-    return outputItems;
-  }
+        List<AnonymizationItem> outputItems = outputQueue.stream().map(cgItem -> {
+                    //TODO: Unify value data type to avoid this mess
+                    Map<String, Double> values = cgItem.getData().entrySet().stream()
+                            .collect(Collectors.toMap(Map.Entry::getKey,
+                                    e -> e.getValue().doubleValue()));
+                    return new AnonymizationItem(cgItem.getExternalId(), values, cgItem.getNonAnonymizedData());
+                }
+        ).toList();
+        outputQueue.clear();
 
-  /**
-   * Inserts a new piece of data into the algorithm and updates the state, checking whether data
-   * needs to be output as well
-   *
-   * @param data: The element of data to insert into the algorithm
-   */
+        // Filter out median of cluster values. TODO: Check if we only need this median, or if we want min, max or spc as well
+        List<AnonymizationItem> updatedOutput = outputItems.stream()
+                .map(item -> {
+                    Map<String, Double> hashMap = item.getValues();
+                    Map<String, Double> newHashMap = new HashMap<>();
+                    for (String header : headers) {
+                        double headerValue = hashMap.getOrDefault(header, 0.0);
+                        newHashMap.put(header, headerValue); // Create a new HashMap with only the "Header" key
+                    }
+                    return new AnonymizationItem(item.getId(), newHashMap, item.getNonAnonymizedValues());
+                  })
+                .collect(Collectors.toList());
+
+        return updatedOutput;
+    }
+
+    /**
+     * Inserts a new piece of data into the algorithm and updates the state, checking whether data
+     * needs to be output as well
+     *
+     * @param data: The element of data to insert into the algorithm
+     */
     public void insertData(HashMap<String, Float> data) {
-        CGItem item = new CGItem("", data, this.headers, this.sensitiveAttr);
+        CGItem item = new CGItem("", data, new HashMap<>(), this.headers, this.sensitiveAttr);
         insertData(item);
     }
 
     public void insertData(CGItem item) {
-      Random rand = new Random();
-      if (this.useDiffPrivacy && rand.nextDouble() > this.bigBeta) {
-        logger.info("Suppressing the item");
-        return;
-      }
+        Random rand = new Random();
+        if (this.useDiffPrivacy && rand.nextDouble() > this.bigBeta) {
+            logger.info("Suppressing the item");
+            return;
+        }
 
-      updateGlobalRanges(item);
+        updateGlobalRanges(item);
 
-      if (this.useDiffPrivacy) {
-        perturb(item);
-      }
-      Optional<Cluster> cluster = bestSelection(item);
-      if (!cluster.isPresent()) {
-        // Create new cluster
-        Cluster newCluster = new Cluster(this.headers);
-        this.clusterManagement.addToNonAnonymizedClusters(newCluster);
-        newCluster.insert(item);
-      } else {
-        cluster.get().insert(item);
-      }
+        if (this.useDiffPrivacy) {
+            perturb(item);
+        }
+        Optional<Cluster> cluster = bestSelection(item);
+        if (!cluster.isPresent()) {
+            // Create new cluster
+            Cluster newCluster = new Cluster(this.headers);
+            this.clusterManagement.addToNonAnonymizedClusters(newCluster);
+            newCluster.insert(item);
+        } else {
+            cluster.get().insert(item);
+        }
 
-      items.add(item);
-      if (items.size() > this.delta) {
-        delayConstraint(items.pop());
-      }
-      this.clusterManagement.updateTau(this.globalRanges);
+        items.add(item);
+        if (items.size() > this.delta) {
+            delayConstraint(items.pop());
+        }
+        this.clusterManagement.updateTau(this.globalRanges);
     }
 
     /**
@@ -277,56 +286,56 @@ public class CastleGuard implements AnonymizationAlgorithm {
     private void outputItem(CGItem item) {
         outputQueue.push(item);
     }
-  
-  /**
-   * Suppresses a tuple from being output and deletes it from the CASTLE state. Removes it from the
-   * global tuple queue and also the cluster it is being contained in
-   *
-   * @param item: The tuple to suppress
-   */
-  public void suppressItem(CGItem item) {
-      if (this.items.contains(item)) {
-          List<Cluster> nonAnonClusters = this.clusterManagement.getNonAnonymizedClusters();
-          this.items.remove(item);
-          Cluster parentCluster = item.getCluster();
-          parentCluster.remove(item);
 
-          if (parentCluster.getSize() == 0) {
-              nonAnonClusters.remove(parentCluster);
-          }
-      }
-  }
+    /**
+     * Suppresses a tuple from being output and deletes it from the CASTLE state. Removes it from the
+     * global tuple queue and also the cluster it is being contained in
+     *
+     * @param item: The tuple to suppress
+     */
+    public void suppressItem(CGItem item) {
+        if (this.items.contains(item)) {
+            List<Cluster> nonAnonClusters = this.clusterManagement.getNonAnonymizedClusters();
+            this.items.remove(item);
+            Cluster parentCluster = item.getCluster();
+            parentCluster.remove(item);
 
-  /**
-   * Fudges a tuple based on laplace distribution
-   *
-   * @param item: The tuple to be perturbed
-   */
-  private void perturb(CGItem item) {
-    HashMap<String, Float> data = item.getData();
-
-    for (String header : this.headers) {
-      // Check if header has a range
-      if (this.globalRanges.get(header).getMinimum() != null
-          || this.globalRanges.get(header).getMaximum() != null) {
-        double max_value = this.globalRanges.get(header).getMaximum();
-        double min_value = this.globalRanges.get(header).getMinimum();
-
-        // Calaculate scale
-        double scale = Math.max((max_value - min_value), 1) / this.phi;
-
-        // Draw random noise from Laplace distribution
-        JDKRandomGenerator rg = new JDKRandomGenerator();
-        LaplaceDistribution laplaceDistribution = new LaplaceDistribution(rg, 0, scale);
-        float noise = (float) laplaceDistribution.sample();
-
-        // Add noise to original value
-        float originalValue = data.get(header);
-        float perturbedValue = originalValue + noise;
-        item.updateAttributes(header, perturbedValue);
-      }
+            if (parentCluster.getSize() == 0) {
+                nonAnonClusters.remove(parentCluster);
+            }
+        }
     }
-  }
+
+    /**
+     * Fudges a tuple based on laplace distribution
+     *
+     * @param item: The tuple to be perturbed
+     */
+    private void perturb(CGItem item) {
+        Map<String, Float> data = item.getData();
+
+        for (String header : this.headers) {
+            // Check if header has a range
+            if (this.globalRanges.get(header).getMinimum() != null
+                    || this.globalRanges.get(header).getMaximum() != null) {
+                double max_value = this.globalRanges.get(header).getMaximum();
+                double min_value = this.globalRanges.get(header).getMinimum();
+
+                // Calaculate scale
+                double scale = Math.max((max_value - min_value), 1) / this.phi;
+
+                // Draw random noise from Laplace distribution
+                JDKRandomGenerator rg = new JDKRandomGenerator();
+                LaplaceDistribution laplaceDistribution = new LaplaceDistribution(rg, 0, scale);
+                float noise = (float) laplaceDistribution.sample();
+
+                // Add noise to original value
+                float originalValue = data.get(header);
+                float perturbedValue = originalValue + noise;
+                item.updateAttributes(header, perturbedValue);
+            }
+        }
+    }
 
     /**
      * Finds the best matching cluster for <element>

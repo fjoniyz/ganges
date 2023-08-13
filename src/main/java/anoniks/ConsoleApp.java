@@ -1,9 +1,8 @@
-package myapps;
+package anoniks;
 
 import com.ganges.lib.castleguard.CGConfig;
 import com.ganges.lib.castleguard.CGItem;
 import com.ganges.lib.castleguard.CastleGuard;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -40,17 +39,14 @@ public class ConsoleApp {
                 rowData.put(headers.get(i), values.get(i));
             }
             anonymization.insertData(rowData);
-            //Optional<HashMap<String, Float>> anonData = anonymization.tryGetOutputLine();
             Optional<CGItem> anonData = anonymization.tryGetOutputLine();
             if (anonData.isPresent()) {
                 System.out.print("Anon data: ");
-                CGItem item = anonData.get();
-                HashMap<String, Float> data = item.getData();
-                for (String key : data.keySet()) {
+                anonData.get().getData().forEach((key, value) -> {
                     if (key.startsWith("spc")) {
-                        System.out.print(key.replace("spc", "") + ": " + data.get(key) + " ");
+                        System.out.print(key.replace("spc", "") + ": " + value + " ");
                     }
-                }
+                });
                 System.out.println();
             }
         }

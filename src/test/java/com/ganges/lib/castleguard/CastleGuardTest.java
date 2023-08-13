@@ -1,13 +1,13 @@
 package com.ganges.lib.castleguard;
 
 import com.ganges.lib.castleguard.utils.ClusterManagement;
+import com.ganges.lib.AnonymizationItem;
 import org.apache.commons.lang3.Range;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.*;
 
-import static org.junit.Assert.*;
 public class CastleGuardTest {
     private ArrayList<String> headers;
     private HashMap<String, Range<Float>> globalRanges;
@@ -31,6 +31,21 @@ public class CastleGuardTest {
 
         this.config = new CGConfig(k, delta, beta, bigBeta, mu, l, phi, useDiffPrivacy);
         this.castle = new CastleGuard(this.config, this.headers, "station");
+    }
+
+    /**
+     * creates an item with double Values;
+     * @ param: list of data for given headers
+     */
+    public HashMap<String, Double> createDoubleItem(List<Double> elements){
+        Assert.assertEquals(this.headers.size(), elements.size());
+        HashMap<String, Double> item = new HashMap<>();
+        int i = 0;
+        for (String header: this.headers) {
+            item.put(header, elements.get(i));
+            i++;
+        }
+        return item;
     }
 
     /**
@@ -99,6 +114,38 @@ public class CastleGuardTest {
         clusters = manage.getNonAnonymizedClusters();
         Assert.assertTrue(clusters.isEmpty());
     }
+
+    @Test
+    public void testAnonymize() {
+        preparation(3, 10, 5, 1, 5, 1, 100 * Math.log(2), true);
+        Map<String, Double> dataOne = createDoubleItem(Arrays.asList(1.0, 200.0, 5.0));
+        Map<String, Double> dataTwo = createDoubleItem(Arrays.asList(2.0, 300.0, 5.0));
+        Map<String, Double> dataThree = createDoubleItem(Arrays.asList(3.0, 400.0, 3.0));
+        Map<String, Double> dataFour = createDoubleItem(Arrays.asList(4.0, 500.0, 2.0));
+        Map<String, Double> dataFive = createDoubleItem(Arrays.asList(5.0, 600.0, 1.0));
+        Map<String, Double> dataSix = createDoubleItem(Arrays.asList(6.0, 700.0, 0.0));
+
+        List<AnonymizationItem> inputOne = new ArrayList<>();
+        inputOne.add(new AnonymizationItem("1", dataOne));
+
+        List<AnonymizationItem> inputTwo = new ArrayList<>();
+        inputTwo.add(new AnonymizationItem("2", dataTwo));
+        inputTwo.add(new AnonymizationItem("3", dataThree));
+        inputTwo.add(new AnonymizationItem("4", dataFour));
+
+        List<AnonymizationItem> inputThree = new ArrayList<>();
+        inputThree.add(new AnonymizationItem("5", dataFive));
+        inputThree.add(new AnonymizationItem("6", dataSix));
+
+        castle.anonymize(inputOne);
+        castle.anonymize(inputTwo);
+        castle.anonymize(inputThree);
+
+        Deque<CGItem> items = this.castle.getItems();
+        System.out.println(items);
+
+    }
+
 
     /**
      * suppressing all elements within CastleGuard algorithm
