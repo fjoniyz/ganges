@@ -46,6 +46,10 @@ def read_and_send(config: dict, dataset: str, topic: str):
     
     with open(dataset) as f:
         dataset = list(csv.reader(f, delimiter=","))
+        for row in dataset:
+            for i in range(len(row)):
+                if row[i].replace(".", "").replace(",", "").isnumeric():
+                    row[i] = float(row[i])
 
     send_dataset(bootstrap_servers=config["bootstrap_servers"], 
                  dataset=dataset, 
