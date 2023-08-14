@@ -1,4 +1,4 @@
-package myapps.utils;
+package com.ganges.lib.doca.utils;
 
 import java.util.*;
 
