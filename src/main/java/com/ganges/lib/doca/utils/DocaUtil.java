@@ -1,6 +1,6 @@
 package com.ganges.lib.doca.utils;
 
-import com.ganges.lib.castleguard.Item;
+import com.ganges.lib.castleguard.CGItem;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -96,8 +96,8 @@ public class DocaUtil {
    * @param dataSet the list of data points to be converted
    * @return a list of items created from the data points
    */
-  public static List<Item> dataPointsToItems(List<List<Double>> dataSet) {
-    List<Item> items = new ArrayList<>();
+  public static List<CGItem> dataPointsToItems(List<List<Double>> dataSet) {
+    List<CGItem> items = new ArrayList<>();
     int i = 0;
     for (List<Double> dataPoint : dataSet) {
       int attrIndex = 0;
@@ -106,7 +106,7 @@ public class DocaUtil {
         attributeValue.put(String.valueOf(attrIndex), (float) attr);
         attrIndex++;
       }
-      Item item = new Item(attributeValue, new ArrayList<>(attributeValue.keySet()), i);
+      CGItem item = new CGItem(attributeValue, new ArrayList<>(attributeValue.keySet()), String.valueOf(i));
       items.add(item);
       i++;
     }
