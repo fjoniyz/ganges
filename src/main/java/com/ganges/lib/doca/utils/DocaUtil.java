@@ -9,6 +9,8 @@ import org.apache.commons.lang3.Range;
 
 public class DocaUtil {
 
+  private static int currentID = 0;
+
   /**
    * Performs element-wise division of two arrays of doubles.
    * If the corresponding element in the divisor array is zero, the result will be set to zero
@@ -106,7 +108,7 @@ public class DocaUtil {
         attributeValue.put(String.valueOf(attrIndex), (float) attr);
         attrIndex++;
       }
-      CGItem item = new CGItem(attributeValue, new ArrayList<>(attributeValue.keySet()), String.valueOf(i));
+      CGItem item = new CGItem(String.valueOf(currentID++), attributeValue, null, new ArrayList<>(attributeValue.keySet()), String.valueOf(i));
       items.add(item);
       i++;
     }

@@ -18,6 +18,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Properties;
 import org.apache.commons.lang3.Range;
 import org.apache.commons.math3.distribution.LaplaceDistribution;
@@ -34,19 +35,19 @@ public class Doca implements AnonymizationAlgorithm {
   // List of all lower bounds for each attribute/header TODO: Check if ranges have to be correct implemented or change with ranges
   private static List<Double> Vsup = new ArrayList<>();
   // Size that has to be reached before release conditions for stable Domain are checked
-  private final double LAMBDA = 0.003;      // tolerance parameter for domain building
+  private final double LAMBDA = 0.8;      // tolerance parameter for domain building
   private final int beta;   // maximum number of clusters that can be stored
   private final int delayConstraint;
   // List of all current items (bound by delay constraint)
   // List of all upper bounds for each attribute/header
-  private final double delta;   // publishing rate [0,1], 0 means no publishing
+  private final double delta;   // publishing rate [0,1], 0 means everything is published
   //-----------Attributes for DOCA Phase----------------//
   private final List<Cluster> clusterList;  // List of all current active clusters
   private final HashMap<String, Range<Float>> rangeMap = new HashMap<>();
   // List of all ranges for each attribute/header
   private final List<CGItem> currentItems = new ArrayList<>();
   // could be potentially also just used as lower bound (if domains wont get stable)
-  private static final int processingWindowSize = 10;
+  private static final int processingWindowSize = 25;
   //-----------Parameters for DOCA Phase----------------//
   private final double eps; // privacy budget
   private final boolean inplace;
@@ -55,6 +56,10 @@ public class Doca implements AnonymizationAlgorithm {
   private List<List<Double>> stableDomain;
   // number of tuples that have to be collected before a phase begins with checking the release requirements
   private double tau; // average loss of last M expired clusters
+
+
+  //test
+  private static List<AnonymizationItem> leftOverItems = new ArrayList<>();
 
 
   public Doca() {
@@ -115,7 +120,7 @@ public class Doca implements AnonymizationAlgorithm {
       stableDomains.add(dataPoints);
     }
 
-    double[][] output = new double[0][0];
+    double[][] output;
     List<CGItem> anonymizedData = new ArrayList<>();
     for (List<List<Double>> stableDomain : stableDomains) {
       List<CGItem> itemList = DocaUtil.dataPointsToItems(stableDomain);
@@ -149,12 +154,8 @@ public class Doca implements AnonymizationAlgorithm {
       List<CGItem> pertubedItems = new ArrayList<>();
       for (CGItem item : itemList) {
         List<CGItem> returnItems = this.doca(item, sensitivityList, false);
-        pertubedItems.addAll(returnItems);
-
-        if (returnItems != null) {
-          for (CGItem items : returnItems) {
-            System.out.println(items.getData().values());
-          }
+        if (!returnItems.isEmpty()) {
+          pertubedItems.addAll(returnItems);
         }
       }
       anonymizedData.addAll(pertubedItems);
@@ -245,7 +246,6 @@ public class Doca implements AnonymizationAlgorithm {
    * @return the domain if it is stable, otherwise null
    */
   protected List<CGItem> doca(CGItem dataTuple, List<Double> sensitivities, boolean inplace) {
-
     // Add tuple to best cluster and return expired clusters if any
     Cluster expiringCluster = this.onlineClustering(dataTuple);
 
@@ -300,10 +300,10 @@ public class Doca implements AnonymizationAlgorithm {
     Cluster expiredCluster;
     // add tuple to currently active items
     if (this.currentItems.size() <= this.delayConstraint) {
-      currentItems.add(tuple);
+      this.currentItems.add(tuple);
       return null;
     } else {
-      CGItem expiredTuple = currentItems.remove(0);
+      CGItem expiredTuple = this.currentItems.remove(0);
       currentItems.add(tuple);
       expiredCluster = expiredTuple.getCluster();
     }
@@ -464,6 +464,11 @@ public class Doca implements AnonymizationAlgorithm {
       }
     }
 
+
+    for (CGItem expired : expiredCluster.getContents()) {
+      this.currentItems.removeIf(currentItem -> expired.getExternalId().equals(currentItem.getExternalId()));
+    }
+
     expiredCluster.pertubeCluster(noise);
 
     return expiredCluster.getContents();
@@ -475,7 +480,7 @@ public class Doca implements AnonymizationAlgorithm {
       return new ArrayList<>();
     }
 
-    // Preserving fields order through anonymization input/output, since doca doesnt handle
+    // Preserving fields order through anonymization input/output, since doca doesn't handle
     // field names in any way
     ArrayList<String> headers = new ArrayList<>(X.get(0).getValues().keySet());
 
@@ -488,8 +493,20 @@ public class Doca implements AnonymizationAlgorithm {
       }
     }
 
-    //double[][] result = addData(docaInput);
-    double[][] result = anonymize(docaInput);
+    double[][] result = addData(docaInput);
+
+    // Add remaining items to leftOverItems list
+    for (CGItem remainingItem : this.currentItems) {
+      for (AnonymizationItem origItem : X) {
+        if (Objects.equals(origItem.getId(), remainingItem.getExternalId())) {
+          leftOverItems.add(origItem);
+        }
+      }
+    }
+
+    // TODO: Instead of clearing the list save leftover Tuples for next run
+    this.currentItems.clear();
+    this.clusterList.clear();
 
     // Convert double array to Anonymization Items
     // Doca outputs values in the same order as input, so we can use data from items with
@@ -504,12 +521,14 @@ public class Doca implements AnonymizationAlgorithm {
           X.get(i).getNonAnonymizedValues());
       outputResult.add(item);
     }
-    if (outputResult.isEmpty()) {
-      return outputResult;
-    } else {
+    //if (outputResult.isEmpty()) {
+    //  return outputResult;
+    //} else {
       // We return only one last item, since previous were output in previous calls
-      return List.of(outputResult.get(outputResult.size() - 1));
-    }
+    //  return List.of(outputResult.get(outputResult.size() - 1));
+    //}
+
+    return outputResult;
   }
 
 
