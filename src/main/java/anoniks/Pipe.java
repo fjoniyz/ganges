@@ -109,16 +109,13 @@ public class Pipe {
     ObjectMapper mapper = new ObjectMapper();
     Map<String, String> messageMap = mapper.convertValue(message, new TypeReference<>() {
     });
-    System.out.println("Es funktioniert auch bei CastleGuard");
     // Get values of current message
     String id = message.get("id").textValue();
-    System.out.println("This is the id" +id);
     List<String> anonFieldsList = List.of(anonFields);
     HashMap<String, Double> valuesMap = getValuesListByKeys(message, anonFieldsList);
     HashMap<String, String> nonAnonymizedValuesMap = getNonAnonymizedValuesByKeys(message,
         anonFieldsList);
     System.out.println(message);
-    System.out.println("This is the message map"+ messageMap);
     // Get all entries needed for anonymization
     List<AnonymizationItem> contextValues = new ArrayList<>();
     dataRepository.open();
