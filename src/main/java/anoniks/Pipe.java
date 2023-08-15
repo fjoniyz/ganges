@@ -1,5 +1,6 @@
 package anoniks;
 
+import benchmark.LocalMetricsCollector;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -21,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
@@ -38,6 +40,8 @@ public class Pipe {
   private static final String CASTLEGUARD_KEY = "castleguard";
   private static final String DOCA_KEY = "doca";
   private static AnonymizationAlgorithm algorithm;
+
+  private static LocalMetricsCollector metricsCollector;
 
   /**
    * This method extracts values from a JSON message based on keys specified in the
@@ -104,7 +108,12 @@ public class Pipe {
    */
   private static JsonNode processing(JsonNode message, DataRepository dataRepository,
                                      String[] anonFields,
-                                     boolean addUnanonymizedHistory) throws IOException {
+                                     boolean addUnanonymizedHistory, boolean enableMetrics) throws IOException {
+
+    if (enableMetrics) {
+      metricsCollector.setPipeEntryTimestamps(message.get("id").textValue(),
+          System.currentTimeMillis());
+    }
 
     ObjectMapper mapper = new ObjectMapper();
     Map<String, String> messageMap = mapper.convertValue(message, new TypeReference<>() {
@@ -135,9 +144,23 @@ public class Pipe {
     }
 
     // Anonymization
+    if (enableMetrics) {
+      metricsCollector.setAnonEntryTimestamps(id,
+          System.currentTimeMillis());
+    }
     List<AnonymizationItem> output = algorithm.anonymize(contextValues);
+    if (enableMetrics) {
+      metricsCollector.setAnonExitTimestamps(id,
+          System.currentTimeMillis());
+    }
 
     ArrayNode outputMessage = getJsonFromItems(output);
+
+    if (enableMetrics) {
+      metricsCollector.setPipeExitTimestamps(id,
+          System.currentTimeMillis());
+    }
+
     System.out.println("OUTPUT " + outputMessage);
     return outputMessage;
   }
@@ -191,9 +214,13 @@ public class Pipe {
     }
   }
 
-  public static void main(final String[] args) {
+  public static void main(final String[] args)
+      throws IOException, ExecutionException, InterruptedException {
     String userDirectory = System.getProperty("user.dir");
     Properties props = new Properties();
+
+    metricsCollector = LocalMetricsCollector.getInstance();
+    System.out.println("Created local metrics collector");
 
     try (InputStream inputStream = Files.newInputStream(
         Paths.get(userDirectory + "/src/main/resources/pipe.properties"))) {
@@ -205,6 +232,7 @@ public class Pipe {
     String inputTopic = props.getProperty("input-topic");
     String outputTopic = props.getProperty("output-topic");
     String anonymizationAlgoName = props.getProperty("algorithm");
+    boolean enableMetrics = Boolean.parseBoolean(props.getProperty("enable-metrics"));
 
     boolean addUnanonymizedHistory = anonymizationAlgoName.equals(DOCA_KEY);
     if (anonymizationAlgoName.equals(CASTLEGUARD_KEY)) {
@@ -235,7 +263,7 @@ public class Pipe {
       String[] fields = getFieldsToAnonymize();
       src.mapValues(value -> {
         try {
-          return processing(value, dataRepository, fields, addUnanonymizedHistory);
+          return processing(value, dataRepository, fields, addUnanonymizedHistory, enableMetrics);
         } catch (IOException e) {
           throw new RuntimeException(e);
         }

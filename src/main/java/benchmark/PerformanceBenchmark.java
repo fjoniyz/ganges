@@ -5,7 +5,7 @@ import java.text.ParseException;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Properties;
-import myapps.Pipe;
+import java.util.concurrent.ExecutionException;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -16,7 +16,8 @@ public class PerformanceBenchmark {
 
   }
 
-  public static void main(String[] args) throws IOException, ParseException {
+  public static void main(String[] args) throws IOException, ParseException, ExecutionException,
+      InterruptedException {
     Properties props = new Properties();
     props.setProperty("bootstrap.servers", "localhost:9092");
     props.setProperty("group.id", "test");
@@ -29,17 +30,18 @@ public class PerformanceBenchmark {
     KafkaConsumer<String, String> consumer = new KafkaConsumer<>(props);
     consumer.subscribe(Arrays.asList("output-test"));
 
-    MetricsCollector metricsCollector = MetricsCollector.getInstance();
-    metricsCollector.setFileName("consumer_results.csv");
+    LocalMetricsCollector metricsCollector = LocalMetricsCollector.getInstance();
+    //metricsCollector.setFileName("consumer_results.csv");
     while (true) {
       ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
       for (ConsumerRecord<String, String> record : records) {
         long consumerTimestamp = System.currentTimeMillis();
 
-        MetricsCollector.setConsumerTimestamps(record.key(), consumerTimestamp); // TODO: put the
+        //LocalMetricsCollector.setConsumerTimestamps(record.key(), consumerTimestamp); // TODO:
+        // put the
         // id into the
         // record key
-        metricsCollector.saveMetricsToCSV();
+        //metricsCollector.saveMetricsToCSV();
 
         System.out.printf("offset = %d, key = %s, value = %s%n", record.offset(), record.key(), record.value());
       }
