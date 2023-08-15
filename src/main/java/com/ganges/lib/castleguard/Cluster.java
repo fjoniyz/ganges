@@ -22,7 +22,7 @@ public class Cluster {
     // Initialises the cluster
     this.contents = new ArrayList<>();
     this.ranges = new LinkedHashMap<>();
-    // Ranges method -> in Python zero arguments and initialized with zeros
+
     headers.forEach(header -> this.ranges.put(header, Range.between(0F, 0F)));
     this.diversity = new HashSet<>();
     this.sampleValues = new HashMap<>();
@@ -54,19 +54,7 @@ public class Cluster {
     return pids.size();
   }
 
-  /**
-   * Perturbs the cluster with header specific but constant noise
-   *
-   * @param noise List of noise for each Header
-   */
-  public void pertubeCluster(List<Float> noise) {
-    // Perturbs the cluster
-    for (CGItem item : this.contents) {
-      for (Map.Entry<String, Float> data : item.getData().entrySet()) {
-        data.setValue((float) data.getValue() + noise.get(Integer.parseInt(data.getKey())));
-      }
-    }
-  }
+
 
   public int getSize() {
     return this.contents.size();

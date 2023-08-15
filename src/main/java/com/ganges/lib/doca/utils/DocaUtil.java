@@ -1,6 +1,7 @@
 package com.ganges.lib.doca.utils;
 
 import com.ganges.lib.castleguard.CGItem;
+import com.ganges.lib.doca.DocaItem;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -19,18 +20,10 @@ public class DocaUtil {
    * @param b the second array of doubles
    * @return the division of the two arrays
    */
-  public static double[] divisionWith0(double[] a, double[] b) {
-    double[] result = new double[a.length];
-    for (int i = 0; i < a.length; i++) {
-      result[i] = (b[i] != 0) ? a[i] / b[i] : 0;
-    }
-    return result;
-  }
-
-  public static HashMap<String, Float> divisionWith0(HashMap<String, Float> a,
-                                                     HashMap<String, Float> b) {
-    HashMap<String, Float> result = new HashMap<>();
-    for (Map.Entry<String, Float> aEntry : a.entrySet()) {
+  public static HashMap<String, Double> divisionWith0(HashMap<String, Double> a,
+                                                     HashMap<String, Double> b) {
+    HashMap<String, Double> result = new HashMap<>();
+    for (Map.Entry<String, Double> aEntry : a.entrySet()) {
       result.put(aEntry.getKey(),
           (b.get(aEntry.getKey()) != 0) ? aEntry.getValue() / b.get(aEntry.getKey()) : 0);
     }
@@ -43,18 +36,17 @@ public class DocaUtil {
    * @param X the 2D array of doubles
    * @return the maximum value in the array
    */
-  public static List<Double> getMax(double[][] X) {
-    int numColumns = X[0].length;
-    List<Double> maxList = new ArrayList<>();
+  public static Map<String, Double> getMax(List<DocaItem> X) {
+    Map<String, Double> maxMap = new HashMap<>();
 
-    for (int col = 0; col < numColumns; col++) {
+    for (String header : X.get(0).getHeaders()) {
       double max = Double.NEGATIVE_INFINITY;
-      for (int row = 0; row < X.length; row++) {
-        max = Math.max(max, X[row][col]);
+      for (DocaItem item : X) {
+        max = Math.max(max, item.getData().get(header));
       }
-      maxList.add(max);
+      maxMap.put(header, max);
     }
-    return maxList;
+    return maxMap;
   }
 
   /**
@@ -63,19 +55,17 @@ public class DocaUtil {
    * @param X the 2D array of doubles
    * @return the minimum value in the array
    */
-  public static List<Double> getMin(double[][] X) {
-    int numColumns = X[0].length;
-    List<Double> minList = new ArrayList<>();
+  public static Map<String, Double> getMin(List<DocaItem> X) {
+    Map<String, Double> minMap = new HashMap<>();
 
-    for (int col = 0; col < numColumns; col++) {
+    for (String header : X.get(0).getHeaders()) {
       double min = Double.POSITIVE_INFINITY;
-      for (int row = 0; row < X.length; row++) {
-        min = Math.min(min, X[row][col]);
+      for (DocaItem item : X) {
+        min = Math.min(min, item.getData().get(header));
       }
-      minList.add(min);
+      minMap.put(header, min);
     }
-
-    return minList;
+    return minMap;
   }
 
   /**
@@ -146,9 +136,9 @@ public class DocaUtil {
    *
    * @return HashMap with the attribute name as key and the difference as value
    */
-  public static HashMap<String, Float> getAttributeDiff(HashMap<String, Range<Float>> rangeMap) {
-    HashMap<String, Float> dif = new HashMap<>();
-    for (Map.Entry<String, Range<Float>> attributeRange : rangeMap.entrySet()) {
+  public static HashMap<String, Double> getAttributeDiff(HashMap<String, Range<Double>> rangeMap) {
+    HashMap<String, Double> dif = new HashMap<>();
+    for (Map.Entry<String, Range<Double>> attributeRange : rangeMap.entrySet()) {
       dif.put(attributeRange.getKey(),
           attributeRange.getValue().getMaximum() - attributeRange.getValue().getMinimum());
     }

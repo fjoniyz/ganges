@@ -2,9 +2,6 @@ package com.ganges.lib.doca;
 
 import com.ganges.lib.AnonymizationAlgorithm;
 import com.ganges.lib.AnonymizationItem;
-import com.ganges.lib.DataRepository;
-import com.ganges.lib.castleguard.CGItem;
-import com.ganges.lib.castleguard.Cluster;
 import com.ganges.lib.castleguard.utils.Utils;
 import com.ganges.lib.doca.utils.DocaUtil;
 import com.ganges.lib.doca.utils.GreenwaldKhannaQuantileEstimator;
@@ -15,7 +12,6 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -26,40 +22,29 @@ import org.apache.commons.math3.random.JDKRandomGenerator;
 
 public class Doca implements AnonymizationAlgorithm {
 
-  //-----------Parameters for DELTA Phase----------------//
-  private static final DataRepository domainRepository = new DataRepository();
-  // List of all items that are part of the stable domain
+  //-----------Parameters/Variables for DELTA Phase----------------//
+
   private static GreenwaldKhannaQuantileEstimator GKQuantileEstimator =
-      new GreenwaldKhannaQuantileEstimator(0.02);   // GK Quantile Estimator
-  private static List<Double> Vinf = new ArrayList<>();
-  // List of all lower bounds for each attribute/header TODO: Check if ranges have to be correct implemented or change with ranges
-  private static List<Double> Vsup = new ArrayList<>();
-  // Size that has to be reached before release conditions for stable Domain are checked
+      new GreenwaldKhannaQuantileEstimator(0.02);    // GK Quantile Estimator
+  private static List<Double> Vinf = new ArrayList<>(); // List of all lower bounds for each header
+  private static List<Double> Vsup = new ArrayList<>();  // List of all upper bounds for each header
   private final double LAMBDA = 0.8;      // tolerance parameter for domain building
   private final int beta;   // maximum number of clusters that can be stored
-  private final int delayConstraint;
-  // List of all current items (bound by delay constraint)
-  // List of all upper bounds for each attribute/header
-  private final double delta;   // publishing rate [0,1], 0 means everything is published
-  //-----------Attributes for DOCA Phase----------------//
-  private final List<Cluster> clusterList;  // List of all current active clusters
-  private final HashMap<String, Range<Float>> rangeMap = new HashMap<>();
-  // List of all ranges for each attribute/header
-  private final List<CGItem> currentItems = new ArrayList<>();
-  // could be potentially also just used as lower bound (if domains won't get stable)
-  private static final int processingWindowSize = 25;
-  //-----------Parameters for DOCA Phase----------------//
+  private final int delayConstraint;  // maximum time a tuple can be stored before it's released
+  private final double delta;   // suppression rate
+  private boolean stableDomainReached = false;
+  private static final int processingWindowSize = 100; //size of process window for domain bounding
+
+  //-----------Parameters/Variables for DOCA Phase----------------//
+  private final List<DocaCluster> clusterList;  // List of all current active clusters
+  private final HashMap<String, Range<Double>> rangeMap = new HashMap<>(); // Global ranges
+  private final List<DocaItem> currentItems = new ArrayList<>();
   private final double eps; // privacy budget
-  private final boolean inplace;
-  private final List<Double> losses = new ArrayList<>();      // Losses to use when calculating tau
-  //-----------Attributes for DELTA Phase----------------//
-  private List<List<Double>> stableDomain;
-  // number of tuples that have to be collected before a phase begins with checking the release requirements
+  private final List<Double> losses = new ArrayList<>();   // Losses to use when calculating tau
   private double tau; // average loss of last M expired clusters
 
+  private List<DocaItem> domain;
 
-  //test
-  private static List<AnonymizationItem> leftOverItems = new ArrayList<>();
 
 
   public Doca() {
@@ -67,9 +52,8 @@ public class Doca implements AnonymizationAlgorithm {
     this.eps = Double.parseDouble(parameters[0]);
     this.delayConstraint = Integer.parseInt(parameters[1]);
     this.beta = Integer.parseInt(parameters[2]);
-    this.inplace = Boolean.parseBoolean(parameters[3]);
     this.delta = Double.parseDouble(parameters[4]);
-    this.stableDomain = new ArrayList<>();
+    this.domain = new ArrayList<>();
     this.tau = 0;
     this.clusterList = new ArrayList<>();
   }
@@ -92,69 +76,49 @@ public class Doca implements AnonymizationAlgorithm {
     }
   }
 
+
   /**
    * Added Tuple gets either suppressed or released to the DOCA Phase.
    *
    * @param x Input Tuple
    */
-  public double[][] addData(double[][] x) {
-    List<List<Double>> domain;
-    List<List<Double>> dataPoints = new ArrayList<>();
-    for (double[] l : x) {
-      List<Double> headerData = new ArrayList<>();
-      for (double v : l) {
-        headerData.add(v);
-      }
-      dataPoints.add(headerData);
-    }
-    List<List<List<Double>>> stableDomains = new ArrayList<>();
-    if (this.delta != 0) {
-      for (List<Double> dataPoint : dataPoints) {
-        domain = this.addToDomain(dataPoint);
-        if (domain != null) {
-          stableDomains.add(domain);
-        }
-      }
-    } else {
-      stableDomains.add(dataPoints);
+  public List<AnonymizationItem> addData(AnonymizationItem x) {
+    DocaItem currentItem = new DocaItem(x.getId(), x.getValues(), x.getNonAnonymizedValues(),
+        x.getValues().keySet().stream().toList());
+
+    this.stableDomainReached = this.addToDomain(currentItem);
+
+    // If stable domain not reached yet, return empty list
+    if (!this.stableDomainReached) {
+      return new ArrayList<>();
     }
 
-    double[][] output;
-    List<CGItem> anonymizedData = new ArrayList<>();
-    for (List<List<Double>> stableDomain : stableDomains) {
-      List<CGItem> itemList = DocaUtil.dataPointsToItems(stableDomain);
+    Map<String, Double> maximums = DocaUtil.getMax(this.domain);
+    Map<String, Double> minimums = DocaUtil.getMin(this.domain);
 
-      List<Double> maximums = DocaUtil.getMax(x);
-      List<Double> minimums = DocaUtil.getMin(x);
-
-      List<Double> sensitivityList = new ArrayList<>();
-      for (int i = 0; i < maximums.size(); i++) {
-        sensitivityList.add(Math.abs(minimums.get(i) - maximums.get(i)));
-      }
-
-      List<CGItem> pertubedItems = new ArrayList<>();
-      for (CGItem item : itemList) {
-        List<CGItem> returnItems = this.doca(item, sensitivityList, false);
-        if (!returnItems.isEmpty()) {
-          pertubedItems.addAll(returnItems);
-        }
-      }
-      anonymizedData.addAll(pertubedItems);
-    }
-    // create output tuple
-    int rows = anonymizedData.size();
-    int cols = anonymizedData.get(0).getData().size();
-    output = new double[rows][cols];
-
-    for (int i = 0; i < rows; i++) {
-      Map<String, Float> attributes = anonymizedData.get(i).getData();
-      int j = 0;
-      for (float value : attributes.values()) {
-        output[i][j] = value;
-        j++;
+    Map<String, Double> sensitivityList = new HashMap<>();
+    for (String header : maximums.keySet()) {
+      if (Objects.equals(maximums.get(header), minimums.get(header))) {
+        sensitivityList.put(header, 1.0);
+      } else {
+        sensitivityList.put(header, Math.abs(minimums.get(header) - maximums.get(header)));
       }
     }
-    return output;
+
+    List<DocaItem> anonymizedData = new ArrayList<>();
+    for (DocaItem item : this.domain) {
+      List<DocaItem> returnedItems = this.doca(item, sensitivityList);
+      if (!returnedItems.isEmpty()) {
+        anonymizedData.addAll(returnedItems);
+      }
+    }
+
+    // TODO: Check if needed
+    //this.domain.removeAll(anonymizedData);
+
+    return anonymizedData.stream().map(anonItem ->
+        new AnonymizationItem(anonItem.getExternalId(), anonItem.getData(),
+            anonItem.getNonAnonymizedData())).toList();
   }
 
   /**
@@ -164,13 +128,13 @@ public class Doca implements AnonymizationAlgorithm {
    * @param x Tuple to be added
    * @return the domain if it is stable, otherwise null
    */
-  protected List<List<Double>> addToDomain(List<Double> x) {
+  protected Boolean addToDomain(DocaItem x) {
     double tolerance = this.LAMBDA;
 
     // EXPERIMENTAL: Use mean of tuple as value for GK
     // Get mean value of data point
-    double sum = x.stream().reduce(0.0, Double::sum);
-    double mean = sum / x.size();
+    double sum = x.getData().values().stream().reduce(0.0, Double::sum);
+    double mean = sum / x.getHeaders().size();
 
     // Add tuple to GKQEstimator
     GKQuantileEstimator.add(mean, x);
@@ -200,23 +164,26 @@ public class Doca implements AnonymizationAlgorithm {
       // check if domain is stable
       if (cvVinf < tolerance && cvVsup < tolerance) {
 
-        List<List<Double>> domain = GKQuantileEstimator.getDomain();
+        List<DocaItem> stableDomain = GKQuantileEstimator.getDomain();
         int from = (int) estQuantilInf.keySet().toArray()[0];
         int to = (int) estQuantilSup.keySet().toArray()[0];
-        this.stableDomain = domain.subList(from, to);
+        this.domain = stableDomain.subList(from, to);
 
 
         Vinf = new ArrayList<>();
         Vsup = new ArrayList<>();
         GKQuantileEstimator = new GreenwaldKhannaQuantileEstimator(0.02);
-        return this.stableDomain;
+        return true;
+      } else if (this.delta == 0) {
+        return true;
       }
       // remove oldest tuple to remain size of stable domain
       Vinf.remove(0);
       Vsup.remove(0);
     }
-    return null;
+    return false;
   }
+
 
   /**
    * Adds a Tuple to the domain and checks if it is stable.
@@ -226,14 +193,15 @@ public class Doca implements AnonymizationAlgorithm {
    * @param sensitivities sensitivity of the tuple
    * @return the domain if it is stable, otherwise null
    */
-  protected List<CGItem> doca(CGItem dataTuple, List<Double> sensitivities, boolean inplace) {
+  protected List<DocaItem> doca(DocaItem dataTuple, Map<String, Double> sensitivities) {
     // Add tuple to best cluster and return expired clusters if any
-    Cluster expiringCluster = this.onlineClustering(dataTuple);
+    DocaCluster expiringCluster = this.onlineClustering(dataTuple);
 
-    List<CGItem> releasedItems = new ArrayList<>();
+    List<DocaItem> releasedItems = new ArrayList<>();
     // Release Cluster if expired
     if (expiringCluster != null) {
       releasedItems.addAll(releaseExpiredCluster(expiringCluster, sensitivities));
+      this.clusterList.remove(expiringCluster);
     }
 
     return releasedItems;
@@ -245,13 +213,13 @@ public class Doca implements AnonymizationAlgorithm {
    * @param tuple Data Tuple to be clustered
    * @return List of expired clusters, the list is empty if no cluster expired
    */
-  private Cluster onlineClustering(CGItem tuple) {
+  private DocaCluster onlineClustering(DocaItem tuple) {
     // Find best cluster
-    Cluster bestCluster = this.findBestCluster(tuple, DocaUtil.getAttributeDiff(this.rangeMap));
+    DocaCluster bestCluster = this.findBestCluster(tuple, DocaUtil.getAttributeDiff(this.rangeMap));
 
     if (bestCluster == null) {
       // Add new Cluster
-      Cluster newCluster = new Cluster(tuple.getHeaders());
+      DocaCluster newCluster = new DocaCluster(tuple.getHeaders());
       newCluster.insert(tuple);
       this.clusterList.add(newCluster);
 
@@ -263,19 +231,19 @@ public class Doca implements AnonymizationAlgorithm {
     // update global ranges
     for (String header : tuple.getHeaders()) {
       if (this.rangeMap.containsKey(header)) {
-        Utils.updateRange(this.rangeMap.get(header), tuple.getData().get(header));
+        Utils.updateDoubleRange(this.rangeMap.get(header), tuple.getData().get(header));
       } else {
         this.rangeMap.put(header, Range.is(tuple.getData().get(header)));
       }
     }
 
-    Cluster expiredCluster;
+    DocaCluster expiredCluster;
     // add tuple to currently active items
     if (this.currentItems.size() <= this.delayConstraint) {
       this.currentItems.add(tuple);
       return null;
     } else {
-      CGItem expiredTuple = this.currentItems.remove(0);
+      DocaItem expiredTuple = this.currentItems.remove(0);
       currentItems.add(tuple);
       expiredCluster = expiredTuple.getCluster();
     }
@@ -289,19 +257,18 @@ public class Doca implements AnonymizationAlgorithm {
    * @param dif       Difference of global ranges
    * @return Best cluster for the data point or null if no fitting cluster was found
    */
-  private Cluster findBestCluster(CGItem dataPoint, HashMap<String, Float> dif) {
+  private DocaCluster findBestCluster(DocaItem dataPoint, HashMap<String, Double> dif) {
     int bestCluster = -1;
     int numAttributes = dataPoint.getHeaders().size();
-    List<Cluster> clusters = this.clusterList;
-
+    List<DocaCluster> clusters = this.clusterList;
 
     // Calculate enlargement (the value is not yet divided by the number of attributes!)
     List<Double> enlargement = new ArrayList<>();
-    for (Cluster cluster : clusters) {
+    for (DocaCluster cluster : clusters) {
       double sum = 0;
-      for (Map.Entry<String, Float> entry : dataPoint.getData().entrySet()) {
+      for (Map.Entry<String, Double> entry : dataPoint.getData().entrySet()) {
         String key = entry.getKey();
-        Float value = entry.getValue();
+        Double value = entry.getValue();
         sum += Math.max(0, value - cluster.getRanges().get(key).getMaximum())
             - Math.min(0, value - cluster.getRanges().get(key).getMinimum());
       }
@@ -325,14 +292,14 @@ public class Doca implements AnonymizationAlgorithm {
       if (enl == minEnlarge) {
         minClusters.add(c);
 
-        HashMap<String, Float> difCluster = new HashMap<>();
-        for (Map.Entry<String, Range<Float>> clusterRange : clusters.get(c).getRanges()
+        HashMap<String, Double> difCluster = new HashMap<>();
+        for (Map.Entry<String, Range<Double>> clusterRange : clusters.get(c).getRanges()
             .entrySet()) {
           difCluster.put(clusterRange.getKey(),
               clusterRange.getValue().getMaximum() - clusterRange.getValue().getMinimum());
         }
-        double overallLoss = (enl 
-            + DocaUtil.divisionWith0(difCluster, dif).values().stream().reduce(0f, Float::sum) 
+        double overallLoss = (enl
+            + DocaUtil.divisionWith0(difCluster, dif).values().stream().reduce(0.0, Double::sum)
             / numAttributes);
         if (overallLoss <= this.tau) {
           okClusters.add(c);
@@ -344,7 +311,7 @@ public class Doca implements AnonymizationAlgorithm {
       bestCluster = okClusters.stream()
           .min(Comparator.comparingInt(c -> clusters.get(c).getContents().size()))
           .orElse(-1);
-      //If no new cluster is allowed, try to find a cluster with minimum enlargement
+      // If no new cluster is allowed, try to find a cluster with minimum enlargement
     } else if (clusters.size() >= beta) {
       bestCluster = minClusters.stream()
           .min(Comparator.comparingInt(c -> clusters.get(c).getContents().size()))
@@ -364,18 +331,19 @@ public class Doca implements AnonymizationAlgorithm {
    * @param expiredCluster  Cluster to be released
    * @param sensitivityList Sensitivity for the perturbation of each header
    * @return an expired cluster or empty list if no cluster was released (e.g. delay constraint not
-   *          reached).
+   *        reached)
    */
-  private List<CGItem> releaseExpiredCluster(Cluster expiredCluster, List<Double> sensitivityList) {
+  private List<DocaItem> releaseExpiredCluster(DocaCluster expiredCluster,
+                                               Map<String, Double> sensitivityList) {
     // update values
-    HashMap<String, Float> dif = DocaUtil.getAttributeDiff(this.rangeMap);
-    HashMap<String, Float> difCluster = new HashMap<>();
-    for (Map.Entry<String, Range<Float>> clusterRange : expiredCluster.getRanges().entrySet()) {
+    HashMap<String, Double> dif = DocaUtil.getAttributeDiff(this.rangeMap);
+    HashMap<String, Double> difCluster = new HashMap<>();
+    for (Map.Entry<String, Range<Double>> clusterRange : expiredCluster.getRanges().entrySet()) {
       difCluster.put(clusterRange.getKey(),
           clusterRange.getValue().getMaximum() - clusterRange.getValue().getMinimum());
     }
     double loss =
-        DocaUtil.divisionWith0(difCluster, dif).values().stream().reduce(0f, Float::sum) 
+        DocaUtil.divisionWith0(difCluster, dif).values().stream().reduce(0.0, Double::sum)
             / (float) difCluster.keySet().size();
     this.losses.add(loss);
     //TODO: tau should only be calculated from the last m losses
@@ -384,57 +352,52 @@ public class Doca implements AnonymizationAlgorithm {
     this.clusterList.remove(expiredCluster);
 
     // perturbs cluster items
-    HashMap<String, Float> attr = new HashMap<>();
-    for (CGItem item : expiredCluster.getContents()) {
+    HashMap<String, Double> attr = new HashMap<>();
+    for (DocaItem item : expiredCluster.getContents()) {
       // Sum up each Attribute
       for (String header : item.getHeaders()) {
         if (!attr.containsKey(header)) {
-          attr.put(header, 0f);
+          attr.put(header, 0.0);
         }
         attr.put(header, attr.get(header) + item.getData().get(header));
       }
     }
     // Calculate mean of Attributes
-    HashMap<String, Float> mean = new HashMap<>();
-    for (Map.Entry<String, Float> attrEntry : attr.entrySet()) {
+    HashMap<String, Double> mean = new HashMap<>();
+    for (Map.Entry<String, Double> attrEntry : attr.entrySet()) {
       mean.put(attrEntry.getKey(), attrEntry.getValue() / expiredCluster.getContents().size());
     }
 
-    List<Float> noise = getNoise(expiredCluster, sensitivityList, mean);
+    Map<String, Double> noise = getNoise(expiredCluster, sensitivityList, mean);
 
-    for (CGItem i : expiredCluster.getContents()) {
-      for (Map.Entry<String, Float> entry : i.getData().entrySet()) {
+    for (DocaItem i : expiredCluster.getContents()) {
+      for (Map.Entry<String, Double> entry : i.getData().entrySet()) {
         entry.setValue(mean.get(entry.getKey()));
       }
     }
 
-    for (CGItem expired : expiredCluster.getContents()) {
-      this.currentItems.removeIf(currentItem -> expired.getExternalId().equals(currentItem.getExternalId()));
+    for (DocaItem expired : expiredCluster.getContents()) {
+      this.currentItems.removeIf(
+          currentItem -> expired.getExternalId().equals(currentItem.getExternalId()));
     }
     expiredCluster.pertubeCluster(noise);
     return expiredCluster.getContents();
   }
 
-  private List<Float> getNoise(Cluster expiredCluster, List<Double> sensitivityList,
-                                HashMap<String, Float> mean) {
-    HashMap<String, Float> laplace = new HashMap<>();
-    int headerNumber = 0;
-    for (String attribute : mean.keySet()) {
-      double scale = (sensitivityList.get(headerNumber)
+  private Map<String, Double> getNoise(DocaCluster expiredCluster,
+                                       Map<String, Double> sensitivityMap,
+                                       HashMap<String, Double> mean) {
+    HashMap<String, Double> laplaceNoise = new HashMap<>();
+    for (String header : mean.keySet()) {
+      double scale = (sensitivityMap.get(header)
           / (expiredCluster.getContents().size() * eps));
-
       JDKRandomGenerator rg = new JDKRandomGenerator();
       LaplaceDistribution laplaceDistribution = new LaplaceDistribution(rg, 0, scale);
-      float noise = (float) laplaceDistribution.sample();
-      laplace.put(attribute, noise);
+      Double noise = laplaceDistribution.sample();
+      laplaceNoise.put(header, noise);
     }
 
-    List<Float> noise = new ArrayList<>();
-
-    for (String attribute : mean.keySet()) {
-      noise.add(laplace.get(attribute));
-    }
-    return noise;
+    return laplaceNoise;
   }
 
   @Override
@@ -443,46 +406,10 @@ public class Doca implements AnonymizationAlgorithm {
       return new ArrayList<>();
     }
 
-    // Preserving fields order through anonymization input/output, since doca doesn't handle
-    // field names in any way
-    ArrayList<String> headers = new ArrayList<>(x.get(0).getValues().keySet());
-
-    // Convert map to double array
-    double[][] docaInput = new double[x.size()][];
-    for (int i = 0; i < x.size(); i++) {
-      docaInput[i] = new double[x.get(i).getValues().size()];
-      for (int headerId = 0; headerId < headers.size(); headerId++) {
-        docaInput[i][headerId] = x.get(i).getValues().get(headers.get(headerId));
-      }
-    }
-
-    double[][] result = addData(docaInput);
-
-    // Add remaining items to leftOverItems list
-    for (CGItem remainingItem : this.currentItems) {
-      for (AnonymizationItem origItem : x) {
-        if (Objects.equals(origItem.getId(), remainingItem.getExternalId())) {
-          leftOverItems.add(origItem);
-        }
-      }
-    }
-
-    // TODO: Instead of clearing the list save leftover Tuples for next run
-    this.currentItems.clear();
-    this.clusterList.clear();
-
-    // Convert double array to Anonymization Items
-    // Doca outputs values in the same order as input, so we can use data from items with
-    // same index in input list
     List<AnonymizationItem> outputResult = new ArrayList<>();
-    for (int i = 0; i < result.length; i++) {
-      Map<String, Double> dataRowMap = new LinkedHashMap<>();
-      for (int headerId = 0; headerId < headers.size(); headerId++) {
-        dataRowMap.put(headers.get(headerId), result[i][headerId]);
-      }
-      AnonymizationItem item = new AnonymizationItem(x.get(i).getId(), dataRowMap,
-          x.get(i).getNonAnonymizedValues());
-      outputResult.add(item);
+    for (AnonymizationItem docaInput : x) {
+      List<AnonymizationItem> result = addData(docaInput);
+      outputResult.addAll(result);
     }
 
     return outputResult;
