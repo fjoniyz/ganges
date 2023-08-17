@@ -109,7 +109,6 @@ public class Pipe {
     ObjectMapper mapper = new ObjectMapper();
     Map<String, String> messageMap = mapper.convertValue(message, new TypeReference<>() {
     });
-
     // Get values of current message
     String id = message.get("id").textValue();
     List<String> anonFieldsList = List.of(anonFields);
@@ -117,22 +116,21 @@ public class Pipe {
     HashMap<String, String> nonAnonymizedValuesMap = getNonAnonymizedValuesByKeys(message,
         anonFieldsList);
     System.out.println(message);
-
     // Get all entries needed for anonymization
     List<AnonymizationItem> contextValues = new ArrayList<>();
-    if (addUnanonymizedHistory) {
-      dataRepository.open();
+    dataRepository.open();
+    // Retrieve non-anonymized data from cache
+    dataRepository.saveValues(messageMap);
 
-      // Retrieve non-anonymized data from cache
-      dataRepository.saveValues(messageMap);
+    if (addUnanonymizedHistory) {
 
       // Here we assume that for one message type the values are stored consistently (all
       // fields are present in cache)
       contextValues = dataRepository.getValuesByKeys(anonFieldsList);
-      dataRepository.close();
     } else {
       contextValues.add(new AnonymizationItem(id, valuesMap, nonAnonymizedValuesMap));
     }
+    dataRepository.close();
 
     // Anonymization
     List<AnonymizationItem> output = algorithm.anonymize(contextValues);
