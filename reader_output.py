@@ -1,15 +1,47 @@
 import math
-
 from confluent_kafka import Consumer, KafkaError
 from datetime import datetime
 import json
 import time
 import prognose
 from types import SimpleNamespace
+import redis
+from numpy.linalg import norm
+import numpy as np
+
 # Kafka broker configuration
 bootstrap_servers = 'localhost:9092'
 group_id = 'my-consumer-group'
-topic = 'output'
+topic = 'output-test'
+redis_port = 6379
+
+
+
+def information_loss(message):
+    '''
+    returns the information loss (with euclidan distance) of anonymizes messages 
+    compared to the original messages
+    '''
+    r = redis.Redis(host='localhost', port=6379)
+    all_keys = r.keys('*')
+    all_values = []
+    information_loss = 0
+    for key in all_keys:
+        all_values.append({'id':key, 'values':r.hgetall(key)})
+
+    for value in all_values:
+        print(value['values']['id'.encode('utf-8')].decode('utf-8'))
+        if message['id'] == value['values']['id'.encode('utf-8')].decode('utf-8'):
+            print("Das ist die Message", message)
+            print("Das ist die value", value)
+            for a in value['values'].keys():
+                if type(message[a.decode('utf-8')]) == float:
+                    first = float(value['values'][a].decode('utf-8'))
+                    second = message[a.decode('utf-8')]
+                    # creating the euclidian distance
+                    information_loss += norm(np.array([first])- np.array([second]))
+    return information_loss
+
 
 def create_TaskSimEvCharging(message, power):
     # each max is just min value plus one hour
@@ -74,8 +106,7 @@ consumer.subscribe([topic])
 try:
     while True:
         msg = consumer.poll(1.0)
-
-        if msg is None:
+        if msg is None or msg.value().decode('utf-8') == "[]":
             continue
         if msg.error():
             if msg.error().code() == KafkaError._PARTITION_EOF:
@@ -86,8 +117,11 @@ try:
                 print(f"Error: {msg.error()}")
                 break
         x = json.loads(msg.value(), object_hook=lambda d: SimpleNamespace(**d))
+        x_information_loss = information_loss(x[0].__dict__)
+      
         # Process the message
         print(f"Received message: {msg.value().decode('utf-8')}")
+        print("Information loss of message: ", x_information_loss)
         prognose.random.seed(prognose.pd.Timestamp.utcnow().dayofyear)
         power = [11.0, 22.0]
         task_instance = create_TaskSimEvCharging(x, power)
