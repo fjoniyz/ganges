@@ -30,10 +30,8 @@ def information_loss(message):
         all_values.append({'id':key, 'values':r.hgetall(key)})
 
     for value in all_values:
-        print(value['values']['id'.encode('utf-8')].decode('utf-8'))
         if message['id'] == value['values']['id'.encode('utf-8')].decode('utf-8'):
-            print("Das ist die Message", message)
-            print("Das ist die value", value)
+            print("Message and value are the same.")
             for a in value['values'].keys():
                 if type(message[a.decode('utf-8')]) == float:
                     first = float(value['values'][a].decode('utf-8'))
