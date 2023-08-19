@@ -111,6 +111,7 @@ public class Pipe {
                                      boolean addUnanonymizedHistory, boolean enableMetrics) throws IOException {
 
     if (enableMetrics) {
+      metricsCollector.setProducerTimestamps(message);
       metricsCollector.setPipeEntryTimestamps(message.get("id").textValue(),
           System.currentTimeMillis());
     }

@@ -23,8 +23,14 @@ public class LocalMetricsCollector {
   private Future<Integer> lastSendingResult;
   private final ReentrantLock timestampsLock = new ReentrantLock();
 
-  private LocalMetricsCollector() throws ExecutionException, InterruptedException, IOException {
+  AsynchronousSocketChannel clientSocket;
+  Future<Void> socketOpenFuture;
 
+  private LocalMetricsCollector() throws IOException {
+    lastSendingResult = null;
+    clientSocket = AsynchronousSocketChannel.open();
+    socketOpenFuture = clientSocket.connect(new InetSocketAddress(REMOTE_METRICS_ADDRESS,
+        REMOTE_METRICS_PORT));
   }
 
   public static LocalMetricsCollector getInstance()
@@ -86,10 +92,7 @@ public class LocalMetricsCollector {
 
   private void sendMessage(JsonNode message) {
     try {
-      AsynchronousSocketChannel clientSocket = AsynchronousSocketChannel.open();
-      Future<Void> future = clientSocket.connect(new InetSocketAddress(REMOTE_METRICS_ADDRESS,
-          REMOTE_METRICS_PORT));
-      future.get();
+      socketOpenFuture.get();
       if (lastSendingResult != null) {
         lastSendingResult.get();
       }
@@ -97,8 +100,7 @@ public class LocalMetricsCollector {
       ByteBuffer buffer = ByteBuffer.wrap(message.toString().getBytes(StandardCharsets.UTF_8));
       lastSendingResult =
           clientSocket.write(buffer);
-      lastSendingResult.get();
-    } catch (InterruptedException | ExecutionException | IOException e) {
+    } catch (InterruptedException | ExecutionException e) {
       e.printStackTrace();
     }
 

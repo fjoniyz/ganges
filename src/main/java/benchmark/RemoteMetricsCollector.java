@@ -1,6 +1,5 @@
 package benchmark;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.opencsv.CSVWriter;
@@ -9,21 +8,22 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.CharBuffer;
 import java.nio.channels.AsynchronousServerSocketChannel;
 import java.nio.channels.AsynchronousSocketChannel;
-import java.nio.channels.CompletionHandler;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.Queue;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeoutException;
+import java.util.concurrent.LinkedBlockingQueue;
+
+
 
 public class RemoteMetricsCollector {
 
@@ -36,13 +36,35 @@ public class RemoteMetricsCollector {
 
   private static ObjectMapper objectMapper = new ObjectMapper();
 
+  private static File outputFile;
+  private static FileWriter fileWriter;
+
   public static void main(String[] args)
       throws ExecutionException, InterruptedException, IOException {
+
+    outputFile = new File(fileName);
     connectSocket();
+    ExecutorService taskExecutor = Executors.newCachedThreadPool(Executors
+        .defaultThreadFactory());
+
     while (true) {
       Future<AsynchronousSocketChannel> acceptResult = serverSocket.accept();
       AsynchronousSocketChannel socketChannel = acceptResult.get();
-      metricsReaderLoop(socketChannel);
+
+      Callable<Void> worker =
+          new Callable<Void>() {
+            @Override
+            public Void call() throws Exception {
+
+              String host = socketChannel.getRemoteAddress().toString();
+              System.out.println("Incoming connection from: " + host);
+
+              while (true) {
+                metricsReaderLoop(socketChannel);
+              }
+            }
+          };
+      taskExecutor.submit(worker);
     }
   }
 
@@ -60,7 +82,7 @@ public class RemoteMetricsCollector {
   private static void metricsReaderLoop(AsynchronousSocketChannel socketChannel)
       throws ExecutionException, InterruptedException, IOException {
 
-    ByteBuffer buffer = ByteBuffer.allocate(1024);
+    ByteBuffer buffer = ByteBuffer.allocate(10240);
     Future<Integer> readResult = socketChannel.read(buffer);
     readResult.get();
     buffer.flip();
@@ -69,7 +91,6 @@ public class RemoteMetricsCollector {
 
     System.out.println("Received: " + receivedValue);
     processMessage(receivedNode);
-    socketChannel.close();
   }
 
   private static void processMessage(JsonNode rootNode) throws IOException {
@@ -97,14 +118,13 @@ public class RemoteMetricsCollector {
 
   private static void saveMetricsToCSV() throws IOException {
 
-    File file = new File(fileName);
+    fileWriter = new FileWriter(outputFile);
 
     try {
       // create FileWriter object with file as parameter
-      FileWriter outputfile = new FileWriter(file);
 
       // create CSVWriter object filewriter object as parameter
-      CSVWriter writer = new CSVWriter(outputfile);
+      CSVWriter writer = new CSVWriter(fileWriter);
 
       // adding header to csv
       String[] header = { "ID", "Producer", "EntryPipe",
@@ -151,4 +171,6 @@ public class RemoteMetricsCollector {
       e.printStackTrace();
     }
   }
+
+
 }
