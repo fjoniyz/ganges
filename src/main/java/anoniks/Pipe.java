@@ -138,7 +138,9 @@ public class Pipe {
     List<AnonymizationItem> output = algorithm.anonymize(contextValues);
 
     ArrayNode outputMessage = getJsonFromItems(output);
-    System.out.println("OUTPUT " + outputMessage);
+    if (!outputMessage.isEmpty()) {
+      System.out.println("OUTPUT " + outputMessage);
+    }
     return outputMessage;
   }
 
