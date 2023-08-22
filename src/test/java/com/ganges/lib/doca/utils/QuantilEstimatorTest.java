@@ -1,4 +1,4 @@
-package myapps.utils;
+package com.ganges.lib.doca.utils;
 
 import com.ganges.lib.doca.utils.GreenwaldKhannaQuantileEstimator;
 import org.junit.Test;
@@ -17,11 +17,11 @@ public class QuantilEstimatorTest {
         GreenwaldKhannaQuantileEstimator estimator = new GreenwaldKhannaQuantileEstimator(0.01);
 
         // Add values to the estimator
-        estimator.add(10);
-        estimator.add(20);
-        estimator.add(30);
-        estimator.add(40);
-        estimator.add(50);
+        estimator.add(10, null);
+        estimator.add(20, null);
+        estimator.add(30, null);
+        estimator.add(40, null);
+        estimator.add(50, null);
 
         // Calculate quantiles and assert their values
         List<Double> quantile25 = new ArrayList<>(estimator.getQuantile(0.25).values());
@@ -34,11 +34,11 @@ public class QuantilEstimatorTest {
         assertEquals(40.0, quantile75.get(0), 0.0);
 
         // Add more values
-        estimator.add(60);
-        estimator.add(70);
-        estimator.add(80);
-        estimator.add(90);
-        estimator.add(100);
+        estimator.add(60, null);
+        estimator.add(70, null);
+        estimator.add(80, null);
+        estimator.add(90, null);
+        estimator.add(100, null);
 
         // Calculate quantiles again
         quantile25 = new ArrayList<>(estimator.getQuantile(0.25).values());

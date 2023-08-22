@@ -23,9 +23,8 @@ import org.apache.commons.math3.random.JDKRandomGenerator;
 public class Doca implements AnonymizationAlgorithm {
 
   //-----------Parameters/Variables for DELTA Phase----------------//
-
   private static GreenwaldKhannaQuantileEstimator GKQuantileEstimator =
-      new GreenwaldKhannaQuantileEstimator(0.02);    // GK Quantile Estimator
+      new GreenwaldKhannaQuantileEstimator(0.002);    // GK Quantile Estimator
   private static List<Double> Vinf = new ArrayList<>(); // List of all lower bounds for each header
   private static List<Double> Vsup = new ArrayList<>();  // List of all upper bounds for each header
   private final double LAMBDA = 0.8;      // tolerance parameter for domain building
@@ -33,17 +32,18 @@ public class Doca implements AnonymizationAlgorithm {
   private final int delayConstraint;  // maximum time a tuple can be stored before it's released
   private final double delta;   // suppression rate
   private boolean stableDomainReached = false;
-  private static final int processingWindowSize = 100; //size of process window for domain bounding
+  private static final int processingWindowSize = 50; //size of process window for domain bounding
 
   //-----------Parameters/Variables for DOCA Phase----------------//
-  private final List<DocaCluster> clusterList;  // List of all current active clusters
-  private final HashMap<String, Range<Double>> rangeMap = new HashMap<>(); // Global ranges
-  private final List<DocaItem> currentItems = new ArrayList<>();
+  private List<DocaCluster> clusterList;  // List of all current active clusters
+  private HashMap<String, Range<Double>> rangeMap = new HashMap<>(); // Global ranges
+  private List<DocaItem> currentItems = new ArrayList<>();
   private final double eps; // privacy budget
-  private final List<Double> losses = new ArrayList<>();   // Losses to use when calculating tau
+  private List<Double> losses = new ArrayList<>();   // Losses to use when calculating tau
   private double tau; // average loss of last M expired clusters
-
-  private List<DocaItem> domain;
+  private List<DocaItem> domain = new ArrayList<>();
+  private List<AnonymizationItem> leftOverItems = new ArrayList<>();
+  private Map<DocaItem, Double> testDocaBuilding = new HashMap<>();
 
 
 
@@ -76,26 +76,42 @@ public class Doca implements AnonymizationAlgorithm {
     }
   }
 
+  @Override
+  public List<AnonymizationItem> anonymize(List<AnonymizationItem> x) {
+    // Append Left over Items from previous batch (only used when domain bounding is used)
+    x.addAll(0, leftOverItems);
+    leftOverItems = new ArrayList<>();
 
-  /**
-   * Added Tuple gets either suppressed or released to the DOCA Phase.
-   *
-   * @param x Input Tuple
-   */
-  public List<AnonymizationItem> addData(AnonymizationItem x) {
-    DocaItem currentItem = new DocaItem(x.getId(), x.getValues(), x.getNonAnonymizedValues(),
-        x.getValues().keySet().stream().toList());
+    if (x.isEmpty() || x.get(0).getValues().isEmpty()) {
+      return new ArrayList<>();
+    }
 
-    this.stableDomainReached = this.addToDomain(currentItem);
+    List<AnonymizationItem> outputResult = new ArrayList<>();
+    for (AnonymizationItem docaInput : x) {
+      DocaItem currentItem = new DocaItem(docaInput.getId(), docaInput.getValues(), docaInput.getNonAnonymizedValues(),
+          docaInput.getValues().keySet().stream().toList());
 
-    // If stable domain not reached yet, return empty list
-    if (!this.stableDomainReached) {
+      // If Delta is 1 no suppression (Domain Bounding) is applied
+      if (this.delta != 1) {
+        this.stableDomainReached = this.addToDomain(currentItem);
+
+        // If stable domain is reached
+        if (this.stableDomainReached) {
+          this.leftOverItems.addAll(x.subList(x.indexOf(docaInput), x.size()));
+          break;
+        }
+      } else {
+        this.domain.add(currentItem);
+      }
+    }
+
+    if (!this.stableDomainReached && this.delta != 1) {
       return new ArrayList<>();
     }
 
     Map<String, Double> maximums = DocaUtil.getMax(this.domain);
     Map<String, Double> minimums = DocaUtil.getMin(this.domain);
-
+    // TODO: Make Global Sensitivity List
     Map<String, Double> sensitivityList = new HashMap<>();
     for (String header : maximums.keySet()) {
       if (Objects.equals(maximums.get(header), minimums.get(header))) {
@@ -105,17 +121,27 @@ public class Doca implements AnonymizationAlgorithm {
       }
     }
 
-    List<DocaItem> anonymizedData = new ArrayList<>();
-    for (DocaItem item : this.domain) {
-      List<DocaItem> returnedItems = this.doca(item, sensitivityList);
-      if (!returnedItems.isEmpty()) {
-        anonymizedData.addAll(returnedItems);
-      }
+    for (DocaItem docaItem : this.domain) {
+      List<AnonymizationItem> result = this.addData(docaItem, sensitivityList);
+      outputResult.addAll(result);
     }
+    this.domain = new ArrayList<>();
+    return outputResult;
+  }
 
-    // TODO: Check if needed
-    //this.domain.removeAll(anonymizedData);
 
+  /**
+   * Added Tuple gets either suppressed or released to the DOCA Phase.
+   *
+   * @param currentItem Input Tuple
+   */
+  public List<AnonymizationItem> addData(DocaItem currentItem, Map<String, Double> sensitivityList) {
+    //TODO: remove addData -> doca function is sufficient
+    List<DocaItem> anonymizedData = new ArrayList<>();
+    List<DocaItem> returnedItems = this.doca(currentItem, sensitivityList);
+    if (!returnedItems.isEmpty()) {
+      anonymizedData.addAll(returnedItems);
+    }
     return anonymizedData.stream().map(anonItem ->
         new AnonymizationItem(anonItem.getExternalId(), anonItem.getData(),
             anonItem.getNonAnonymizedData())).toList();
@@ -138,16 +164,17 @@ public class Doca implements AnonymizationAlgorithm {
 
     // Add tuple to GKQEstimator
     GKQuantileEstimator.add(mean, x);
+    testDocaBuilding.put(x, mean);
 
     // Add Quantile to Vinf and Vsup
     // Key is index, value is value
-    HashMap<Integer, Double> estQuantilInf =
+    HashMap<DocaItem, Double> estQuantileInf =
         GKQuantileEstimator.getQuantile((1.0 - this.delta) / 2.0);
-    HashMap<Integer, Double> estQuantilSup =
+    HashMap<DocaItem, Double> estQuantileSup =
         GKQuantileEstimator.getQuantile((1.0 + this.delta) / 2.0);
 
-    Vinf.add((double) estQuantilInf.values().toArray()[0]);
-    Vsup.add((double) estQuantilSup.values().toArray()[0]);
+    Vinf.add((double) estQuantileInf.values().toArray()[0]);
+    Vsup.add((double) estQuantileSup.values().toArray()[0]);
 
     // Check if processing window is large enough
     if (Vinf.size() == processingWindowSize && Vsup.size() == processingWindowSize) {
@@ -164,17 +191,25 @@ public class Doca implements AnonymizationAlgorithm {
       // check if domain is stable
       if (cvVinf < tolerance && cvVsup < tolerance) {
 
-        List<DocaItem> stableDomain = GKQuantileEstimator.getDomain();
-        int from = (int) estQuantilInf.keySet().toArray()[0];
-        int to = (int) estQuantilSup.keySet().toArray()[0];
-        this.domain = stableDomain.subList(from, to);
+        DocaItem from = (DocaItem) estQuantileInf.keySet().toArray()[0];
+        DocaItem to = (DocaItem) estQuantileSup.keySet().toArray()[0];
 
+        List<DocaItem> sortedItems = testDocaBuilding.entrySet()
+            .stream()
+            .sorted(Map.Entry.comparingByValue())
+            .map(Map.Entry::getKey)
+            .toList();
+        this.domain = sortedItems.subList(sortedItems.indexOf(from), sortedItems.indexOf(to) + 1);
 
         Vinf = new ArrayList<>();
         Vsup = new ArrayList<>();
         GKQuantileEstimator = new GreenwaldKhannaQuantileEstimator(0.02);
-        return true;
-      } else if (this.delta == 0) {
+
+        // Reset Doca Stage when using StableDomains
+        this.clusterList.clear();
+        this.rangeMap.clear();
+        this.tau = 0;
+
         return true;
       }
       // remove oldest tuple to remain size of stable domain
@@ -201,9 +236,7 @@ public class Doca implements AnonymizationAlgorithm {
     // Release Cluster if expired
     if (expiringCluster != null) {
       releasedItems.addAll(releaseExpiredCluster(expiringCluster, sensitivities));
-      this.clusterList.remove(expiringCluster);
     }
-
     return releasedItems;
   }
 
@@ -214,17 +247,14 @@ public class Doca implements AnonymizationAlgorithm {
    * @return List of expired clusters, the list is empty if no cluster expired
    */
   private DocaCluster onlineClustering(DocaItem tuple) {
-    // Find best cluster
+
     DocaCluster bestCluster = this.findBestCluster(tuple, DocaUtil.getAttributeDiff(this.rangeMap));
 
     if (bestCluster == null) {
-      // Add new Cluster
       DocaCluster newCluster = new DocaCluster(tuple.getHeaders());
       newCluster.insert(tuple);
       this.clusterList.add(newCluster);
-
     } else {
-      // Add tuple to cluster
       bestCluster.insert(tuple);
     }
 
@@ -244,7 +274,7 @@ public class Doca implements AnonymizationAlgorithm {
       return null;
     } else {
       DocaItem expiredTuple = this.currentItems.remove(0);
-      currentItems.add(tuple);
+      this.currentItems.add(tuple);
       expiredCluster = expiredTuple.getCluster();
     }
     return expiredCluster;
@@ -389,8 +419,10 @@ public class Doca implements AnonymizationAlgorithm {
                                        HashMap<String, Double> mean) {
     HashMap<String, Double> laplaceNoise = new HashMap<>();
     for (String header : mean.keySet()) {
-      double scale = (sensitivityMap.get(header)
-          / (expiredCluster.getContents().size() * eps));
+
+      double deltaC = sensitivityMap.get(header) / (expiredCluster.getContents().size());
+      double scale = deltaC / eps;
+
       JDKRandomGenerator rg = new JDKRandomGenerator();
       LaplaceDistribution laplaceDistribution = new LaplaceDistribution(rg, 0, scale);
       Double noise = laplaceDistribution.sample();
@@ -400,18 +432,8 @@ public class Doca implements AnonymizationAlgorithm {
     return laplaceNoise;
   }
 
-  @Override
-  public List<AnonymizationItem> anonymize(List<AnonymizationItem> x) {
-    if (x.isEmpty() || x.get(0).getValues().isEmpty()) {
-      return new ArrayList<>();
-    }
-
-    List<AnonymizationItem> outputResult = new ArrayList<>();
-    for (AnonymizationItem docaInput : x) {
-      List<AnonymizationItem> result = addData(docaInput);
-      outputResult.addAll(result);
-    }
-
-    return outputResult;
+  private void updateSensitivities() {
+    //TODO
   }
+
 }

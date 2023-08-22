@@ -122,7 +122,7 @@ public class GreenwaldKhannaQuantileEstimator {
     return -(low + 1); // key not found
   }
 
-  public HashMap<Integer, Double> getQuantile(double p) {
+  public HashMap<DocaItem, Double> getQuantile(double p) {
     if (this.tuples.isEmpty()) {
       throw new IllegalStateException("Sequence contains no elements");
     }
@@ -149,11 +149,10 @@ public class GreenwaldKhannaQuantileEstimator {
       throw new IllegalStateException("Failed to find the requested quantile");
     }
 
-    HashMap<Integer, Double> resultMap = new HashMap<>();
-    resultMap.put(bestIndex, this.tuples.get(bestIndex).getValue());
-    //resultMap.put("index", (double) bestIndex);
+    HashMap<DocaItem, Double> resultMap = new HashMap<>();
+    //resultMap.put(bestIndex, this.tuples.get(bestIndex).getValue());
+    resultMap.put(this.tuples.get(bestIndex).item, this.tuples.get(bestIndex).getValue());
     return resultMap;
-    //return Arrays.asList(this.tuples.get(bestIndex).getValue(), (double) bestIndex);
   }
 
   public void compress() {
