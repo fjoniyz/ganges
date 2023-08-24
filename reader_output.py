@@ -29,7 +29,6 @@ def information_loss(message):
 
     for value in all_values:
         if message['id'] == value['values']['id'.encode('utf-8')].decode('utf-8'):
-            print("Message and value are the same.")
             for a in value['values'].keys():
                 if type(message[a.decode('utf-8')]) == float:
                     first = float(value['values'][a].decode('utf-8'))
@@ -93,9 +92,10 @@ messages = []
 # Start consuming messages
 try:
     while True:
+        info_loss = 0
         while(len(messages) < 4):
             msg = consumer.poll(1.0)
-
+            
             if msg is None:
                 continue
             if msg.error():
@@ -105,8 +105,10 @@ try:
                     print(msg.error())
                     break
             else:
-                messages.append(json.loads(msg.value().decode('utf-8')))
-                
+                message = json.loads(msg.value().decode('utf-8'))
+                info_loss += information_loss(message[0])
+                messages.append(message)
+        print("The information Loss of this forecast is: ", info_loss)       
         # Process the message
         prognose.random.seed(prognose.pd.Timestamp.utcnow().dayofyear)
         power = [11.0, 22.0]
