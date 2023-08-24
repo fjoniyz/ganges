@@ -33,17 +33,6 @@ def create_TaskSimEvCharging(messages, power):
     max_demand = -math.inf
     max_duration = -math.inf
 
-    #TODO: the + 60 and + 20 values are just there because we only do one message at a time for the moment
-    #We're going to need something like:
-    # min_start = int(min(x["start_time_loading"]))
-    # max_start = int(max(x["start_time_loading"]))
-    #
-    # min_duration = int(min(x["duration"]))
-    # max_duration = int(max(x["duration"]))
-    #
-    # min_demand = int(min(x["kwh"]))
-    # max_demand = int(max(x["kwh"]))
-
     min_start = min([(msg["start_time_loading"]) for msg in messages])
     max_start = max([(msg["start_time_loading"]) for msg in messages])
     

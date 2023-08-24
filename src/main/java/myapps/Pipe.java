@@ -120,7 +120,7 @@ public class Pipe {
     String userDirectory = System.getProperty("user.dir");
     try (InputStream inputStream = Files.newInputStream(Paths.get(userDirectory + "/src/main/resources/kafka.properties"))) {
       Properties props = new Properties();
-      String inputTopic = "input-test6";
+      String inputTopic = "electromobility2";
       String outputTopic = "output";
 
       ChargingStationSerializer<ChargingStationMessage> chargingStationSerializer = new ChargingStationSerializer<>();
