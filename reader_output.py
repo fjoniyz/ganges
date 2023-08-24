@@ -62,17 +62,6 @@ def create_TaskSimEvCharging(messages, power):
     max_demand = -math.inf
     max_duration = -math.inf
 
-    #TODO: the + 60 and + 20 values are just there because we only do one message at a time for the moment
-    #We're going to need something like:
-    # min_start = int(min(x["start_time_loading"]))
-    # max_start = int(max(x["start_time_loading"]))
-    #
-    # min_duration = int(min(x["duration"]))
-    # max_duration = int(max(x["duration"]))
-    #
-    # min_demand = int(min(x["kwh"]))
-    # max_demand = int(max(x["kwh"]))
-
     min_start = min([(msg["start_time_loading"]) for msg in messages])
     max_start = max([(msg["start_time_loading"]) for msg in messages])
     
@@ -104,19 +93,10 @@ messages = []
 # Start consuming messages
 try:
     while True:
-<<<<<<< HEAD
         while(len(messages) < 4):
             msg = consumer.poll(1.0)
 
             if msg is None:
-=======
-        msg = consumer.poll(1.0)
-        if msg is None or msg.value().decode('utf-8') == "[]":
-            continue
-        if msg.error():
-            if msg.error().code() == KafkaError._PARTITION_EOF:
-                # End of partition, continue polling
->>>>>>> dd857acf5eb28d79f1477dae5baffddded0d6489
                 continue
             if msg.error():
                 if msg.error().code() == KafkaError._PARTITION_EOF:
@@ -125,21 +105,9 @@ try:
                     print(msg.error())
                     break
             else:
-<<<<<<< HEAD
                 messages.append(json.loads(msg.value().decode('utf-8')))
                 
         # Process the message
-=======
-                # Error occurred
-                print(f"Error: {msg.error()}")
-                break
-        x = json.loads(msg.value(), object_hook=lambda d: SimpleNamespace(**d))
-        x_information_loss = information_loss(x[0].__dict__)
-      
-        # Process the message
-        print(f"Received message: {msg.value().decode('utf-8')}")
-        print("Information loss of message: ", x_information_loss)
->>>>>>> dd857acf5eb28d79f1477dae5baffddded0d6489
         prognose.random.seed(prognose.pd.Timestamp.utcnow().dayofyear)
         power = [11.0, 22.0]
         task_instance = create_TaskSimEvCharging(messages, power)
