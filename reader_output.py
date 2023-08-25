@@ -10,7 +10,7 @@ import numpy as np
 # Kafka broker configuration
 bootstrap_servers = 'localhost:9092'
 group_id = 'my-consumer-group'
-topic = 'output'
+topic = 'output1'
 redis_port = 6379
 
 def information_loss(message):
@@ -26,7 +26,9 @@ def information_loss(message):
         all_values.append({'id':key, 'values':r.hgetall(key)})
 
     for value in all_values:
-        if message['id'] == value['values']['id'.encode('utf-8')].decode('utf-8'):
+        byte_str = value['id']
+        id_integer = int(byte_str)
+        if message['id'] == id_integer:
             for a in value['values'].keys():
                 if type(message[a.decode('utf-8')]) == float:
                     first = float(value['values'][a].decode('utf-8'))
@@ -38,15 +40,15 @@ def information_loss(message):
 def get_min_duration(messages):
     min_duration = math.inf
     for msg in messages:
-        if((msg["endTimeLoading"] - msg["startTimeLoading"]) < min_duration):
-            min_duration = msg["endTimeLoading"] - msg["startTimeLoading"]
+        if((int(msg[0]["end_time_loading"]) - int(msg[0]["start_time_loading"])) < min_duration):
+            min_duration = int(msg[0]["end_time_loading"]) - int(msg[0]["start_time_loading"])
     return min_duration
 
 def get_max_duration(messages):
     max_duration = -math.inf
     for msg in messages:
-        if((msg["endTimeLoading"] - msg["startTimeLoading"]) > max_duration):
-            max_duration = msg["endTimeLoading"] - msg["startTimeLoading"]
+        if((int(msg[0]["end_time_loading"]) - int(msg[0]["start_time_loading"])) > max_duration):
+            max_duration = int(msg[0]["end_time_loading"]) - int(msg[0]["start_time_loading"])
     return max_duration
 
 def create_TaskSimEvCharging(messages, power):
@@ -59,16 +61,14 @@ def create_TaskSimEvCharging(messages, power):
     max_demand = -math.inf
     max_duration = -math.inf
 
-    min_start = min([(msg["startTimeLoading"]) for msg in messages])
-    max_start = max([(msg["startTimeLoading"]) for msg in messages])
+    min_start = min([(msg[0]["start_time_loading"]) for msg in messages])
+    max_start = max([(msg[0]["start_time_loading"]) for msg in messages])
     
     min_duration = get_min_duration(messages)
     max_duration = get_max_duration(messages)
-    print("Min duration: ", min_duration)
-    print("Max duration: ", max_duration)
     
-    min_demand = min([(msg["kwh"]) for msg in messages])
-    max_demand = max([(msg["kwh"]) for msg in messages])
+    min_demand = min([(msg[0]["kwh"]) for msg in messages])
+    max_demand = max([(msg[0]["kwh"]) for msg in messages])
 
     return prognose.TaskSimEvCharging(min_duration, max_duration, min_demand, max_demand, min_start, max_start, power)
 
@@ -104,8 +104,9 @@ try:
                     break
             else:
                 message = json.loads(msg.value().decode('utf-8'))
-                info_loss += information_loss(message)
+                info_loss += information_loss(message[0])
                 messages.append(message)
+                print("messages: ", messages)
         print("The information Loss of this forecast is: ", info_loss)       
         # Process the message
         prognose.random.seed(prognose.pd.Timestamp.utcnow().dayofyear)

@@ -1,15 +1,11 @@
 import csv
-from datetime import datetime
 import random
 from time import sleep
 import os
 from typing import Iterable
 import uuid
-from faker import Faker
-import datetime
 
 def generate_station_rows() -> Iterable:
-    fake = Faker()
     for station in range(100):
         ae_session_id = str(uuid.uuid4())
         building_type = random.choice(["Residental", 'Commercial', "Healthcare", "Educational"])

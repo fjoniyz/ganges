@@ -7,7 +7,7 @@ from types import SimpleNamespace
 # Kafka broker configuration
 bootstrap_servers = 'localhost:9092'
 group_id = 'my-consumer-group'
-topic = 'electromobility'
+topic = 'electromobility2'
 
 def get_min_duration(messages):
     min_duration = math.inf

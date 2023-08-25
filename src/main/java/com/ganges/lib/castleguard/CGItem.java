@@ -3,35 +3,43 @@ package com.ganges.lib.castleguard;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-
+import java.util.Map;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
-public class Item {
-    private HashMap<String, Float> data;
-    private List<String> headers;
-    private Float sensitiveAttr;
+public class CGItem {
+    private final Map<String, Float> data;
+    private final Map<String, String> nonAnonymizedData;
+    private final List<String> headers;
+    private final Float sensitiveAttr;
     private Cluster parent;
     private Float pid;
-
-    public Item(HashMap<String, Float> data, List<String> headers, String sensitiveAttr) {
+    private String externalId;
+    public CGItem(String externalId, Map<String, Float> data,
+                  Map<String, String> nonAnonymizedData, List<String> headers,
+                  String sensitiveAttr) {
+        this.externalId = externalId;
         this.data = data;
+        this.nonAnonymizedData = nonAnonymizedData;
         this.headers = new ArrayList<>(headers);
         this.sensitiveAttr = data.get(sensitiveAttr);
         this.pid = data.get("pid");
     }
 
-    public Item(@NonNull Item another) {
-        this.data = (HashMap<String, Float>) another.data.clone();
-        this.headers = new ArrayList<>(another.getHeaders());
-        this.sensitiveAttr = another.sensitiveAttr;
-        this.parent = another.parent;
+    public CGItem(Map<String, Float> data, List<String> headers,
+                  String sensitiveAttr) {
+        this.externalId = "";
+        this.data = data;
+        this.nonAnonymizedData = new HashMap<>();
+        this.headers = new ArrayList<>(headers);
+        this.sensitiveAttr = data.get(sensitiveAttr);
+        this.pid = data.get("pid");
     }
 
     public Float getPid() {
         return this.pid;
     }
 
-    public HashMap<String, Float> getData() {
+    public Map<String, Float> getData() {
         return data;
     }
 
@@ -67,8 +75,16 @@ public class Item {
         this.parent = cluster;
     }
 
-    public Float tupleDistance(Item item) {
+    public Float tupleDistance(CGItem item) {
         // TODO: Implement
         return null;
+    }
+
+    public String getExternalId() {
+        return externalId;
+    }
+
+    public Map<String, String> getNonAnonymizedData() {
+        return nonAnonymizedData;
     }
 }
