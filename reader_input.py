@@ -3,11 +3,10 @@ import math
 from confluent_kafka import Consumer, KafkaError
 import json
 import prognose
-from types import SimpleNamespace
 # Kafka broker configuration
 bootstrap_servers = 'localhost:9092'
 group_id = 'my-consumer-group'
-topic = 'electromobility2'
+topic = 'electromobility'
 
 def get_min_duration(messages):
     min_duration = math.inf
