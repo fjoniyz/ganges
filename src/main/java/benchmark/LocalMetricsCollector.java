@@ -4,14 +4,12 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousSocketChannel;
-import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.locks.ReentrantLock;
+import org.zeromq.ZMQ;
 
 public class LocalMetricsCollector {
 
@@ -19,18 +17,23 @@ public class LocalMetricsCollector {
   private static HashMap<String, HashMap<String, Long>> timestamps = new HashMap<>();
   //private final AsynchronousSocketChannel clientSocket;
   private final String REMOTE_METRICS_ADDRESS = "localhost";
-  private final int REMOTE_METRICS_PORT = 5000;
+  private final int REMOTE_METRICS_PORT = 5001;
   private Future<Integer> lastSendingResult;
   private final ReentrantLock timestampsLock = new ReentrantLock();
 
   AsynchronousSocketChannel clientSocket;
   Future<Void> socketOpenFuture;
+  ZMQ.Context context = ZMQ.context(1);
+  ZMQ.Socket socket;
 
   private LocalMetricsCollector() throws IOException {
     lastSendingResult = null;
-    clientSocket = AsynchronousSocketChannel.open();
-    socketOpenFuture = clientSocket.connect(new InetSocketAddress(REMOTE_METRICS_ADDRESS,
-        REMOTE_METRICS_PORT));
+    connectToSocket();
+  }
+
+  private void connectToSocket() {
+    socket = context.socket(ZMQ.PUB);
+    socket.connect("tcp://*:12346");
   }
 
   public static LocalMetricsCollector getInstance()
@@ -42,8 +45,8 @@ public class LocalMetricsCollector {
   }
 
   public void setProducerTimestamps(JsonNode message) {
-    String id = message.get("id").toString();
-    Long producerTimestamp = Long.parseLong(message.get("producerTimestamp").toString());
+    String id = message.get("id").textValue();
+    Long producerTimestamp = Long.parseLong(message.get("producer_timestamp").toString());
     setTimestamp(id, "producer", producerTimestamp);
   }
 
@@ -54,17 +57,14 @@ public class LocalMetricsCollector {
 
   public void setConsumerTimestamps(String id, long timestamp) {
     setTimestamp(id, "consumer", timestamp);
-    sendCurrentResultsToRemote();
   }
 
   public void setPipeEntryTimestamps(String id, long timestamp) {
     setTimestamp(id, "pipeEntry", timestamp);
-    sendCurrentResultsToRemote();
   }
 
   public void setPipeExitTimestamps(String id, long timestamp) {
     setTimestamp(id, "pipeExit", timestamp);
-    sendCurrentResultsToRemote();
   }
 
   public void setAnonExitTimestamps(String id, long timestamp) {
@@ -72,37 +72,32 @@ public class LocalMetricsCollector {
   }
 
   private void setTimestamp(String id, String timestampName, Long timestamp) {
-    timestampsLock.lock();
+//    timestampsLock.lock();
     if (!timestamps.containsKey(id)) {
       timestamps.put(id, new HashMap<>());
     }
     timestamps.get(id).put(timestampName, timestamp);
-    timestampsLock.unlock();
   }
 
-  private void sendCurrentResultsToRemote() {
+  public void sendCurrentResultsToRemote() {
+    if (timestamps.isEmpty()) {
+      System.err.println("Timestamps are empty");
+      return;
+    }
     ObjectMapper mapper = new ObjectMapper();
 
-    timestampsLock.lock();
     JsonNode jsonNode = mapper.valueToTree(timestamps);
-    sendMessage(jsonNode);
-    timestamps.clear();
-    timestampsLock.unlock();
-  }
-
-  private void sendMessage(JsonNode message) {
     try {
-      socketOpenFuture.get();
-      if (lastSendingResult != null) {
-        lastSendingResult.get();
-      }
-      System.out.println("Sending message to remote metrics collector: " + message.toString());
-      ByteBuffer buffer = ByteBuffer.wrap(message.toString().getBytes(StandardCharsets.UTF_8));
-      lastSendingResult =
-          clientSocket.write(buffer);
-    } catch (InterruptedException | ExecutionException e) {
+      sendMessage(jsonNode);
+    } catch (InterruptedException e) {
       e.printStackTrace();
     }
+    timestamps.clear();
+  }
 
+  private void sendMessage(JsonNode message) throws InterruptedException {
+    boolean sent = socket.send(message.toString());
+    System.out.println("Sent message to remote metrics collector: " + message + " sending result:"
+            + " " + sent);
   }
 }

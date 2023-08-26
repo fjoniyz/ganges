@@ -6,94 +6,66 @@ import com.opencsv.CSVWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
-import java.nio.channels.AsynchronousServerSocketChannel;
-import java.nio.channels.AsynchronousSocketChannel;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Queue;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.concurrent.LinkedBlockingQueue;
-
+import org.zeromq.ZMQ;
 
 
 public class RemoteMetricsCollector {
 
-  //private static Set<String> allIds = new LinkedHashSet<>();
+  public static final String[] CSV_HEADERS = new String[] {"ID", "Producer", "EntryPipe",
+      "EntryAnonymization", "ExitAnonymization", "ExitPipe",
+      "Consumer"};
+  public static final String[] REQUIRED_TIMESTAMPS = new String[] {"producer", "pipeEntry",
+      "anonEntry", "anonExit", "pipeExit"};
+  private static final String FILE_NAME = "timestamps.csv";
+  private static final int PORT = 5001;
+  public static final String[] OPTIONAL_TIMESTAMPS = new String[] {"Consumer"};
+  private static final Integer MAX_CHECK_COUNT = 50;
   private static HashMap<String, HashMap<String, Long>> timestamps = new HashMap<>();
-  private static AsynchronousServerSocketChannel serverSocket;
-  //private static AsynchronousSocketChannel socketChannel;
-  private static String fileName = "timestamps.csv";
-  private static final int PORT = 5000;
-
-  private static ObjectMapper objectMapper = new ObjectMapper();
-
-  private static File outputFile;
-  private static FileWriter fileWriter;
+  private static HashMap<String, Integer> recordCheckCount = new HashMap<>();
+  private static final ObjectMapper objectMapper = new ObjectMapper();
+  private static CSVWriter writer;
+  private static ZMQ.Socket socket;
 
   public static void main(String[] args)
       throws ExecutionException, InterruptedException, IOException {
 
-    outputFile = new File(fileName);
-    connectSocket();
-    ExecutorService taskExecutor = Executors.newCachedThreadPool(Executors
-        .defaultThreadFactory());
+    File outputFile = new File(FILE_NAME);
+    FileWriter fileWriter = new FileWriter(outputFile);
+    // create CSVWriter object filewriter object as parameter
+    writer = new CSVWriter(fileWriter);
+    // adding header to csv
+    writer.writeNext(CSV_HEADERS);
+    writer.flush();
 
+    System.out.println("Connecting...");
+      // Socket to talk to clients
+    ZMQ.Context ctx = ZMQ.context(1);
+    ZMQ.Socket socket = ctx.socket(ZMQ.SUB);
+    socket.bind("tcp://127.0.0.1:12346");
+    socket.subscribe("".getBytes());
     while (true) {
-      Future<AsynchronousSocketChannel> acceptResult = serverSocket.accept();
-      AsynchronousSocketChannel socketChannel = acceptResult.get();
-
-      Callable<Void> worker =
-          new Callable<Void>() {
-            @Override
-            public Void call() throws Exception {
-
-              String host = socketChannel.getRemoteAddress().toString();
-              System.out.println("Incoming connection from: " + host);
-
-              while (true) {
-                metricsReaderLoop(socketChannel);
-              }
-            }
-          };
-      taskExecutor.submit(worker);
+      String message = socket.recvStr();
+      processMessage(message);
     }
+
   }
 
-  private static void connectSocket() {
-    try {
-      serverSocket =
-          AsynchronousServerSocketChannel.open();
-      serverSocket.bind(new InetSocketAddress("localhost", PORT));
-      System.out.println("Opened server socket on port " + PORT);
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
-  }
-
-  private static void metricsReaderLoop(AsynchronousSocketChannel socketChannel)
+  private static void processMessage(String message)
       throws ExecutionException, InterruptedException, IOException {
-
-    ByteBuffer buffer = ByteBuffer.allocate(10240);
-    Future<Integer> readResult = socketChannel.read(buffer);
-    readResult.get();
-    buffer.flip();
-    String receivedValue = new String(buffer.array(), StandardCharsets.UTF_8).replaceAll("\0", "");
-    JsonNode receivedNode = objectMapper.readTree(receivedValue);
-
-    System.out.println("Received: " + receivedValue);
-    processMessage(receivedNode);
+    JsonNode receivedNode = objectMapper.readTree(message);
+    System.out.println("Received: " + message);
+    if (!message.isEmpty()) {
+      processTimestampsJson(receivedNode);
+    }
   }
 
-  private static void processMessage(JsonNode rootNode) throws IOException {
+  private static void processTimestampsJson(JsonNode rootNode) throws IOException {
     // Iterate through all entries
     for (Iterator<String> node = rootNode.fieldNames(); node.hasNext(); ) {
       String id = node.next();
@@ -113,64 +85,49 @@ public class RemoteMetricsCollector {
       }
     }
 
-    saveMetricsToCSV();
+    saveMetricsToCsv();
   }
 
-  private static void saveMetricsToCSV() throws IOException {
+  private static void saveMetricsToCsv() throws IOException {
+    List<String> outputIds = new ArrayList<>();
+    for (String id : timestamps.keySet()) {
+      HashMap<String, Long> recordTimestamps = timestamps.get(id);
+      if (Arrays.stream(REQUIRED_TIMESTAMPS)
+          .allMatch(recordTimestamps::containsKey)) {
+        if (Arrays.stream(OPTIONAL_TIMESTAMPS)
+            .allMatch(recordTimestamps::containsKey)
+            || (recordCheckCount.containsKey(id) && recordCheckCount.get(id) >= MAX_CHECK_COUNT)) {
 
-    fileWriter = new FileWriter(outputFile);
+          String[] data = {
+            id,
+            recordTimestamps.get("producer").toString(),
+            recordTimestamps.get("pipeEntry").toString(),
+            recordTimestamps.get("anonEntry").toString(),
+            recordTimestamps.get("anonExit").toString(),
+            recordTimestamps.get("pipeExit").toString(),
+              !recordTimestamps.containsKey("consumer") ? "" :
+                  recordTimestamps.get("consumer").toString()
+          };
+          try {
+            writer.writeNext(data);
+            writer.flush();
+          } catch (IOException e) {
+            e.printStackTrace();
+          }
 
-    try {
-      // create FileWriter object with file as parameter
-
-      // create CSVWriter object filewriter object as parameter
-      CSVWriter writer = new CSVWriter(fileWriter);
-
-      // adding header to csv
-      String[] header = { "ID", "Producer", "EntryPipe",
-          "EntryAnonymization", "ExitAnonymization", "ExitPipe",
-          "Consumer"};
-      writer.writeNext(header);
-
-      for (String id : timestamps.keySet()) {
-        List<String> dataList = new ArrayList<>();
-
-        String producerTimestamp = timestamps.containsKey(id)
-            && timestamps.get(id).containsKey("producer")
-            ? timestamps.get(id).get("producer").toString() : "";
-        String pipeEntryTimestamp = timestamps.containsKey(id)
-            && timestamps.get(id).containsKey("pipeEntry")
-            ? timestamps.get(id).get("pipeEntry").toString() : "";
-        String pipeExitTimestamp = timestamps.containsKey(id)
-            && timestamps.get(id).containsKey("pipeExit")
-            ? timestamps.get(id).get("pipeExit").toString() : "";
-        String anonEntryTimestamp = timestamps.containsKey(id)
-            && timestamps.get(id).containsKey("anonEntry")
-            ? timestamps.get(id).get("anonEntry").toString() : "";
-        String anonExitTimestamp = timestamps.containsKey(id)
-            && timestamps.get(id).containsKey("anonExit")
-            ? timestamps.get(id).get("anonExit").toString() : "";
-        String consumerTimestamp = timestamps.containsKey(id)
-            && timestamps.get(id).containsKey("consumer")
-            ? timestamps.get(id).get("consumer").toString() : "";
-
-        String[] data = {id, producerTimestamp, pipeEntryTimestamp, anonEntryTimestamp,
-            anonExitTimestamp, pipeExitTimestamp, consumerTimestamp };
-        writer.writeNext(data);
-
-        boolean allPresent = !producerTimestamp.isEmpty() && !pipeEntryTimestamp.isEmpty()
-            && !pipeExitTimestamp.isEmpty() && !anonEntryTimestamp.isEmpty()
-            && !anonExitTimestamp.isEmpty() && !consumerTimestamp.isEmpty();
-        if (allPresent) {
-          timestamps.remove(id);
+          outputIds.add(id);
+        } else {
+          if (recordCheckCount.containsKey(id)) {
+            recordCheckCount.put(id, recordCheckCount.get(id) + 1);
+          } else {
+            recordCheckCount.put(id, 1);
+          }
         }
       }
-      // closing writer connection
-      writer.close();
-    } catch (IOException e) {
-      e.printStackTrace();
     }
+    outputIds.forEach(id -> {
+      timestamps.remove(id);
+      recordCheckCount.remove(id);
+    });
   }
-
-
 }

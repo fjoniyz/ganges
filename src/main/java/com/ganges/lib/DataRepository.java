@@ -1,6 +1,5 @@
 package com.ganges.lib;
 
-import com.ganges.lib.AnonymizationItem;
 import com.lambdaworks.redis.RedisClient;
 import com.lambdaworks.redis.RedisConnection;
 import com.lambdaworks.redis.RedisURI;
@@ -52,7 +51,7 @@ public class DataRepository {
     public List<AnonymizationItem> getValuesByKeys(List<String> valueKeys) {
         List<String> keys = connection.keys("*");
         List<Integer> keysAsInts = new ArrayList<>();
-        for(String key: keys){
+        for(String key : keys){
             keysAsInts.add(Integer.parseInt(key));
         }
         Collections.sort(keysAsInts);

@@ -30,7 +30,7 @@ def send_dataset(bootstrap_servers: List[str], dataset: Iterable, topic: str, he
 
     for instance in dataset:
         instance_dict = {headers[i]: preprocess_value(instance[i]) for i in range(len(instance))}
-        instance_dict['producer_timestamp'] = str(int(time.time() * 1000))
+        instance_dict['producer_timestamp'] = int(time.time() * 1000)
         msg = json.dumps(instance_dict)
         logging.info(f"{topic} {instance_dict['id']} {str(msg)}")
         producer.send(topic, value=str(msg).encode(

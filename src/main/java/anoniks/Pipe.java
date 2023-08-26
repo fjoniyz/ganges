@@ -151,15 +151,22 @@ public class Pipe {
     }
     List<AnonymizationItem> output = algorithm.anonymize(contextValues);
     if (enableMetrics) {
-      metricsCollector.setAnonExitTimestamps(id,
-          System.currentTimeMillis());
+      long anonExitTimestamp = System.currentTimeMillis();
+      for (AnonymizationItem item : output) {
+        metricsCollector.setAnonExitTimestamps(item.getId(), anonExitTimestamp);
+      }
     }
 
     ArrayNode outputMessage = getJsonFromItems(output);
 
     if (enableMetrics) {
-      metricsCollector.setPipeExitTimestamps(id,
-          System.currentTimeMillis());
+      long pipeExitTimestamp = System.currentTimeMillis();
+      for (AnonymizationItem item : output) {
+        metricsCollector.setPipeExitTimestamps(item.getId(), pipeExitTimestamp);
+      }
+      if (!output.isEmpty()) {
+        metricsCollector.sendCurrentResultsToRemote();
+      }
     }
 
     System.out.println("OUTPUT " + outputMessage);
