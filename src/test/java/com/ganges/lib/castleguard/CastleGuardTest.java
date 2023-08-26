@@ -117,7 +117,7 @@ public class CastleGuardTest {
 
     @Test
     public void testAnonymize() {
-        Map<String, String> testNonAnon = new HashMap<>()
+        Map<String, String> testNonAnon = new HashMap<>();
         preparation(3, 10, 5, 1, 5, 1, 100 * Math.log(2), true);
         Map<String, Double> dataOne = createDoubleItem(Arrays.asList(1.0, 200.0, 5.0));
         Map<String, Double> dataTwo = createDoubleItem(Arrays.asList(2.0, 300.0, 5.0));
@@ -151,7 +151,7 @@ public class CastleGuardTest {
     /**
      * suppressing all elements within CastleGuard algorithm
      */
-    @Tests
+    @Test
     public void suppressAllItemsTest() {
         preparation(3, 10, 5, 1, 5, 1, 100 * Math.log(2), true);
         HashMap<String, Float> dataOne = createItem(Arrays.asList(1.0F, 200.0F, 5.0F));
