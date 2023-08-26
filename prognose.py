@@ -1,6 +1,4 @@
-import pandas as pd
 from pandas import DataFrame, Timestamp, Timedelta, date_range, concat, Series
-import random
 from numpy import zeros, array, ceil, concatenate
 
 from numpy.random import seed
