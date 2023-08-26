@@ -133,17 +133,18 @@ public class CastleGuard implements AnonymizationAlgorithm {
                 data.put(header, floatData);
             }
             CGItem item = new CGItem(dataPoint.getId(), data, dataPoint.getNonAnonymizedValues(),
-                    this.headers,
+                this.headers,
                     this.sensitiveAttr);
             insertData(item);
         }
         List<AnonymizationItem> outputItems = outputQueue.stream().map(cgItem -> {
-            //TODO: Unify value data type to avoid this mess
-            Map<String, Double> values = cgItem.getData().entrySet().stream()
-                    .collect(Collectors.toMap(Map.Entry::getKey,
-                            e -> e.getValue().doubleValue()));
-            return new AnonymizationItem(cgItem.getExternalId(), values, cgItem.getNonAnonymizedData());
-        }).collect(Collectors.toList()); // Collect the stream elements into a list
+                    //TODO: Unify value data type to avoid this mess
+                    Map<String, Double> values = cgItem.getData().entrySet().stream()
+                            .collect(Collectors.toMap(Map.Entry::getKey,
+                                    e -> e.getValue().doubleValue()));
+                    return new AnonymizationItem(cgItem.getExternalId(), values, cgItem.getNonAnonymizedData());
+                }
+        ).toList();
         outputQueue.clear();
 
         // Filter out median of cluster values. TODO: Check if we only need this median, or if we want min, max or spc as well
@@ -156,7 +157,7 @@ public class CastleGuard implements AnonymizationAlgorithm {
                         newHashMap.put(header, headerValue); // Create a new HashMap with only the "Header" key
                     }
                     return new AnonymizationItem(item.getId(), newHashMap, item.getNonAnonymizedValues());
-                })
+                  })
                 .collect(Collectors.toList());
 
         return updatedOutput;
