@@ -15,25 +15,17 @@ public class LocalMetricsCollector {
 
   private static LocalMetricsCollector instance;
   private static HashMap<String, HashMap<String, Long>> timestamps = new HashMap<>();
-  //private final AsynchronousSocketChannel clientSocket;
-  private final String REMOTE_METRICS_ADDRESS = "localhost";
-  private final int REMOTE_METRICS_PORT = 5001;
-  private Future<Integer> lastSendingResult;
-  private final ReentrantLock timestampsLock = new ReentrantLock();
-
-  AsynchronousSocketChannel clientSocket;
-  Future<Void> socketOpenFuture;
+  private final String REMOTE_METRICS_ADDRESS = "tcp://*:12346";
   ZMQ.Context context = ZMQ.context(1);
   ZMQ.Socket socket;
 
   private LocalMetricsCollector() throws IOException {
-    lastSendingResult = null;
     connectToSocket();
   }
 
   private void connectToSocket() {
     socket = context.socket(ZMQ.PUB);
-    socket.connect("tcp://*:12346");
+    socket.connect(REMOTE_METRICS_ADDRESS);
   }
 
   public static LocalMetricsCollector getInstance()

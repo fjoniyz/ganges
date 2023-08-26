@@ -23,14 +23,13 @@ public class RemoteMetricsCollector {
   public static final String[] REQUIRED_TIMESTAMPS = new String[] {"producer", "pipeEntry",
       "anonEntry", "anonExit", "pipeExit"};
   private static final String FILE_NAME = "timestamps.csv";
-  private static final int PORT = 5001;
+  private static final int PORT = 12346;
   public static final String[] OPTIONAL_TIMESTAMPS = new String[] {"Consumer"};
   private static final Integer MAX_CHECK_COUNT = 50;
   private static HashMap<String, HashMap<String, Long>> timestamps = new HashMap<>();
   private static HashMap<String, Integer> recordCheckCount = new HashMap<>();
   private static final ObjectMapper objectMapper = new ObjectMapper();
   private static CSVWriter writer;
-  private static ZMQ.Socket socket;
 
   public static void main(String[] args)
       throws ExecutionException, InterruptedException, IOException {
@@ -43,12 +42,13 @@ public class RemoteMetricsCollector {
     writer.writeNext(CSV_HEADERS);
     writer.flush();
 
-    System.out.println("Connecting...");
-      // Socket to talk to clients
+    System.out.println("Connecting to the socket with port " + PORT + "...");
+    // Socket to talk to clients
     ZMQ.Context ctx = ZMQ.context(1);
     ZMQ.Socket socket = ctx.socket(ZMQ.SUB);
-    socket.bind("tcp://127.0.0.1:12346");
+    socket.bind("tcp://127.0.0.1:" + PORT);
     socket.subscribe("".getBytes());
+
     while (true) {
       String message = socket.recvStr();
       processMessage(message);
