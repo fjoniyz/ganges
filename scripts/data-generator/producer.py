@@ -32,9 +32,9 @@ def send_dataset(bootstrap_servers: List[str], dataset: Iterable, topic: str, he
         instance_dict = {headers[i]: preprocess_value(instance[i]) for i in range(len(instance))}
         instance_dict['producer_timestamp'] = int(time.time() * 1000)
         msg = json.dumps(instance_dict)
-        logging.info(f"{topic} {instance_dict['id']} {str(msg)}")
+        logging.info(f"{topic} {instance_dict['ae_session_id']} {str(msg)}")
         producer.send(topic, value=str(msg).encode(
-            'utf-8'), key=instance_dict["id"].encode('utf-8')) # change the key here??
+            'utf-8'), key=instance_dict["ae_session_id"].encode('utf-8')) # change the key here??
         producer.flush()
         sleep(delay)
 
