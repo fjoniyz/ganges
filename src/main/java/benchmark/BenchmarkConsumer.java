@@ -36,7 +36,7 @@ public class BenchmarkConsumer {
 
         if (!record.value().isEmpty()) {
           for (JsonNode node : record.value()) {
-            String id = node.get("id").textValue();
+            String id = node.get("ae_session_id").textValue();
             metricsCollector.setConsumerTimestamps(id, consumerTimestamp);
           }
           metricsCollector.sendCurrentResultsToRemote();
