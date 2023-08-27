@@ -40,7 +40,8 @@ public class RemoteMetricsCollector {
 
     String userDirectory = System.getProperty("user.dir");
     try (InputStream configStream = Files.newInputStream(
-        Paths.get(userDirectory + "/src/main/resources/remote-metrics-collector.properties"))) {
+        Paths.get(userDirectory + "/src/main/resources/monitoring/remote-metrics-collector" +
+            ".properties"))) {
       Properties props = new Properties();
       props.load(configStream);
       port = Integer.parseInt(props.getProperty("collector-socket-port"));
