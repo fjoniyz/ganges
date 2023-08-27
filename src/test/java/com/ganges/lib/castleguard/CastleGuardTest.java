@@ -94,7 +94,7 @@ public class CastleGuardTest {
         castle.insertData(dataOne);
         List<Cluster> clusters = manage.getNonAnonymizedClusters();
         Assert.assertEquals(clusters.get(0).getContents().get(0).getData().get("timeseriesId"), 1.0F, 0.0F);
-        Assert.assertEquals(clusters.get(0).getContents().get(0).getData().get("SecondsEnergyConsumption"), 200.0F, 0.0F);
+        Assert.assertEquals(clusters.get(0).getContents().get(0).getData().get("Seconds_EnergyConsumption"), 200.0F, 0.0F);
         Assert.assertEquals(clusters.get(0).getContents().get(0).getData().get("station"), 5.0F, 0.0F);
     }
 
@@ -117,6 +117,7 @@ public class CastleGuardTest {
 
     @Test
     public void testAnonymize() {
+        Map<String, String> testNonAnon = new HashMap<>();
         preparation(3, 10, 5, 1, 5, 1, 100 * Math.log(2), true);
         Map<String, Double> dataOne = createDoubleItem(Arrays.asList(1.0, 200.0, 5.0));
         Map<String, Double> dataTwo = createDoubleItem(Arrays.asList(2.0, 300.0, 5.0));
@@ -126,16 +127,16 @@ public class CastleGuardTest {
         Map<String, Double> dataSix = createDoubleItem(Arrays.asList(6.0, 700.0, 0.0));
 
         List<AnonymizationItem> inputOne = new ArrayList<>();
-        inputOne.add(new AnonymizationItem("1", dataOne));
+        inputOne.add(new AnonymizationItem("1", dataOne, testNonAnon));
 
         List<AnonymizationItem> inputTwo = new ArrayList<>();
-        inputTwo.add(new AnonymizationItem("2", dataTwo));
-        inputTwo.add(new AnonymizationItem("3", dataThree));
-        inputTwo.add(new AnonymizationItem("4", dataFour));
+        inputTwo.add(new AnonymizationItem("2", dataTwo, testNonAnon));
+        inputTwo.add(new AnonymizationItem("3", dataThree, testNonAnon));
+        inputTwo.add(new AnonymizationItem("4", dataFour, testNonAnon));
 
         List<AnonymizationItem> inputThree = new ArrayList<>();
-        inputThree.add(new AnonymizationItem("5", dataFive));
-        inputThree.add(new AnonymizationItem("6", dataSix));
+        inputThree.add(new AnonymizationItem("5", dataFive, testNonAnon));
+        inputThree.add(new AnonymizationItem("6", dataSix, testNonAnon));
 
         castle.anonymize(inputOne);
         castle.anonymize(inputTwo);
