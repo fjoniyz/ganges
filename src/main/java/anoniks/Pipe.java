@@ -212,11 +212,11 @@ public class Pipe {
   public static String[] getFieldsToAnonymize() throws IOException {
     String userDirectory = System.getProperty("user.dir");
     try (InputStream inputStream = Files.newInputStream(
-        Paths.get(userDirectory + "/src/main/resources/pipe.properties"))) {
+        Paths.get(userDirectory + "/src/main/resources/anoniks/pipe.properties"))) {
       Properties properties = new Properties();
       properties.load(inputStream);
-      String docaFieldsString = properties.getProperty("anonymized_fields");
-      String[] anonFields = docaFieldsString.split(",");
+      String fieldsStr = properties.getProperty("anonymized_fields");
+      String[] anonFields = fieldsStr.split(",");
       System.out.println("Fields to be anonymized: " + String.join(" ", anonFields));
       return anonFields;
     }
@@ -231,7 +231,7 @@ public class Pipe {
     System.out.println("Created local metrics collector");
 
     try (InputStream inputStream = Files.newInputStream(
-        Paths.get(userDirectory + "/src/main/resources/pipe.properties"))) {
+        Paths.get(userDirectory + "/src/main/resources/anoniks/pipe.properties"))) {
       props.load(inputStream);
     } catch (IOException e) {
       throw new RuntimeException(e);
@@ -254,7 +254,7 @@ public class Pipe {
     Deserializer deserializer = new Deserializer();
     Serde<JsonNode> jsonSerde = Serdes.serdeFrom(serializer, deserializer);
     try (InputStream inputStream = Files.newInputStream(
-        Paths.get(userDirectory + "/src/main/resources/kafka.properties"))) {
+        Paths.get(userDirectory + "/src/main/resources/anoniks/kafka.properties"))) {
       props.load(inputStream);
       props.put(StreamsConfig.METADATA_MAX_AGE_CONFIG,
           "1000"); // Needed to prevent timeouts during broker startup.

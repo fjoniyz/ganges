@@ -4,32 +4,44 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
-import java.nio.channels.AsynchronousSocketChannel;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.HashMap;
+import java.util.Properties;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-import java.util.concurrent.locks.ReentrantLock;
 import org.zeromq.ZMQ;
 
 public class LocalMetricsCollector {
 
   private static LocalMetricsCollector instance;
   private static HashMap<String, HashMap<String, Long>> timestamps = new HashMap<>();
-  private final String REMOTE_METRICS_ADDRESS = "tcp://*:12346";
+  private String remoteMetricsAddress;
   ZMQ.Context context = ZMQ.context(1);
   ZMQ.Socket socket;
 
-  private LocalMetricsCollector() throws IOException {
+  private LocalMetricsCollector() {
+    String userDirectory = System.getProperty("user.dir");
+    try (InputStream configStream = Files.newInputStream(
+        Paths.get(userDirectory + "/src/main/resources/monitoring/local-metrics-collector" +
+            ".properties"))) {
+      Properties props = new Properties();
+      props.load(configStream);
+      remoteMetricsAddress = props.getProperty("remote-collector-address");
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+
     connectToSocket();
   }
 
   private void connectToSocket() {
     socket = context.socket(ZMQ.PUB);
-    socket.connect(REMOTE_METRICS_ADDRESS);
+    socket.connect(remoteMetricsAddress);
   }
 
   public static LocalMetricsCollector getInstance()
-      throws IOException, ExecutionException, InterruptedException {
+      throws ExecutionException, InterruptedException {
     if (instance == null) {
       instance = new LocalMetricsCollector();
     }
@@ -64,7 +76,6 @@ public class LocalMetricsCollector {
   }
 
   private void setTimestamp(String id, String timestampName, Long timestamp) {
-//    timestampsLock.lock();
     if (!timestamps.containsKey(id)) {
       timestamps.put(id, new HashMap<>());
     }

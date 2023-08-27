@@ -6,11 +6,15 @@ import com.opencsv.CSVWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import org.zeromq.ZMQ;
 
@@ -22,19 +26,32 @@ public class RemoteMetricsCollector {
       "Consumer"};
   public static final String[] REQUIRED_TIMESTAMPS = new String[] {"producer", "pipeEntry",
       "anonEntry", "anonExit", "pipeExit"};
-  private static final String FILE_NAME = "timestamps.csv";
-  private static final int PORT = 12346;
+  private static String fileName;
+  private static int port;
   public static final String[] OPTIONAL_TIMESTAMPS = new String[] {"Consumer"};
-  private static final Integer MAX_CHECK_COUNT = 50;
-  private static HashMap<String, HashMap<String, Long>> timestamps = new HashMap<>();
-  private static HashMap<String, Integer> recordCheckCount = new HashMap<>();
+  private static Integer maxCheckCount = 50;
+  private static final HashMap<String, HashMap<String, Long>> timestamps = new HashMap<>();
+  private static final HashMap<String, Integer> recordCheckCount = new HashMap<>();
   private static final ObjectMapper objectMapper = new ObjectMapper();
   private static CSVWriter writer;
 
   public static void main(String[] args)
       throws ExecutionException, InterruptedException, IOException {
 
-    File outputFile = new File(FILE_NAME);
+    String userDirectory = System.getProperty("user.dir");
+    try (InputStream configStream = Files.newInputStream(
+        Paths.get(userDirectory + "/src/main/resources/remote-metrics-collector.properties"))) {
+      Properties props = new Properties();
+      props.load(configStream);
+      port = Integer.parseInt(props.getProperty("collector-socket-port"));
+      maxCheckCount = Integer.valueOf(props.getProperty("max-check-count"));
+      fileName = props.getProperty("csv-file-name");
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+
+
+    File outputFile = new File(fileName);
     FileWriter fileWriter = new FileWriter(outputFile);
     // create CSVWriter object filewriter object as parameter
     writer = new CSVWriter(fileWriter);
@@ -42,11 +59,11 @@ public class RemoteMetricsCollector {
     writer.writeNext(CSV_HEADERS);
     writer.flush();
 
-    System.out.println("Connecting to the socket with port " + PORT + "...");
+    System.out.println("Connecting to the socket with port " + port + "...");
     // Socket to talk to clients
     ZMQ.Context ctx = ZMQ.context(1);
     ZMQ.Socket socket = ctx.socket(ZMQ.SUB);
-    socket.bind("tcp://127.0.0.1:" + PORT);
+    socket.bind("tcp://127.0.0.1:" + port);
     socket.subscribe("".getBytes());
 
     while (true) {
@@ -96,7 +113,7 @@ public class RemoteMetricsCollector {
           .allMatch(recordTimestamps::containsKey)) {
         if (Arrays.stream(OPTIONAL_TIMESTAMPS)
             .allMatch(recordTimestamps::containsKey)
-            || (recordCheckCount.containsKey(id) && recordCheckCount.get(id) >= MAX_CHECK_COUNT)) {
+            || (recordCheckCount.containsKey(id) && recordCheckCount.get(id) >= maxCheckCount)) {
 
           String[] data = {
             id,
