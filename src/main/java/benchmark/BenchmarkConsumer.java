@@ -19,7 +19,7 @@ public class BenchmarkConsumer {
     Properties props = new Properties();
     Deserializer deserializer = new Deserializer();
 
-    props.setProperty("bootstrap.servers", "localhost:9092");
+    props.setProperty("bootstrap.servers", "10.214.0.2:9092");
     props.setProperty("group.id", "test");
     props.setProperty("enable.auto.commit", "true");
     props.setProperty("auto.commit.interval.ms", "1000");
