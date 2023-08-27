@@ -113,9 +113,10 @@ public class Pipe {
     // Get values of current message
     System.out.println("message: " + message);
     String id = message.get("ae_session_id").textValue();
+
     if (enableMetrics) {
       metricsCollector.setProducerTimestamps(message);
-      metricsCollector.setPipeEntryTimestamps(message.get("id").textValue(),
+      metricsCollector.setPipeEntryTimestamps(message.get("ae_session_id").textValue(),
           System.currentTimeMillis());
     }
 
