@@ -205,7 +205,7 @@ public class Pipe {
     String outputTopic = props.getProperty("output-topic");
     String anonymizationAlgoName = props.getProperty("algorithm");
 
-    boolean addUnanonymizedHistory = anonymizationAlgoName.equals(DOCA_KEY);
+    boolean addUnanonymizedHistory = Boolean.parseBoolean(props.getProperty("use-redis"));
     if (anonymizationAlgoName.equals(CASTLEGUARD_KEY)) {
       algorithm = new CastleGuard();
     } else if (anonymizationAlgoName.equals(DOCA_KEY)) {
