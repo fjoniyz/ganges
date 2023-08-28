@@ -60,12 +60,13 @@ public class RemoteMetricsCollector {
     writer.writeNext(CSV_HEADERS);
     writer.flush();
 
-    System.out.println("Connecting to the socket with port " + port + "...");
     // Socket to talk to clients
     ZMQ.Context ctx = ZMQ.context(1);
     ZMQ.Socket socket = ctx.socket(ZMQ.SUB);
-    socket.bind("tcp://127.0.0.1:" + port);
+    String socketAddress = "tcp://*:" + port;
+    socket.bind(socketAddress);
     socket.subscribe("".getBytes());
+    System.out.println("Connecting to the socket: " + socketAddress + " ...");
 
     while (true) {
       String message = socket.recvStr();
