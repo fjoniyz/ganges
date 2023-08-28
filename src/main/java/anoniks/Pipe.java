@@ -38,6 +38,7 @@ public class Pipe {
   private static final String CASTLEGUARD_KEY = "castleguard";
   private static final String DOCA_KEY = "doca";
   private static AnonymizationAlgorithm algorithm;
+  private static Properties props = new Properties();
 
   /**
    * This method extracts values from a JSON message based on keys specified in the
@@ -131,7 +132,12 @@ public class Pipe {
       contextValues = dataRepository.getValuesByKeys(anonFieldsList);
       dataRepository.close();
     } else {
-      contextValues.add(new AnonymizationItem(id, valuesMap, nonAnonymizedValuesMap));
+      String[] weights = props.getProperty("prioritization").split(",");
+      Map<String, Float> headerWeights = new HashMap<>();
+      for (int i = 0; i < weights.length; i++) {
+        headerWeights.put(anonFields[i], Float.parseFloat(weights[i]));
+      }
+      contextValues.add(new AnonymizationItem(id, valuesMap, nonAnonymizedValuesMap, headerWeights));
     }
 
     // Anonymization
@@ -195,7 +201,6 @@ public class Pipe {
 
   public static void main(final String[] args) {
     String userDirectory = System.getProperty("user.dir");
-    Properties props = new Properties();
 
     try (InputStream inputStream = Files.newInputStream(
         Paths.get(userDirectory + "/src/main/resources/pipe.properties"))) {
