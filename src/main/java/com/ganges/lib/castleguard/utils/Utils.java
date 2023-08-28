@@ -9,13 +9,20 @@ public class Utils {
   private static Random random;
 
   public Utils() {
-    random = new Random();
+    this.random = new Random();
   }
 
   public static Range<Float> updateRange(Range<Float> range, float newVal) {
     float max = Math.max(range.getMaximum(), newVal);
     float min = Math.min(range.getMinimum(), newVal);
     Range<Float> newRange = Range.between(min, max);
+    return newRange;
+  }
+
+  public static Range<Double> updateDoubleRange(Range<Double> range, Double newVal) {
+    Double max = Math.max(range.getMaximum(), newVal);
+    Double min = Math.min(range.getMinimum(), newVal);
+    Range<Double> newRange = Range.between(min, max);
     return newRange;
   }
 
@@ -49,6 +56,15 @@ public class Utils {
     float diff_other = Math.abs(other.getMaximum() - other.getMinimum());
     if (diff_other == 0) {
       return 0F;
+    }
+    return diff_self / diff_other;
+  }
+
+  public Double doubleRangeInformationLoss(Range<Double> actual, Range<Double> other) {
+    Double diff_self = Math.abs(actual.getMaximum() - actual.getMinimum());
+    Double diff_other = Math.abs(other.getMaximum() - other.getMinimum());
+    if (diff_other == 0) {
+      return 0.0;
     }
     return diff_self / diff_other;
   }
