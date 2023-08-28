@@ -17,6 +17,7 @@ public class Cluster {
   private Map<String, Range<Float>> ranges;
   private Set<Float> diversity;
   private Map<String, Float> sampleValues;
+  private Map<String, Float> headerWeights;
 
   public Cluster(List<String> headers) {
     // Initialises the cluster
@@ -26,6 +27,22 @@ public class Cluster {
     headers.forEach(header -> this.ranges.put(header, Range.between(0F, 0F)));
     this.diversity = new HashSet<>();
     this.sampleValues = new HashMap<>();
+    for (String header : headers) {
+      this.headerWeights.put(header, 1f);
+    }
+
+    this.utils = new Utils();
+  }
+
+  public Cluster(List<String> headers, Map<String, Float> headerWeights) {
+    // Initialises the cluster
+    this.contents = new ArrayList<>();
+    this.ranges = new LinkedHashMap<>();
+
+    headers.forEach(header -> this.ranges.put(header, Range.between(0F, 0F)));
+    this.diversity = new HashSet<>();
+    this.sampleValues = new HashMap<>();
+    this.headerWeights = headerWeights;
 
     this.utils = new Utils();
   }
@@ -224,7 +241,7 @@ public class Cluster {
           Range.between(
               (Math.min(header.getValue().getMinimum(), item.getData().get(header.getKey()))),
               Math.max(header.getValue().getMaximum(), item.getData().get(header.getKey())));
-      loss += this.utils.rangeInformationLoss(updated, global_range);
+      loss += this.utils.rangeInformationLoss(updated, global_range, this.headerWeights.get(header.getKey()));
     }
     return loss;
   }
@@ -254,7 +271,7 @@ public class Cluster {
               Math.max(
                   header.getValue().getMaximum(),
                   cluster.ranges.get(header.getKey()).getMaximum()));
-      loss += this.utils.rangeInformationLoss(updated, global_range);
+      loss += this.utils.rangeInformationLoss(updated, global_range, this.headerWeights.get(header.getKey()));
     }
     return loss;
   }
@@ -272,7 +289,7 @@ public class Cluster {
     Range<Integer> updated = null;
     for (Map.Entry<String, Range<Float>> header : this.ranges.entrySet()) {
       Range<Float> global_range = global_ranges.get(header.getKey());
-      loss += this.utils.rangeInformationLoss(header.getValue(), global_range);
+      loss += this.utils.rangeInformationLoss(header.getValue(), global_range, this.headerWeights.get(header.getKey()));
     }
     return loss;
   }

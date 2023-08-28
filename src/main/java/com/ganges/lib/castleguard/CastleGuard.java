@@ -48,6 +48,7 @@ public class CastleGuard implements AnonymizationAlgorithm {
   private final boolean useDiffPrivacy;
   private final ClusterManagement clusterManagement;
   private final Deque<CGItem> outputQueue = new ArrayDeque<>();
+  private Map<String, Float> headerWeights;
 
   /**
    * !Deprecated constructor
@@ -140,6 +141,7 @@ public class CastleGuard implements AnonymizationAlgorithm {
 
   @Override
   public List<AnonymizationItem> anonymize(List<AnonymizationItem> X) {
+    this.headerWeights = X.get(0).getHeaderWeights();
     for (AnonymizationItem dataPoint : X) {
       HashMap<String, Float> data = new HashMap<>();
       for (String header : headers) {
@@ -203,7 +205,7 @@ public class CastleGuard implements AnonymizationAlgorithm {
     Optional<Cluster> cluster = bestSelection(item);
     if (!cluster.isPresent()) {
       // Create new cluster
-      Cluster newCluster = new Cluster(this.headers);
+      Cluster newCluster = new Cluster(this.headers, this.headerWeights);
       this.clusterManagement.addToNonAnonymizedClusters(newCluster);
       newCluster.insert(item);
     } else {
