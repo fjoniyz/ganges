@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Properties;
+import java.util.stream.Collectors;
 import org.apache.commons.lang3.Range;
 import org.apache.commons.math3.distribution.LaplaceDistribution;
 import org.apache.commons.math3.random.JDKRandomGenerator;
@@ -45,7 +46,7 @@ public class Doca implements AnonymizationAlgorithm {
   private List<DocaItem> domain;
   private List<AnonymizationItem> leftOverItems = new ArrayList<>();
   private final Map<String, Double> sensitivityList = new HashMap<>();
-
+  private Map<String, Double> headerWeights;
 
 
   public Doca() {
@@ -79,6 +80,13 @@ public class Doca implements AnonymizationAlgorithm {
 
   @Override
   public List<AnonymizationItem> anonymize(List<AnonymizationItem> x) {
+    // Initialize header weights
+    this.headerWeights = x.get(0).getHeaderWeights().entrySet()
+        .stream()
+        .collect(Collectors.toMap(
+            Map.Entry::getKey,
+            entry -> entry.getValue().doubleValue() // Convert Float to Double
+        ));
     // Append Left over Items from previous batch (only happens when domain bounding is used)
     x.addAll(0, this.leftOverItems);
     this.leftOverItems = new ArrayList<>();
@@ -229,7 +237,7 @@ public class Doca implements AnonymizationAlgorithm {
     DocaCluster bestCluster = this.findBestCluster(tuple, DocaUtil.getAttributeDiff(this.rangeMap));
 
     if (bestCluster == null) {
-      DocaCluster newCluster = new DocaCluster(tuple.getHeaders());
+      DocaCluster newCluster = new DocaCluster(tuple.getHeaders(), this.headerWeights);
       newCluster.insert(tuple);
       this.clusterList.add(newCluster);
     } else {
@@ -239,7 +247,7 @@ public class Doca implements AnonymizationAlgorithm {
     // update global ranges
     for (String header : tuple.getHeaders()) {
       if (this.rangeMap.containsKey(header)) {
-        Utils.updateDoubleRange(this.rangeMap.get(header), tuple.getData().get(header));
+        this.rangeMap.put(header, Utils.updateDoubleRange(this.rangeMap.get(header), tuple.getData().get(header)));
       } else {
         this.rangeMap.put(header, Range.is(tuple.getData().get(header)));
       }
@@ -273,13 +281,14 @@ public class Doca implements AnonymizationAlgorithm {
     // Calculate enlargement (the value is not yet divided by the number of attributes!)
     List<Double> enlargement = new ArrayList<>();
     for (DocaCluster cluster : clusters) {
-      double sum = 0;
-      for (Map.Entry<String, Double> entry : dataPoint.getData().entrySet()) {
-        String key = entry.getKey();
-        Double value = entry.getValue();
-        sum += Math.max(0, value - cluster.getRanges().get(key).getMaximum())
-            - Math.min(0, value - cluster.getRanges().get(key).getMinimum());
-      }
+      //double sum = 0;
+      //for (Map.Entry<String, Double> entry : dataPoint.getData().entrySet()) {
+      //  String key = entry.getKey();
+      //  Double value = entry.getValue();
+      //  sum += Math.max(0, value - cluster.getRanges().get(key).getMaximum())
+      //      - Math.min(0, value - cluster.getRanges().get(key).getMinimum());
+      //}
+      double sum = cluster.tupleEnlargement(dataPoint, this.rangeMap);
       enlargement.add(sum);
     }
 
