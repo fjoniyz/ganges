@@ -112,7 +112,7 @@ public class Pipe {
     });
 
     // Get values of current message
-    String id = message.get("ae_session_id").textValue();
+    String id = message.get("id").textValue();
     List<String> anonFieldsList = List.of(anonFields);
     HashMap<String, Double> valuesMap = getValuesListByKeys(message, anonFieldsList);
     HashMap<String, String> nonAnonymizedValuesMap = getNonAnonymizedValuesByKeys(message,
