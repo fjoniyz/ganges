@@ -110,14 +110,15 @@ public class Pipe {
     ObjectMapper mapper = new ObjectMapper();
     Map<String, String> messageMap = mapper.convertValue(message, new TypeReference<>() {
     });
+
     // Get values of current message
-    System.out.println("message: " + message);
     String id = message.get("ae_session_id").textValue();
     List<String> anonFieldsList = List.of(anonFields);
     HashMap<String, Double> valuesMap = getValuesListByKeys(message, anonFieldsList);
     HashMap<String, String> nonAnonymizedValuesMap = getNonAnonymizedValuesByKeys(message,
         anonFieldsList);
     System.out.println(message);
+
     // Get all entries needed for anonymization
     List<AnonymizationItem> contextValues = new ArrayList<>();
     dataRepository.open();
