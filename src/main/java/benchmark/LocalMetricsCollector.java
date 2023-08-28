@@ -49,7 +49,7 @@ public class LocalMetricsCollector {
   }
 
   public void setProducerTimestamps(JsonNode message) {
-    String id = message.get("id").textValue();
+    String id = message.get("ae_session_id").textValue();
     Long producerTimestamp = Long.parseLong(message.get("producer_timestamp").toString());
     setTimestamp(id, "producer", producerTimestamp);
   }
