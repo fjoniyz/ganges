@@ -13,6 +13,7 @@ public class DocaCluster {
   private final List<DocaItem> contents;
   private Map<String, Range<Double>> ranges;
   private final Utils utils;
+  private Map<String, Double> headerWeights;
 
   public DocaCluster(List<String> headers) {
     // Initialises the cluster
@@ -20,6 +21,18 @@ public class DocaCluster {
     this.ranges = new LinkedHashMap<>();
     headers.forEach(header -> this.ranges.put(header, Range.between(0.0, 0.0)));
     this.utils =  new Utils();
+    for (String header : headers) {
+      this.headerWeights.put(header, 1.0);
+    }
+  }
+
+  public DocaCluster(List<String> headers, Map<String, Double> headerWeights) {
+    // Initialises the cluster
+    this.contents = new ArrayList<>();
+    this.ranges = new LinkedHashMap<>();
+    headers.forEach(header -> this.ranges.put(header, Range.between(0.0, 0.0)));
+    this.utils =  new Utils();
+    this.headerWeights = headerWeights;
   }
 
   public List<DocaItem> getContents() {
@@ -131,7 +144,7 @@ public class DocaCluster {
           Range.between(
               (Math.min(header.getValue().getMinimum(), item.getData().get(header.getKey()))),
               Math.max(header.getValue().getMaximum(), item.getData().get(header.getKey())));
-      loss += this.utils.doubleRangeInformationLoss(updated, ranges);
+      loss += this.utils.doubleRangeInformationLoss(updated, ranges, this.headerWeights.get(header.getKey()));
     }
     return loss;
   }
@@ -162,7 +175,7 @@ public class DocaCluster {
               Math.max(
                   header.getValue().getMaximum(),
                   cluster.ranges.get(header.getKey()).getMaximum()));
-      loss += this.utils.doubleRangeInformationLoss(updated, range);
+      loss += this.utils.doubleRangeInformationLoss(updated, range, this.headerWeights.get(header.getKey()));
     }
     return loss;
   }
@@ -180,7 +193,7 @@ public class DocaCluster {
     Range<Integer> updated = null;
     for (Map.Entry<String, Range<Double>> header : this.ranges.entrySet()) {
       Range<Double> range = globalRanges.get(header.getKey());
-      loss += this.utils.doubleRangeInformationLoss(header.getValue(), range);
+      loss += this.utils.doubleRangeInformationLoss(header.getValue(), range, this.headerWeights.get(header.getKey()));
     }
     return loss;
   }
