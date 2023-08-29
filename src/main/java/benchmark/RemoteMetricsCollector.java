@@ -24,11 +24,11 @@ public class RemoteMetricsCollector {
   public static final String[] CSV_HEADERS = new String[] {"ID", "Producer", "EntryPipe",
       "EntryAnonymization", "ExitAnonymization", "ExitPipe",
       "Consumer"};
-  public static final String[] REQUIRED_TIMESTAMPS = new String[] {"producer", "pipeEntry",
-      "anonEntry", "anonExit", "pipeExit"};
+  public static final String[] REQUIRED_TIMESTAMPS = new String[] {};
   private static String fileName;
   private static int port;
-  public static final String[] OPTIONAL_TIMESTAMPS = new String[] {"Consumer"};
+  public static final String[] OPTIONAL_TIMESTAMPS = new String[] {"producer", "pipeEntry",
+      "anonEntry", "anonExit", "pipeExit", "Consumer"};
   private static Integer maxCheckCount = 50;
   private static final HashMap<String, HashMap<String, Long>> timestamps = new HashMap<>();
   private static final HashMap<String, Integer> recordCheckCount = new HashMap<>();
@@ -129,6 +129,7 @@ public class RemoteMetricsCollector {
                   recordTimestamps.get("consumer").toString()
           };
           try {
+            System.out.println("WRITING");
             writer.writeNext(data);
             writer.flush();
           } catch (IOException e) {
