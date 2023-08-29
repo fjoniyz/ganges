@@ -108,6 +108,7 @@ public class RemoteMetricsCollector {
   }
 
   private static void saveMetricsToCsv() throws IOException {
+    System.out.println("Saving metrics to CSV...");
     List<String> outputIds = new ArrayList<>();
     for (String id : timestamps.keySet()) {
       HashMap<String, Long> recordTimestamps = timestamps.get(id);
