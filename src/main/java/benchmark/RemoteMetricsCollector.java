@@ -120,13 +120,18 @@ public class RemoteMetricsCollector {
 
           String[] data = {
             id,
-            recordTimestamps.get("producer").toString(),
-            recordTimestamps.get("pipeEntry").toString(),
-            recordTimestamps.get("anonEntry").toString(),
-            recordTimestamps.get("anonExit").toString(),
-            recordTimestamps.get("pipeExit").toString(),
-              !recordTimestamps.containsKey("consumer") ? "" :
-                  recordTimestamps.get("consumer").toString()
+            !recordTimestamps.containsKey("producer") ? "" :
+                recordTimestamps.get("producer").toString(),
+            !recordTimestamps.containsKey("pipeEntry") ? "" :
+                recordTimestamps.get("pipeEntry").toString(),
+            !recordTimestamps.containsKey("anonEntry") ? "" :
+                recordTimestamps.get("anonEntry").toString(),
+            !recordTimestamps.containsKey("anonExit") ? "" :
+                recordTimestamps.get("anonExit").toString(),
+            !recordTimestamps.containsKey("pipeExit") ? "" :
+                recordTimestamps.get("pipeExit").toString(),
+            !recordTimestamps.containsKey("consumer") ? "" :
+                recordTimestamps.get("consumer").toString()
           };
           try {
             System.out.println("WRITING");
