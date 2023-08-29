@@ -112,7 +112,7 @@ public class Pipe {
     });
 
     // Get values of current message
-    String id = message.get("id").textValue();
+    String id = message.get("ae_session_id").textValue();
     List<String> anonFieldsList = List.of(anonFields);
     HashMap<String, Double> valuesMap = getValuesListByKeys(message, anonFieldsList);
     HashMap<String, String> nonAnonymizedValuesMap = getNonAnonymizedValuesByKeys(message,
@@ -121,16 +121,15 @@ public class Pipe {
 
     // Get all entries needed for anonymization
     List<AnonymizationItem> contextValues = new ArrayList<>();
-    if (addUnanonymizedHistory) {
-      dataRepository.open();
+    dataRepository.open();
+    // Retrieve non-anonymized data from cache
+    dataRepository.saveValues(messageMap);
 
-      // Retrieve non-anonymized data from cache
-      dataRepository.saveValues(messageMap);
+    if (addUnanonymizedHistory) {
 
       // Here we assume that for one message type the values are stored consistently (all
       // fields are present in cache)
       contextValues = dataRepository.getValuesByKeys(anonFieldsList);
-      dataRepository.close();
     } else {
       String[] weights = props.getProperty("prioritization").split(",");
       Map<String, Float> headerWeights = new HashMap<>();
@@ -139,14 +138,13 @@ public class Pipe {
       }
       contextValues.add(new AnonymizationItem(id, valuesMap, nonAnonymizedValuesMap, headerWeights));
     }
+    dataRepository.close();
 
     // Anonymization
     List<AnonymizationItem> output = algorithm.anonymize(contextValues);
 
     ArrayNode outputMessage = getJsonFromItems(output);
-    if (!outputMessage.isEmpty()) {
-      System.out.println("OUTPUT " + outputMessage);
-    }
+    System.out.println("OUTPUT " + outputMessage);
     return outputMessage;
   }
 
