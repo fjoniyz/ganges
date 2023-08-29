@@ -49,11 +49,13 @@ public class BenchmarkConsumer {
           if (record.value().isArray()) {
             for (JsonNode node : record.value()) {
               String id = node.get(idKey).textValue();
+              metricsCollector.setProducerTimestamps(node);
               metricsCollector.setConsumerTimestamps(id, consumerTimestamp);
             }
             metricsCollector.sendCurrentResultsToRemote();
           } else {
             String id = record.value().get(idKey).textValue();
+            metricsCollector.setProducerTimestamps(record.value());
             metricsCollector.setConsumerTimestamps(id, consumerTimestamp);
             metricsCollector.sendCurrentResultsToRemote();
           }
