@@ -46,11 +46,17 @@ public class BenchmarkConsumer {
         long consumerTimestamp = System.currentTimeMillis();
 
         if (!record.value().isEmpty()) {
-          for (JsonNode node : record.value()) {
-            String id = node.get(idKey).textValue();
+          if (record.value().isArray()) {
+            for (JsonNode node : record.value()) {
+              String id = node.get(idKey).textValue();
+              metricsCollector.setConsumerTimestamps(id, consumerTimestamp);
+            }
+            metricsCollector.sendCurrentResultsToRemote();
+          } else {
+            String id = record.value().get(idKey).textValue();
             metricsCollector.setConsumerTimestamps(id, consumerTimestamp);
+            metricsCollector.sendCurrentResultsToRemote();
           }
-          metricsCollector.sendCurrentResultsToRemote();
         }
 
         System.out.printf("offset = %d, key = %s, value = %s%n", record.offset(), record.key(), record.value());
