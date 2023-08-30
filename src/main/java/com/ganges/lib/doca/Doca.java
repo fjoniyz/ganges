@@ -133,17 +133,12 @@ public class Doca implements AnonymizationAlgorithm {
       DocaItem currentItem = new DocaItem(docaInput.getId(), docaInput.getValues(), docaInput.getNonAnonymizedValues(),
           docaInput.getValues().keySet().stream().toList());
 
-      // If Delta is 1 no suppression (Domain Bounding) is applied
-      //if (this.delta != 1) {
-        this.stableDomainReached = this.addToDomain(currentItem);
+      this.stableDomainReached = this.addToDomain(currentItem);
 
-        // If stable domain is reached
-        if (this.stableDomainReached) {
-          break;
-        }
-      //} else {
-      //  this.domain.add(currentItem);
-      //}
+      // If stable domain is reached
+      if (this.stableDomainReached) {
+        break;
+      }
     }
 
     if (!this.stableDomainReached && this.delta != 1) {
