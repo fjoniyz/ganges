@@ -1,5 +1,6 @@
 package com.ganges.lib.castleguard.utils;
 
+import com.ganges.lib.AbstractItem;
 import com.ganges.lib.castleguard.CGItem;
 import com.ganges.lib.castleguard.Cluster;
 import java.util.*;
@@ -92,7 +93,7 @@ public class ClusterManagement {
             CGItem t = bucket.remove(random.nextInt(bucket.size()));
 
             // Create a new subcluster over t
-            Cluster cnew = new Cluster(headers);
+            Cluster cnew = new Cluster(headers, c.getHeaderWeights());
             cnew.insert(t);
             availablePids.remove(t.getPid());
 

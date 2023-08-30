@@ -1,50 +1,28 @@
 package com.ganges.lib.castleguard;
 
+import com.ganges.lib.AbstractCluster;
 import com.ganges.lib.castleguard.utils.Utils;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import org.apache.commons.lang3.Range;
 
-public class Cluster {
-  private final Utils utils;
+public class Cluster extends AbstractCluster {
   private final List<CGItem> contents;
-  private Map<String, Range<Float>> ranges;
   private Set<Float> diversity;
   private Map<String, Float> sampleValues;
-  private Map<String, Float> headerWeights;
-
-  public Cluster(List<String> headers) {
-    // Initialises the cluster
-    this.contents = new ArrayList<>();
-    this.ranges = new LinkedHashMap<>();
-
-    headers.forEach(header -> this.ranges.put(header, Range.between(0F, 0F)));
-    this.diversity = new HashSet<>();
-    this.sampleValues = new HashMap<>();
-    for (String header : headers) {
-      this.headerWeights.put(header, 1f);
-    }
-
-    this.utils = new Utils();
-  }
+  //private final Map<String, Float> headerWeights;
 
   public Cluster(List<String> headers, Map<String, Float> headerWeights) {
+    super(headers, headerWeights);
     // Initialises the cluster
-    this.contents = new ArrayList<>();
-    this.ranges = new LinkedHashMap<>();
-
-    headers.forEach(header -> this.ranges.put(header, Range.between(0F, 0F)));
     this.diversity = new HashSet<>();
     this.sampleValues = new HashMap<>();
-    this.headerWeights = headerWeights;
-
-    this.utils = new Utils();
+    this.contents = new ArrayList<>();
   }
 
   public List<CGItem> getContents() {
@@ -62,7 +40,6 @@ public class Cluster {
    * Check number of individuals in Cluster
    ***/
   public int getKSize() {
-    int count = 0;
     Set<Float> pids = new HashSet<>();
 
     for (CGItem item : this.contents) {
@@ -70,7 +47,6 @@ public class Cluster {
     }
     return pids.size();
   }
-
 
 
   public int getSize() {
@@ -81,13 +57,6 @@ public class Cluster {
     return this.diversity.size();
   }
 
-  public Map<String, Range<Float>> getRanges() {
-    return this.ranges;
-  }
-
-  public void setRanges(HashMap<String, Range<Float>> value) {
-    this.ranges = value;
-  }
 
   public Map<String, Float> getSampleValues() {
     return this.sampleValues;
@@ -111,7 +80,6 @@ public class Cluster {
    * @param element The element to insert into the cluster
    */
   public void insert(CGItem element) {
-
     // checks for an empty cluster
     boolean firstElem = this.contents.isEmpty();
     this.contents.add(element);
@@ -122,7 +90,7 @@ public class Cluster {
       element.getCluster().remove(element);
     }
     // Add sensitive attribute value to the diversity of cluster
-    this.diversity.add(element.getSensitiveAttr());
+    this.diversity.add((element).getSensitiveAttr());
     element.setCluster(this);
 
     // in case of an empty Cluster the Ranges are set to the items values
@@ -149,7 +117,6 @@ public class Cluster {
    * @param element: The element to remove from the cluster
    */
   public void remove(CGItem element) {
-
     this.contents.remove(element);
 
     element.setCluster(null);
@@ -164,11 +131,6 @@ public class Cluster {
     if (!containsSensitiveAttr) {
       this.diversity.remove(element.getSensitiveAttr());
     }
-    //TODO: Test if this can be deleted
-//        for (Map.Entry<String, Range<Float>> header : this.ranges.entrySet()) {
-//            header.setValue(
-//                    Range.between(this.findMinimum(header.getKey()), this.findMaximum(header.getKey())));
-//        }
   }
 
   /**
@@ -276,23 +238,6 @@ public class Cluster {
     return loss;
   }
 
-  /**
-   * Calculates the information loss of this cluster
-   *
-   * @param global_ranges: The globally known ranges for each attribute
-   * @return: The current information loss of the cluster
-   */
-  public float informationLoss(HashMap<String, Range<Float>> global_ranges) {
-    float loss = 0F;
-
-    // For each range, check if <item> would extend it
-    Range<Integer> updated = null;
-    for (Map.Entry<String, Range<Float>> header : this.ranges.entrySet()) {
-      Range<Float> global_range = global_ranges.get(header.getKey());
-      loss += this.utils.rangeInformationLoss(header.getValue(), global_range, this.headerWeights.get(header.getKey()));
-    }
-    return loss;
-  }
 
   /**
    * Calculates the distance from this tuple to another
@@ -326,41 +271,4 @@ public class Cluster {
     return true;
   }
 
-  /**
-   * Finds a minimum value for the range within a cluster for a given header
-   *
-   * @param header: Header as string
-   * @return: the minimum value
-   */
-  public float findMinimum(String header) {
-
-    float minValue = Float.MAX_VALUE;
-    for (CGItem item : this.getContents()) {
-      float value = item.getData().get(header);
-
-      if (value < minValue) {
-        minValue = value;
-      }
-    }
-    return minValue;
-  }
-
-  /**
-   * Finds a maximum value for the range within a cluster for a given header
-   *
-   * @param header: Header as string
-   * @return: the maximum value
-   */
-  public float findMaximum(String header) {
-
-    float maxValue = Float.MIN_VALUE;
-    for (CGItem item : this.getContents()) {
-      float value = item.getData().get(header);
-
-      if (value > maxValue) {
-        maxValue = value;
-      }
-    }
-    return maxValue;
-  }
 }
