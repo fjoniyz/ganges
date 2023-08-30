@@ -7,13 +7,13 @@ import java.util.Map;
 public abstract class AbstractItem {
 
   protected final String externalId;
-  protected final Map<String, Float> data;
+  protected final Map<String, Double> data;
   protected final Map<String, String> nonAnonymizedData;
   protected final List<String> headers;
   protected AbstractCluster parent;
 
 
-  public AbstractItem(String externalId, Map<String, Float> data,
+  public AbstractItem(String externalId, Map<String, Double> data,
                       Map<String, String> nonAnonymizedData, List<String> headers) {
     this.externalId = externalId;
     this.data = data;
@@ -22,7 +22,7 @@ public abstract class AbstractItem {
     
   }
 
-  public Map<String, Float> getData() {
+  public Map<String, Double> getData() {
     return data;
   }
   public List<String> getHeaders() {
@@ -40,7 +40,7 @@ public abstract class AbstractItem {
   public void removeData(String elem) {
     this.data.remove(elem);
   }
-  public void updateAttributes(String header, Float value) {
+  public void updateAttributes(String header, Double value) {
     this.data.put(header, value);
   }
   public void addHeaders(String elem) {

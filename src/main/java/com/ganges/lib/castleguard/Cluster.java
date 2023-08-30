@@ -13,11 +13,11 @@ import org.apache.commons.lang3.Range;
 
 public class Cluster extends AbstractCluster {
   private final List<CGItem> contents;
-  private Set<Float> diversity;
-  private Map<String, Float> sampleValues;
-  //private final Map<String, Float> headerWeights;
+  private Set<Double> diversity;
+  private Map<String, Double> sampleValues;
+  //private final Map<String, Double> headerWeights;
 
-  public Cluster(List<String> headers, Map<String, Float> headerWeights) {
+  public Cluster(List<String> headers, Map<String, Double> headerWeights) {
     super(headers, headerWeights);
     // Initialises the cluster
     this.diversity = new HashSet<>();
@@ -40,7 +40,7 @@ public class Cluster extends AbstractCluster {
    * Check number of individuals in Cluster
    ***/
   public int getKSize() {
-    Set<Float> pids = new HashSet<>();
+    Set<Double> pids = new HashSet<>();
 
     for (CGItem item : this.contents) {
       pids.add(item.getPid());
@@ -58,19 +58,19 @@ public class Cluster extends AbstractCluster {
   }
 
 
-  public Map<String, Float> getSampleValues() {
+  public Map<String, Double> getSampleValues() {
     return this.sampleValues;
   }
 
-  public void setSampleValues(Map<String, Float> value) {
+  public void setSampleValues(Map<String, Double> value) {
     this.sampleValues = value;
   }
 
-  public Set<Float> getDiversity() {
+  public Set<Double> getDiversity() {
     return this.diversity;
   }
 
-  public void setDiversity(Set<Float> value) {
+  public void setDiversity(Set<Double> value) {
     this.diversity = value;
   }
 
@@ -95,14 +95,14 @@ public class Cluster extends AbstractCluster {
 
     // in case of an empty Cluster the Ranges are set to the items values
     if (firstElem) {
-      for (Map.Entry<String, Range<Float>> header : this.ranges.entrySet()) {
+      for (Map.Entry<String, Range<Double>> header : this.ranges.entrySet()) {
         header.setValue(
             Range.between(
                 element.getData().get(header.getKey()), element.getData().get(header.getKey())));
       }
       // Otherwise we search for the Minimum /Maximum
     } else {
-      for (Map.Entry<String, Range<Float>> header : this.ranges.entrySet()) {
+      for (Map.Entry<String, Range<Double>> header : this.ranges.entrySet()) {
         header.setValue(
             Range.between(
                 Math.min(header.getValue().getMinimum(), element.getData().get(header.getKey())),
@@ -141,14 +141,14 @@ public class Cluster extends AbstractCluster {
    */
   // Note: Return value with only Item -> In Cluster.py return value (gen_tuple, item)
   CGItem generalise(CGItem item) {
-    for (Map.Entry<String, Range<Float>> header : this.ranges.entrySet()) {
+    for (Map.Entry<String, Range<Double>> header : this.ranges.entrySet()) {
       if (!this.sampleValues.containsKey(header.getKey())) {
         this.sampleValues.put(
             header.getKey(), Utils.randomChoice(this.contents).getData().get(header.getKey()));
       }
       item.removeHeaders("pid");
-      float min = header.getValue().getMinimum();
-      float max = header.getValue().getMaximum();
+      Double min = header.getValue().getMinimum();
+      Double max = header.getValue().getMaximum();
       item.getData().put("min" + header.getKey(), min);
       item.getData().put("spc" + header.getKey(), this.sampleValues.get(header.getKey()));
       item.getData().put("max" + header.getKey(), max);
@@ -171,15 +171,15 @@ public class Cluster extends AbstractCluster {
    * @param globalRanges: The globally known ranges for each attribute
    * @return The information loss if we added item into this cluster
    */
-  public float tupleEnlargement(CGItem item, HashMap<String, Range<Float>> globalRanges) {
-    float given = this.informationLossGivenT(item, globalRanges);
-    float current = this.informationLoss(globalRanges);
+  public Double tupleEnlargement(CGItem item, HashMap<String, Range<Double>> globalRanges) {
+    Double given = this.informationLossGivenT(item, globalRanges);
+    Double current = this.informationLoss(globalRanges);
     return (given - current) / this.ranges.size();
   }
 
-  public float clusterEnlargement(Cluster cluster, HashMap<String, Range<Float>> globalRanges) {
-    float given = this.informationLossGivenC(cluster, globalRanges);
-    float current = this.informationLoss(globalRanges);
+  public Double clusterEnlargement(Cluster cluster, HashMap<String, Range<Double>> globalRanges) {
+    Double given = this.informationLossGivenC(cluster, globalRanges);
+    Double current = this.informationLoss(globalRanges);
     return (given - current) / this.ranges.size();
   }
 
@@ -190,15 +190,15 @@ public class Cluster extends AbstractCluster {
    * @param global_ranges: The globally known ranges for each attribute
    * @return: The information loss given that we insert item into this cluster
    */
-  float informationLossGivenT(CGItem item, HashMap<String, Range<Float>> global_ranges) {
-    float loss = 0F;
+  Double informationLossGivenT(CGItem item, HashMap<String, Range<Double>> global_ranges) {
+    Double loss = 0.0;
     if (this.contents.isEmpty()) {
-      return 0.0F;
+      return 0.0;
     }
     // For each range, check if <item> would extend it
-    Range<Float> updated;
-    for (Map.Entry<String, Range<Float>> header : this.ranges.entrySet()) {
-      Range<Float> global_range = global_ranges.get(header.getKey());
+    Range<Double> updated;
+    for (Map.Entry<String, Range<Double>> header : this.ranges.entrySet()) {
+      Range<Double> global_range = global_ranges.get(header.getKey());
       updated =
           Range.between(
               (Math.min(header.getValue().getMinimum(), item.getData().get(header.getKey()))),
@@ -215,17 +215,17 @@ public class Cluster extends AbstractCluster {
    * @param global_ranges: The globally known ranges for each attribute
    * @return: The information loss given that we merge cluster with this cluster
    */
-  public float informationLossGivenC(Cluster cluster, HashMap<String, Range<Float>> global_ranges) {
-    float loss = 0.0F;
+  public Double informationLossGivenC(Cluster cluster, HashMap<String, Range<Double>> global_ranges) {
+    Double loss = 0.0;
     if (this.contents.isEmpty()) {
       return cluster.informationLoss(global_ranges);
     } else if (cluster.contents.isEmpty()) {
       return this.informationLoss(global_ranges);
     }
     // For each range, check if <item> would extend it
-    Range<Float> updated;
-    for (Map.Entry<String, Range<Float>> header : this.ranges.entrySet()) {
-      Range<Float> global_range = global_ranges.get(header.getKey());
+    Range<Double> updated;
+    for (Map.Entry<String, Range<Double>> header : this.ranges.entrySet()) {
+      Range<Double> global_range = global_ranges.get(header.getKey());
       updated =
           Range.between(
               Math.min(
@@ -245,9 +245,9 @@ public class Cluster extends AbstractCluster {
    * @param other: The tuple to calculate the distance to
    * @return: The tuple to calculate the distance to
    */
-  public float distance(CGItem other) {
-    float total_distance = 0;
-    for (Map.Entry<String, Range<Float>> header : this.ranges.entrySet()) {
+  public Double distance(CGItem other) {
+    Double total_distance = 0.0;
+    for (Map.Entry<String, Range<Double>> header : this.ranges.entrySet()) {
       total_distance +=
           Math.abs(
               other.getData().get(header.getKey()) - this.utils.rangeDifference(header.getValue()));
@@ -263,7 +263,7 @@ public class Cluster extends AbstractCluster {
    * @return: Whether the tuple is within the bounds of the cluster
    */
   public boolean withinBounds(CGItem item) {
-    for (Map.Entry<String, Range<Float>> header : this.ranges.entrySet()) {
+    for (Map.Entry<String, Range<Double>> header : this.ranges.entrySet()) {
       if (!header.getValue().contains(item.getData().get(header.getKey()))) {
         return false;
       }

@@ -9,12 +9,12 @@ import java.util.Map;
 
 public class CGItem extends AbstractItem {
 
-  private final Float sensitiveAttr;
+  private final Double sensitiveAttr;
   private Cluster parent;
-  private Float pid;
+  private Double pid;
 
 
-  public CGItem(String externalId, Map<String, Float> data,
+  public CGItem(String externalId, Map<String, Double> data,
                 Map<String, String> nonAnonymizedData, List<String> headers,
                 String sensitiveAttr) {
     super(externalId, data, nonAnonymizedData, headers);
@@ -22,10 +22,10 @@ public class CGItem extends AbstractItem {
     this.pid = data.get("pid");
   }
 
-  public Float getPid() {
+  public Double getPid() {
     return this.pid;
   }
-  public Float getSensitiveAttr() {
+  public Double getSensitiveAttr() {
     return sensitiveAttr;
   }
 

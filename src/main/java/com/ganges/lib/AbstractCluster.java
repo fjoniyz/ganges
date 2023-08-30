@@ -9,27 +9,27 @@ import org.apache.commons.lang3.Range;
 
 public abstract class AbstractCluster {
 
-  protected Map<String, Range<Float>> ranges;
-  protected Map<String, Float> headerWeights;
+  protected Map<String, Range<Double>> ranges;
+  protected Map<String, Double> headerWeights;
   protected final Utils utils;
 
-  public AbstractCluster(List<String> headers, Map<String, Float> headerWeights) {
+  public AbstractCluster(List<String> headers, Map<String, Double> headerWeights) {
     // Initialises the cluster
     this.ranges = new LinkedHashMap<>();
-    headers.forEach(header -> this.ranges.put(header, Range.between(0f, 0f)));
+    headers.forEach(header -> this.ranges.put(header, Range.between(0.0, 0.0)));
     this.utils =  new Utils();
     this.headerWeights = headerWeights;
   }
 
-  public Map<String, Float> getHeaderWeights() {
+  public Map<String, Double> getHeaderWeights() {
     return this.headerWeights;
   }
 
-  public Map<String, Range<Float>> getRanges() {
+  public Map<String, Range<Double>> getRanges() {
     return this.ranges;
   }
 
-  public void setRanges(HashMap<String, Range<Float>> value) {
+  public void setRanges(HashMap<String, Range<Double>> value) {
     this.ranges = value;
   }
 
@@ -47,13 +47,13 @@ public abstract class AbstractCluster {
    * @param globalRanges The globally known ranges for each attribute
    * @return The current information loss of the cluster
    */
-  public float informationLoss(HashMap<String, Range<Float>> globalRanges) {
+  public double informationLoss(HashMap<String, Range<Double>> globalRanges) {
     float loss = 0f;
 
     // For each range, check if <item> would extend it
     Range<Integer> updated = null;
-    for (Map.Entry<String, Range<Float>> header : this.ranges.entrySet()) {
-      Range<Float> range = globalRanges.get(header.getKey());
+    for (Map.Entry<String, Range<Double>> header : this.ranges.entrySet()) {
+      Range<Double> range = globalRanges.get(header.getKey());
       loss += this.utils.rangeInformationLoss(header.getValue(), range, this.headerWeights.get(header.getKey()));
     }
     return loss;

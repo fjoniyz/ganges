@@ -48,7 +48,7 @@ public class DataRepository {
     }
   }
 
-  public List<AnonymizationItem> getValuesByKeys(List<String> valueKeys, Map<String, Float> headerWeights) {
+  public List<AnonymizationItem> getValuesByKeys(List<String> valueKeys, Map<String, Double> headerWeights) {
     List<String> keys = connection.keys("*");
     List<Integer> keysAsInts = new ArrayList<>();
     for (String key : keys) {

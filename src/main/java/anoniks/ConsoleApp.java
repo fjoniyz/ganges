@@ -31,10 +31,10 @@ public class ConsoleApp {
                 System.out.println("incorrect format");
                 continue;
             }
-            List<Float> values = Stream.of(text.split(","))
-                    .map(Float::parseFloat)
+            List<Double> values = Stream.of(text.split(","))
+                    .map(Double::parseDouble)
                     .collect(Collectors.toList());
-            HashMap<String, Float> rowData = new HashMap<>();
+            HashMap<String, Double> rowData = new HashMap<>();
             for (int i = 0; i < values.size(); i++) {
                 rowData.put(headers.get(i), values.get(i));
             }

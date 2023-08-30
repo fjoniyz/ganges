@@ -17,7 +17,7 @@ public class ClusterManagement {
     private final List<String> headers;
     private final String sensitiveAttribute;
     private double tau;
-    private final List<Float> recentLosses = new ArrayList<>();
+    private final List<Double> recentLosses = new ArrayList<>();
 
     public ClusterManagement(int k, int l, int mu, List<String> headers, String sensitiveAttribute) {
         this.k = k;
@@ -60,11 +60,11 @@ public class ClusterManagement {
      * @param globalRanges Global ranges of the dataset
      * @return List of clusters
      */
-    public List<Cluster> splitL(Cluster c, List<String> headers, HashMap<String, Range<Float>> globalRanges) {
+    public List<Cluster> splitL(Cluster c, List<String> headers, HashMap<String, Range<Double>> globalRanges) {
         List<Cluster> sc = new ArrayList<>();
 
         // Group every tuple by the sensitive attribute and pid
-        Map<Float, List<CGItem>> buckets = generateBuckets(c);
+        Map<Double, List<CGItem>> buckets = generateBuckets(c);
 
         // If number of buckets (sensitive Attributes) is smaller than l, return the cluster
         if (buckets.size() < l) {
@@ -73,9 +73,9 @@ public class ClusterManagement {
         }
 
         // Check the number of distinct PIDs in the buckets
-        Set<Float> availablePids = new HashSet<>();
+        Set<Double> availablePids = new HashSet<>();
         for (List<CGItem> bucket : buckets.values()) {
-            Set<Float> ids = bucket.stream().map(CGItem::getPid).collect(Collectors.toSet());
+            Set<Double> ids = bucket.stream().map(CGItem::getPid).collect(Collectors.toSet());
             availablePids.addAll(ids);
         }
 
@@ -85,9 +85,9 @@ public class ClusterManagement {
         while (buckets.size() >= l && count >= k) {
 
             // Pick a random tuple from a random bucket (bucketKeys = sensitive Attributes)
-            List<Float> bucketKeys = new ArrayList<>(buckets.keySet());
+            List<Double> bucketKeys = new ArrayList<>(buckets.keySet());
             Random random = new Random();
-            Float randomSensitiveAttribute = bucketKeys.get(random.nextInt(bucketKeys.size()));
+            Double randomSensitiveAttribute = bucketKeys.get(random.nextInt(bucketKeys.size()));
 
             List<CGItem> bucket = buckets.get(randomSensitiveAttribute);
             CGItem t = bucket.remove(random.nextInt(bucket.size()));
@@ -101,11 +101,11 @@ public class ClusterManagement {
                 buckets.remove(randomSensitiveAttribute);
             }
 
-            List<Float> emptyBuckets = new ArrayList<>();
+            List<Double> emptyBuckets = new ArrayList<>();
 
             // Go through each bucket. Sort the bucket by the enlargement value of that cluster. Insert the calculated amount of tuples in a new cluster
-            for (Map.Entry<Float, List<CGItem>> entry : buckets.entrySet()) {
-                Float currentSensitiveAttribute = entry.getKey();
+            for (Map.Entry<Double, List<CGItem>> entry : buckets.entrySet()) {
+                Double currentSensitiveAttribute = entry.getKey();
                 List<CGItem> currentBucket = entry.getValue();
 
                 // Sort the bucket by the enlargement value of that cluster - use only the tuples with available PIDs (unused in this bucket/distinct)
@@ -146,14 +146,14 @@ public class ClusterManagement {
             }
 
             // remove empty buckets
-            for (Float emptyBucketKey : emptyBuckets) {
+            for (Double emptyBucketKey : emptyBuckets) {
                 buckets.remove(emptyBucketKey);
             }
 
             // Reset the available PIDs and the count
             availablePids.clear();
             for (List<CGItem> b : buckets.values()) {
-                List<Float> ids = b.stream().map(CGItem::getPid).collect(Collectors.toList());
+                List<Double> ids = b.stream().map(CGItem::getPid).collect(Collectors.toList());
                 availablePids.addAll(ids);
             }
             count = availablePids.size();
@@ -217,11 +217,11 @@ public class ClusterManagement {
      * @param cluster: The cluster to generate the buckets for
      * @return: A dictionary of attribute values to lists of items with those values
      */
-    private Map<Float, List<CGItem>> generateBuckets(Cluster cluster) {
-        Map<Float, List<CGItem>> buckets;
+    private Map<Double, List<CGItem>> generateBuckets(Cluster cluster) {
+        Map<Double, List<CGItem>> buckets;
         buckets = new HashMap<>();
 
-        Set<Float> pids = new HashSet<>();
+        Set<Double> pids = new HashSet<>();
         int numberOfPids = cluster.getContents().stream()
                 .map(CGItem::getPid)
                 .collect(Collectors.toSet())
@@ -234,8 +234,8 @@ public class ClusterManagement {
             CGItem t = cluster.getContents().get(random.nextInt(cluster.getSize()));
 
             // Get the value for the sensitive attribute for this tuple
-            Float sensitiveValue = t.getData().get(this.sensitiveAttribute);
-            Float currentPID = t.getPid();
+            Double sensitiveValue = t.getData().get(this.sensitiveAttribute);
+            Double currentPID = t.getPid();
 
             if (!pids.contains(currentPID)) {
 
@@ -260,15 +260,15 @@ public class ClusterManagement {
      * @param cluster
      * @return
      */
-    private Map<Float, List<CGItem>> generateBucketsExperimental(Cluster cluster) {
-        Map<Float, List<CGItem>> buckets;
+    private Map<Double, List<CGItem>> generateBucketsExperimental(Cluster cluster) {
+        Map<Double, List<CGItem>> buckets;
         buckets = new HashMap<>();
 
         // put each tuple, that refers the same sensitive Attribute in a bucket
         // !! Each bucket represent all cluster entries with the same sensitive attribute (PID is ignored)!!
         for (CGItem t : cluster.getContents()) {
             // Get the value for the sensitive attribute for this tuple
-            Float sensitiveValue = t.getData().get(this.sensitiveAttribute);
+            Double sensitiveValue = t.getData().get(this.sensitiveAttribute);
 
             // If it isn't in our map, make an empty list for it
             if (!buckets.containsKey(sensitiveValue)) {
@@ -288,7 +288,7 @@ public class ClusterManagement {
      * @param globalRanges
      * @return: A cluster with a size larger than or equal to k
      */
-    public Cluster mergeClusters(Cluster c, HashMap<String, Range<Float>> globalRanges) {
+    public Cluster mergeClusters(Cluster c, HashMap<String, Range<Double>> globalRanges) {
         List<Cluster> gamma_c = new ArrayList<>(this.bigGamma);
         gamma_c.remove(c);
         if (gamma_c.size() == 0) {
@@ -318,16 +318,16 @@ public class ClusterManagement {
      *
      * @param globalRanges
      */
-    public void updateTau(HashMap<String, Range<Float>> globalRanges) {
+    public void updateTau(HashMap<String, Range<Double>> globalRanges) {
         this.tau = Double.POSITIVE_INFINITY;
         if (!recentLosses.isEmpty()) {
-            tau = recentLosses.stream().reduce(0F, Float::sum);
+            tau = recentLosses.stream().reduce(0.0, Double::sum);
         } else if (!bigGamma.isEmpty()) {
             int sampleSize = Math.min(bigGamma.size(), 5);
             List<Cluster> chosen = Utils.randomChoice(bigGamma, sampleSize);
 
-            float totalLoss =
-                    chosen.stream().map(c -> c.informationLoss(globalRanges)).reduce(0F, Float::sum);
+            double totalLoss =
+                    chosen.stream().map(c -> c.informationLoss(globalRanges)).reduce(0.0, Double::sum);
             tau = totalLoss / sampleSize;
         }
     }
@@ -338,8 +338,8 @@ public class ClusterManagement {
      * @param c
      * @param globalRanges
      */
-    public void updateLoss(Cluster c, HashMap<String, Range<Float>> globalRanges) {
-        float loss = c.informationLoss(globalRanges);
+    public void updateLoss(Cluster c, HashMap<String, Range<Double>> globalRanges) {
+        double loss = c.informationLoss(globalRanges);
         recentLosses.add(loss);
         if (recentLosses.size() > this.mu) {
             recentLosses.remove(0);

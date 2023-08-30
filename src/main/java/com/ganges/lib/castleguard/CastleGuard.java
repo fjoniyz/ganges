@@ -38,7 +38,7 @@ public class CastleGuard implements AnonymizationAlgorithm {
   private final List<String> headers;
   private final String sensitiveAttr;
   private final Deque<CGItem> items = new ArrayDeque<>(); // a.k.a. global_tuples in castle.py
-  private final HashMap<String, Range<Float>> globalRanges = new HashMap<>();
+  private final HashMap<String, Range<Double>> globalRanges = new HashMap<>();
   private final double tau = Double.POSITIVE_INFINITY;
   private final int delta;
   private final int beta;
@@ -49,7 +49,7 @@ public class CastleGuard implements AnonymizationAlgorithm {
   private final boolean useDiffPrivacy;
   private final ClusterManagement clusterManagement;
   private final Deque<CGItem> outputQueue = new ArrayDeque<>();
-  private Map<String, Float> headerWeights;
+  private Map<String, Double> headerWeights;
 
   /**
    * !Deprecated constructor
@@ -120,7 +120,7 @@ public class CastleGuard implements AnonymizationAlgorithm {
     }
   }
 
-  public HashMap<String, Range<Float>> getGlobalRanges() {
+  public HashMap<String, Range<Double>> getGlobalRanges() {
     return globalRanges;
   }
 
@@ -144,12 +144,7 @@ public class CastleGuard implements AnonymizationAlgorithm {
   public List<AnonymizationItem> anonymize(List<AnonymizationItem> X) {
     this.headerWeights = X.get(0).getHeaderWeights();
     for (AnonymizationItem dataPoint : X) {
-      HashMap<String, Float> data = new HashMap<>();
-      for (String header : headers) {
-        float floatData = dataPoint.getValues().get(header).floatValue();
-        data.put(header, floatData);
-      }
-      CGItem item = new CGItem(dataPoint.getId(), data, dataPoint.getNonAnonymizedValues(),
+      CGItem item = new CGItem(dataPoint.getId(), dataPoint.getValues(), dataPoint.getNonAnonymizedValues(),
           this.headers,
           this.sensitiveAttr);
       insertData(item);
@@ -158,7 +153,7 @@ public class CastleGuard implements AnonymizationAlgorithm {
           //TODO: Unify value data type to avoid this mess
           Map<String, Double> values = cgItem.getData().entrySet().stream()
               .collect(Collectors.toMap(Map.Entry::getKey,
-                  e -> e.getValue().doubleValue()));
+                  Map.Entry::getValue));
           return new AnonymizationItem(cgItem.getExternalId(), values, cgItem.getNonAnonymizedData());
         }
     ).toList();
@@ -186,7 +181,7 @@ public class CastleGuard implements AnonymizationAlgorithm {
    *
    * @param data: The element of data to insert into the algorithm
    */
-  public void insertData(HashMap<String, Float> data) {
+  public void insertData(HashMap<String, Double> data) {
     CGItem item = new CGItem("", data, new HashMap<>(), this.headers, this.sensitiveAttr);
     insertData(item);
   }
@@ -226,8 +221,8 @@ public class CastleGuard implements AnonymizationAlgorithm {
    * @param cluster
    */
   public void checkAndOutputCluster(Cluster cluster) {
-    Set<Float> outputPids = new HashSet<>();
-    Set<Float> outputDiversity = new HashSet<>();
+    Set<Double> outputPids = new HashSet<>();
+    Set<Double> outputDiversity = new HashSet<>();
     boolean splittable =
         cluster.getKSize() >= 2 * this.k && cluster.getDiversitySize() >= this.l;
     List<Cluster> splitted =
@@ -329,7 +324,7 @@ public class CastleGuard implements AnonymizationAlgorithm {
    * @param item: The tuple to be perturbed
    */
   private void perturb(CGItem item) {
-    Map<String, Float> data = item.getData();
+    Map<String, Double> data = item.getData();
 
     for (String header : this.headers) {
       // Check if header has a range
@@ -344,11 +339,11 @@ public class CastleGuard implements AnonymizationAlgorithm {
         // Draw random noise from Laplace distribution
         JDKRandomGenerator rg = new JDKRandomGenerator();
         LaplaceDistribution laplaceDistribution = new LaplaceDistribution(rg, 0, scale);
-        float noise = (float) laplaceDistribution.sample();
+        Double noise = (Double) laplaceDistribution.sample();
 
         // Add noise to original value
-        float originalValue = data.get(header);
-        float perturbedValue = originalValue + noise;
+        Double originalValue = data.get(header);
+        Double perturbedValue = originalValue + noise;
         item.updateAttributes(header, perturbedValue);
       }
     }
@@ -366,7 +361,7 @@ public class CastleGuard implements AnonymizationAlgorithm {
 
     // Need to be tested
 
-    Set<Float> e = new HashSet<>();
+    Set<Double> e = new HashSet<>();
 
     for (Cluster cluster : notAnonClusters) {
       e.add(cluster.tupleEnlargement(item, globalRanges));
@@ -376,12 +371,13 @@ public class CastleGuard implements AnonymizationAlgorithm {
       return Optional.empty();
     }
 
-    float minima = Collections.min(e);
+    Double minima = Collections.min(e);
 
     List<Cluster> setCmin = new ArrayList<>();
 
     for (Cluster cluster : notAnonClusters) {
-      if (cluster.tupleEnlargement(item, globalRanges) == minima) {
+      Double enl = cluster.tupleEnlargement(item, globalRanges);
+      if (enl.equals(minima)) {
         setCmin.add(cluster);
       }
     }
@@ -413,7 +409,7 @@ public class CastleGuard implements AnonymizationAlgorithm {
   }
 
   void updateGlobalRanges(CGItem item) {
-    for (Map.Entry<String, Float> header : item.getData().entrySet()) {
+    for (Map.Entry<String, Double> header : item.getData().entrySet()) {
       if (this.globalRanges.get(header.getKey()) == null) {
         this.globalRanges.put(header.getKey(), Range.is(header.getValue()));
       } else {

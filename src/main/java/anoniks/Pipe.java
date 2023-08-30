@@ -127,9 +127,9 @@ public class Pipe {
     dataRepository.saveValues(messageMap);
 
     String[] weights = props.getProperty("prioritization").split(",");
-    Map<String, Float> headerWeights = new HashMap<>();
+    Map<String, Double> headerWeights = new HashMap<>();
     for (int i = 0; i < weights.length; i++) {
-      headerWeights.put(anonFields[i], Float.parseFloat(weights[i]));
+      headerWeights.put(anonFields[i], Double.parseDouble(weights[i]));
     }
 
     if (addUnanonymizedHistory) {
