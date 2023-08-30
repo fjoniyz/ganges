@@ -1,5 +1,5 @@
 FROM maven:amazoncorretto
 COPY ./ /home
 WORKDIR /home
-RUN mvn clean install -DskipTests
-ENTRYPOINT ["mvn", "exec:java", "-Dexec.mainClass=myapps.Pipe"]
+RUN mvn clean install
+ENTRYPOINT ["mvn", "exec:java", "-Dexec.mainClass=anoniks.Pipe"]

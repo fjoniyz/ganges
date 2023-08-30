@@ -16,11 +16,11 @@ public class ClusterTest {
    * @param sensitiveAttribute
    * @return
    */
-  public Item createItem(List<String> headers, Float timeseriesId, Float secondsEnergyConsumption, String sensitiveAttribute){
+  public CGItem createItem(List<String> headers, Float timeseriesId, Float secondsEnergyConsumption, String sensitiveAttribute){
     HashMap<String, Float> data = new HashMap<>();
     data.put("timeseries_id", timeseriesId);
     data.put("Seconds_EnergyConsumption", secondsEnergyConsumption);
-    return new Item(data, headers, sensitiveAttribute);
+    return new CGItem(data, headers, sensitiveAttribute);
   }
 
   /**
@@ -33,19 +33,19 @@ public class ClusterTest {
     List<String> headers = Arrays.asList(array);
     Cluster testCluster = new Cluster(headers);
 
-    Item testItem = createItem(headers,1.0F, 2.0F, "Seconds_EnergyConsumption");
+    CGItem testItem = createItem(headers,1.0F, 2.0F, "Seconds_EnergyConsumption");
 
     // create variables with expected values
     Map<String, Range<Float>> expectedRanges = new LinkedHashMap<>();
     headers.forEach(header -> expectedRanges.put(header, Range.between(0F, 0F)));
-    List<Item> expectedContents = new ArrayList<Item>();
+    List<CGItem> expectedContents = new ArrayList<CGItem>();
     expectedContents.add(testItem);
     Set<Float> expectedDiversity = new HashSet<Float>();
     expectedDiversity.add(2.0F);
 
     testCluster.insert(testItem);
 
-    List<Item> contents = testCluster.getContents();
+    List<CGItem> contents = testCluster.getContents();
     Set<Float> diversity = testCluster.getDiversity();
 
     Assert.assertEquals(expectedContents, contents);
@@ -71,7 +71,7 @@ public class ClusterTest {
 
     // test adding another element to a non-empty cluster
 
-    Item testItem2 = createItem(headers, 3.0F, 4.0F, "Seconds_EnergyConsumption");
+    CGItem testItem2 = createItem(headers, 3.0F, 4.0F, "Seconds_EnergyConsumption");
 
     testCluster.insert(testItem2);
 
@@ -101,16 +101,16 @@ public class ClusterTest {
 
     Cluster testCluster = new Cluster(headers);
 
-    Item testItem = createItem(headers, 1.0F, 2.0F, "Seconds_EnergyConsumption");
-    Item testItem2 = createItem(headers, 5.0F, 1.0F, "Seconds_EnergyConsumption");
-    Item testItem3 = createItem(headers, 4.0F, 6.0F, "Seconds_EnergyConsumption");
+    CGItem testItem = createItem(headers, 1.0F, 2.0F, "Seconds_EnergyConsumption");
+    CGItem testItem2 = createItem(headers, 5.0F, 1.0F, "Seconds_EnergyConsumption");
+    CGItem testItem3 = createItem(headers, 4.0F, 6.0F, "Seconds_EnergyConsumption");
 
     testCluster.insert(testItem);
     testCluster.insert(testItem2);
     testCluster.insert(testItem3);
 
     // create variables with expected values
-    List<Item> expectedContents = new ArrayList<Item>();
+    List<CGItem> expectedContents = new ArrayList<CGItem>();
     expectedContents.add(testItem);
     expectedContents.add(testItem2);
     expectedContents.add(testItem3);
@@ -154,7 +154,7 @@ public class ClusterTest {
     Assert.assertEquals(expectedRanges, testCluster2.getRanges());
   }
 
-  Item element(float spcTimeseries, float spcEngergyConsumption, List<String> headers) {
+  CGItem element(float spcTimeseries, float spcEngergyConsumption, List<String> headers) {
     HashMap<String, Float> expectedData = new HashMap<>();
     expectedData.put("mintimeseries_id", 1.0F);
     expectedData.put("spctimeseries_id", spcTimeseries);
@@ -162,7 +162,7 @@ public class ClusterTest {
     expectedData.put("minSeconds_EnergyConsumption", 200.0F);
     expectedData.put("spcSeconds_EnergyConsumption", spcEngergyConsumption);
     expectedData.put("maxSeconds_EnergyConsumption", 400.0F);
-    return new Item(expectedData, headers, null);
+    return new CGItem(expectedData, headers, null);
   }
 
   /**
@@ -175,12 +175,12 @@ public class ClusterTest {
     headers.add("Seconds_EnergyConsumption");
     Cluster cluster = new Cluster(headers);
 
-    Item one = createItem(headers, 1.0F, 200.0F, null);
-    Item two = createItem(headers, 4.0F, 400.0F, null);
+    CGItem one = createItem(headers, 1.0F, 200.0F, null);
+    CGItem two = createItem(headers, 4.0F, 400.0F, null);
 
     cluster.insert(one);
     cluster.insert(two);
-    Item result = cluster.generalise(one);
+    CGItem result = cluster.generalise(one);
 
     String[] genArray = {
       "mintimeseries_id",
@@ -192,10 +192,10 @@ public class ClusterTest {
     };
     List<String> genHeaders = Arrays.asList(genArray);
 
-    Item expectedItemOne = element(1.0F, 200.0F, genHeaders);
-    Item expectedItemTwo = element(4.0F, 200.0F, genHeaders);
-    Item expectedItemThree = element(1.0F, 400.0F, genHeaders);
-    Item expectedItemFour = element(4.0F, 400.0F, genHeaders);
+    CGItem expectedItemOne = element(1.0F, 200.0F, genHeaders);
+    CGItem expectedItemTwo = element(4.0F, 200.0F, genHeaders);
+    CGItem expectedItemThree = element(1.0F, 400.0F, genHeaders);
+    CGItem expectedItemFour = element(4.0F, 400.0F, genHeaders);
 
     Assert.assertTrue(
         result.getData().equals(expectedItemOne.getData())
@@ -213,9 +213,9 @@ public class ClusterTest {
     List<String> headers = Arrays.asList(array);
     Cluster testCluster = new Cluster(headers);
 
-    Item testItem = createItem(headers, 5.0F, 300.0F, null);
-    Item testItem2 = createItem(headers, 4.0F, 200.0F, null);
-    Item testItem3 = createItem(headers, 2.0F, 250.0F, null);
+    CGItem testItem = createItem(headers, 5.0F, 300.0F, null);
+    CGItem testItem2 = createItem(headers, 4.0F, 200.0F, null);
+    CGItem testItem3 = createItem(headers, 2.0F, 250.0F, null);
 
     testCluster.insert(testItem);
     testCluster.insert(testItem2);
@@ -228,7 +228,7 @@ public class ClusterTest {
     Assert.assertEquals(0.01, tupleEnlargementValue, 0.001F);
 
     // the case when the enlargement is zero
-    Item testItem4 = createItem(headers, 2.0F, 200.0F,  null);
+    CGItem testItem4 = createItem(headers, 2.0F, 200.0F,  null);
 
     Cluster testCluster2 = new Cluster(headers);
     testCluster2.insert(testItem4);
@@ -254,10 +254,10 @@ public class ClusterTest {
     globalRanges.put(headers.get(0), Range.between(0.0F, 100.0F));
     globalRanges.put(headers.get(1), Range.between(0.0F, 1000.0F));
 
-    Item testItem = createItem(headers, 5.0F, 300.0F,  null);
-    Item testItem2 = createItem(headers, 4.0F, 200.0F, null);
-    Item testItem3 = createItem(headers, 2.0F, 250.0F, null);
-    Item testItem4 = createItem(headers, 1.0F, 500.0F, null);
+    CGItem testItem = createItem(headers, 5.0F, 300.0F,  null);
+    CGItem testItem2 = createItem(headers, 4.0F, 200.0F, null);
+    CGItem testItem3 = createItem(headers, 2.0F, 250.0F, null);
+    CGItem testItem4 = createItem(headers, 1.0F, 500.0F, null);
 
     testCluster.insert(testItem);
     testCluster.insert(testItem2);
@@ -300,9 +300,9 @@ public class ClusterTest {
     globalRanges.put(headers.get(0), Range.between(0.0F, 100.0F));
     globalRanges.put(headers.get(1), Range.between(0.0F, 1000.0F));
 
-    Item one = createItem(headers, 1.0F, 200.0F, null);
-    Item two = createItem(headers, 5.0F, 300.0F, null);
-    Item three = createItem(headers, 2.0F, 250.0F, null);
+    CGItem one = createItem(headers, 1.0F, 200.0F, null);
+    CGItem two = createItem(headers, 5.0F, 300.0F, null);
+    CGItem three = createItem(headers, 2.0F, 250.0F, null);
 
     float loss1 = testCluster.informationLossGivenT(one, globalRanges);
     Assert.assertEquals(0.0F, loss1, 0.0F);
@@ -332,10 +332,10 @@ public class ClusterTest {
     globalRanges.put(headers.get(0), Range.between(0.0F, 100.0F));
     globalRanges.put(headers.get(1), Range.between(0.0F, 1000.0F));
 
-    Item one = createItem(headers,1.0F, 200.0F,  null);
-    Item two = createItem(headers, 5.0F, 300.0F, null);
-    Item three = createItem(headers, 2.0F, 250.0F, null);
-    Item four = createItem(headers, 2.0F, 100.0F, null);
+    CGItem one = createItem(headers,1.0F, 200.0F,  null);
+    CGItem two = createItem(headers, 5.0F, 300.0F, null);
+    CGItem three = createItem(headers, 2.0F, 250.0F, null);
+    CGItem four = createItem(headers, 2.0F, 100.0F, null);
 
     float loss0 = testClusterOne.informationLossGivenC(testClusterTwo, globalRanges);
     Assert.assertEquals(0.0F, loss0, 0.0F);
@@ -374,9 +374,9 @@ public class ClusterTest {
     globalRanges.put(headers.get(0), Range.between(0.0F, 100.0F));
     globalRanges.put(headers.get(1), Range.between(0.0F, 1000.0F));
 
-    Item one = createItem(headers, 1.0F, 200.0F, null);
-    Item two = createItem(headers, 5.0F, 300.0F, null);
-    Item three = createItem(headers, 2.0F, 250.0F, null);
+    CGItem one = createItem(headers, 1.0F, 200.0F, null);
+    CGItem two = createItem(headers, 5.0F, 300.0F, null);
+    CGItem three = createItem(headers, 2.0F, 250.0F, null);
 
     float loss0 = testCluster.informationLoss(globalRanges);
     Assert.assertEquals(0.0F, loss0, 0.0F);
@@ -402,8 +402,8 @@ public class ClusterTest {
     String[] array = {"timeseries_id", "Seconds_EnergyConsumption"};
     List<String> headers = Arrays.asList(array);
 
-    Item one = createItem(headers, 1.0F, 200.0F, null);
-    Item two = createItem(headers, 4.0F, 400.0F, null);
+    CGItem one = createItem(headers, 1.0F, 200.0F, null);
+    CGItem two = createItem(headers, 4.0F, 400.0F, null);
 
     Cluster cluster = new Cluster(headers);
 
@@ -422,8 +422,8 @@ public class ClusterTest {
     String[] array = {"timeseries_id", "Seconds_EnergyConsumption"};
     List<String> headers = Arrays.asList(array);
 
-    Item one = createItem(headers, 1.0F, 200.0F, null);
-    Item two = createItem(headers, 4.0F, 400.0F, null);
+    CGItem one = createItem(headers, 1.0F, 200.0F, null);
+    CGItem two = createItem(headers, 4.0F, 400.0F, null);
 
     Cluster cluster = new Cluster(headers);
 

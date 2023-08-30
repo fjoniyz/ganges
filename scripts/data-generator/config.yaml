@@ -1,5 +1,5 @@
 bootstrap_servers: ["localhost:9092"]
 # For streamable mode: 'sanierungsdata', 'mieterstromdata', 'electro-mobility' 
-dataset_topic: {"electro-mobility_new" : "electromobility"}
+dataset_topic: {"electro-mobility_new" : "electromobility-new"}
 streaming: true
 delay: 0.3

@@ -1,11 +1,10 @@
 package com.ganges.lib.castleguard.utils;
 
 import com.ganges.lib.castleguard.CastleGuard;
+import java.util.HashMap;
 import org.apache.commons.lang3.Range;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.HashMap;
 
 public class LogUtils {
 

@@ -2,20 +2,17 @@ package serdes;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.commons.lang3.SerializationException;
 
-public class Serializer<T> implements org.apache.kafka.common.serialization.Serializer<T> {
-    private ObjectMapper om = new ObjectMapper();
+public class Serializer<JsonNode> implements org.apache.kafka.common.serialization.Serializer<JsonNode> {
+    private ObjectMapper mapper = new ObjectMapper();
 
     @Override
-    public byte[] serialize(String topic, T o) {
-        byte[] retval;
+    public byte[] serialize(String topic, JsonNode data) {
+
         try {
-            System.out.println("Class: " + o.getClass());
-            retval = om.writeValueAsString(o).getBytes();
+            return mapper.writeValueAsBytes(data);
         } catch (JsonProcessingException e) {
-            throw new SerializationException(e);
+            return new byte[0];
         }
-        return retval;
     }
 }

@@ -19,6 +19,13 @@ public class Utils {
     return newRange;
   }
 
+  public static Range<Double> updateDoubleRange(Range<Double> range, Double newVal) {
+    Double max = Math.max(range.getMaximum(), newVal);
+    Double min = Math.min(range.getMinimum(), newVal);
+    Range<Double> newRange = Range.between(min, max);
+    return newRange;
+  }
+
   /** Replacement for non-existant python function np.random.choice() */
   public static <T> T randomChoice(List<T> content) {
     return randomChoice(content, 1).get(0);
@@ -49,6 +56,15 @@ public class Utils {
     float diff_other = Math.abs(other.getMaximum() - other.getMinimum());
     if (diff_other == 0) {
       return 0F;
+    }
+    return diff_self / diff_other;
+  }
+
+  public Double doubleRangeInformationLoss(Range<Double> actual, Range<Double> other) {
+    Double diff_self = Math.abs(actual.getMaximum() - actual.getMinimum());
+    Double diff_other = Math.abs(other.getMaximum() - other.getMinimum());
+    if (diff_other == 0) {
+      return 0.0;
     }
     return diff_self / diff_other;
   }
