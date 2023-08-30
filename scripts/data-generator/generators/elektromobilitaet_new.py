@@ -6,7 +6,7 @@ from typing import Iterable
 import uuid
 
 def generate_station_rows() -> Iterable:
-    for station in range(100):
+    for station in range(300):
         ae_session_id = str(uuid.uuid4())
         building_type = random.choice(["Residental", 'Commercial', "Healthcare", "Educational"])
         urbanisation_level = random.uniform(0, 1)

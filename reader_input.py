@@ -6,7 +6,7 @@ import prognose
 # Kafka broker configuration
 bootstrap_servers = 'localhost:9092'
 group_id = 'my-consumer-group'
-topic = 'electromobility'
+topic = 'fjoni1'
 
 def get_min_duration(messages):
     min_duration = math.inf
@@ -76,6 +76,7 @@ try:
                     break
             else:
                 messages.append(json.loads(msg.value().decode('utf-8')))
+                print(json.loads(msg.value().decode('utf-8')))
                 
         # Process the message
         prognose.random.seed(prognose.pd.Timestamp.utcnow().dayofyear)
