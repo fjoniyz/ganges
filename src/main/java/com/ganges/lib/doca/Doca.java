@@ -281,14 +281,13 @@ public class Doca implements AnonymizationAlgorithm {
     // Calculate enlargement (the value is not yet divided by the number of attributes!)
     List<Double> enlargement = new ArrayList<>();
     for (DocaCluster cluster : clusters) {
-      //double sum = 0;
-      //for (Map.Entry<String, Double> entry : dataPoint.getData().entrySet()) {
-      //  String key = entry.getKey();
-      //  Double value = entry.getValue();
-      //  sum += Math.max(0, value - cluster.getRanges().get(key).getMaximum())
-      //      - Math.min(0, value - cluster.getRanges().get(key).getMinimum());
-      //}
-      double sum = cluster.tupleEnlargement(dataPoint, this.rangeMap);
+      double sum = 0;
+      for (Map.Entry<String, Double> entry : dataPoint.getData().entrySet()) {
+        String key = entry.getKey();
+        Double value = entry.getValue();
+        sum += Math.max(0, value - cluster.getRanges().get(key).getMaximum())
+            - Math.min(0, value - cluster.getRanges().get(key).getMinimum());
+      }
       enlargement.add(sum);
     }
 
@@ -315,9 +314,8 @@ public class Doca implements AnonymizationAlgorithm {
           difCluster.put(clusterRange.getKey(),
               clusterRange.getValue().getMaximum() - clusterRange.getValue().getMinimum());
         }
-        double overallLoss = (enl
-            + DocaUtil.divisionWith0(difCluster, dif).values().stream().reduce(0.0, Double::sum)
-            / numAttributes);
+        // Function tupleEnlargment calculates Loss (which is a bit confusing)
+        double overallLoss = clusters.get(c).tupleEnlargement(dataPoint, this.rangeMap);
         if (overallLoss <= this.tau) {
           okClusters.add(c);
         }
@@ -362,7 +360,7 @@ public class Doca implements AnonymizationAlgorithm {
             / (float) difCluster.keySet().size();
     this.losses.add(loss);
     //TODO: tau should only be calculated from the last m losses
-    this.tau = this.losses.stream().mapToDouble(Double::doubleValue).sum() / losses.size();
+    this.tau = this.losses.subList(Math.max(losses.size() - 80, 0), losses.size()).stream().mapToDouble(Double::doubleValue).sum() / Math.min(losses.size(), 80);
     // release cluster from list
     this.clusterList.remove(expiredCluster);
 

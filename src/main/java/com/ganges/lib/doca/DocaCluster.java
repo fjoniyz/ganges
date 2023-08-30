@@ -119,8 +119,7 @@ public class DocaCluster {
    */
   public Double tupleEnlargement(DocaItem item, HashMap<String, Range<Double>> globalRanges) {
     Double given = this.informationLossGivenT(item, globalRanges);
-    Double current = this.informationLoss(globalRanges);
-    return (given - current) / this.ranges.size();
+    return given  / this.ranges.size();
   }
 
   /**
