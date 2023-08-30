@@ -34,7 +34,7 @@ public class Doca implements AnonymizationAlgorithm {
   private final int delayConstraint;  // maximum time a tuple can be stored before it's released
   private final double delta;   // suppression rate
   private boolean stableDomainReached = false;
-  private static final int processingWindowSize = 400; //size of process window for domain bounding
+  private static final int processingWindowSize = 200; //size of process window for domain bounding
   private Map<DocaItem, Double> sortedCurrentDomain = new HashMap<>(); // Sorted Map of current domain
 
   //-----------Parameters/Variables for DOCA Phase----------------//

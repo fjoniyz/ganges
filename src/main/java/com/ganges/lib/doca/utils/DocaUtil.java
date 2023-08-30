@@ -80,28 +80,6 @@ public class DocaUtil {
     return sum;
   }
 
-  /**
-   * Converts a list of data points to a list of items.
-   *
-   * @param dataSet the list of data points to be converted
-   * @return a list of items created from the data points
-   */
-  public static List<CGItem> dataPointsToItems(List<List<Double>> dataSet) {
-    List<CGItem> items = new ArrayList<>();
-    int i = 0;
-    for (List<Double> dataPoint : dataSet) {
-      int attrIndex = 0;
-      HashMap<String, Float> attributeValue = new HashMap<>();
-      for (double attr : dataPoint) {
-        attributeValue.put(String.valueOf(attrIndex), (float) attr);
-        attrIndex++;
-      }
-      CGItem item = new CGItem(String.valueOf(currentID++), attributeValue, null, new ArrayList<>(attributeValue.keySet()), String.valueOf(i));
-      items.add(item);
-      i++;
-    }
-    return items;
-  }
 
   /**
    * Calculates the standard deviation of a list of numbers
