@@ -20,12 +20,10 @@ public class DocaUtil {
    * @param b the second array of doubles
    * @return the division of the two arrays
    */
-  public static HashMap<String, Double> divisionWith0(HashMap<String, Double> a,
-                                                     HashMap<String, Double> b) {
-    HashMap<String, Double> result = new HashMap<>();
-    for (Map.Entry<String, Double> aEntry : a.entrySet()) {
-      result.put(aEntry.getKey(),
-          (b.get(aEntry.getKey()) != 0) ? aEntry.getValue() / b.get(aEntry.getKey()) : 0);
+  public static double[] divisionWith0(double[] a, double[] b) {
+    double[] result = new double[a.length];
+    for (int i = 0; i < a.length; i++) {
+      result[i] = (b[i] != 0) ? a[i] / b[i] : 0;
     }
     return result;
   }
