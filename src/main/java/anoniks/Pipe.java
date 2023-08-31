@@ -37,6 +37,7 @@ public class Pipe {
 
   private static final String CASTLEGUARD_KEY = "castleguard";
   private static final String DOCA_KEY = "doca";
+  private static final String DOCA_ALT_KEY = "doca-alt";
   private static AnonymizationAlgorithm algorithm;
   private static Properties props = new Properties();
 
@@ -129,17 +130,19 @@ public class Pipe {
     // Retrieve non-anonymized data from cache
     dataRepository.saveValues(messageMap);
 
+    String[] weights = props.getProperty("prioritization").split(",");
+    Map<String, Double> headerWeights = new HashMap<>();
+    for (int i = 0; i < weights.length; i++) {
+      headerWeights.put(anonFields[i], Double.parseDouble(weights[i]));
+    }
+
     if (addUnanonymizedHistory) {
 
       // Here we assume that for one message type the values are stored consistently (all
       // fields are present in cache)
-      contextValues = dataRepository.getValuesByKeys(anonFieldsList);
+      contextValues = dataRepository.getValuesByKeys(anonFieldsList, headerWeights);
     } else {
-      String[] weights = props.getProperty("prioritization").split(",");
-      Map<String, Float> headerWeights = new HashMap<>();
-      for (int i = 0; i < weights.length; i++) {
-        headerWeights.put(anonFields[i], Float.parseFloat(weights[i]));
-      }
+
       contextValues.add(new AnonymizationItem(id, valuesMap, nonAnonymizedValuesMap, headerWeights));
     }
     dataRepository.close();
@@ -215,10 +218,12 @@ public class Pipe {
     String outputTopic = props.getProperty("output-topic");
     String anonymizationAlgoName = props.getProperty("algorithm");
 
-    boolean addUnanonymizedHistory = Boolean.parseBoolean(props.getProperty("use-redis"));
+    boolean addUnanonymizedHistory = anonymizationAlgoName.equals(DOCA_ALT_KEY);
     if (anonymizationAlgoName.equals(CASTLEGUARD_KEY)) {
       algorithm = new CastleGuard();
     } else if (anonymizationAlgoName.equals(DOCA_KEY)) {
+      algorithm = new Doca();
+    } else if (anonymizationAlgoName.equals(DOCA_ALT_KEY)) {
       algorithm = new Doca();
     } else {
       throw new IllegalArgumentException("Unknown anonymization algorithm passed");

@@ -12,6 +12,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -33,7 +34,7 @@ public class Doca implements AnonymizationAlgorithm {
   private final int delayConstraint;  // maximum time a tuple can be stored before it's released
   private final double delta;   // suppression rate
   private boolean stableDomainReached = false;
-  private static final int processingWindowSize = 400; //size of process window for domain bounding
+  private static final int processingWindowSize = 200; //size of process window for domain bounding
   private Map<DocaItem, Double> sortedCurrentDomain = new HashMap<>(); // Sorted Map of current domain
 
   //-----------Parameters/Variables for DOCA Phase----------------//
@@ -44,7 +45,6 @@ public class Doca implements AnonymizationAlgorithm {
   private final List<Double> losses = new ArrayList<>();   // Losses to use when calculating tau
   private double tau; // average loss of last M expired clusters
   private List<DocaItem> domain;
-  private List<AnonymizationItem> leftOverItems = new ArrayList<>();
   private final Map<String, Double> sensitivityList = new HashMap<>();
   private Map<String, Double> headerWeights;
 
@@ -87,29 +87,57 @@ public class Doca implements AnonymizationAlgorithm {
             Map.Entry::getKey,
             entry -> entry.getValue().doubleValue() // Convert Float to Double
         ));
-    // Append Left over Items from previous batch (only happens when domain bounding is used)
-    x.addAll(0, this.leftOverItems);
-    this.leftOverItems = new ArrayList<>();
 
     if (x.isEmpty() || x.get(0).getValues().isEmpty()) {
       return new ArrayList<>();
     }
 
+    // Alternative Doca-Implementation (is triggered when history data is send with the message)
+    if (x.size() > 1) {
+      // Preserving fields order through anonymization input/output, since doca doesnt handle
+      // field names in any way
+      ArrayList<String> headers = new ArrayList<>(x.get(0).getValues().keySet());
+
+      // Convert map to double array
+      double[][] docaInput = new double[x.size()][];
+      for (int i = 0; i < x.size(); i++) {
+        docaInput[i] = new double[x.get(i).getValues().size()];
+        for (int headerId = 0; headerId < headers.size(); headerId++) {
+          docaInput[i][headerId] = x.get(i).getValues().get(headers.get(headerId));
+        }
+      }
+      double[][] result = docaAlternative(docaInput);
+      // Convert double array to Anonymization Items
+      // Doca outputs values in the same order as input, so we can use data from items with
+      // same index in input list
+      List<AnonymizationItem> outputResult = new ArrayList<>();
+      for (int i = 0; i < result.length; i++) {
+        Map<String, Double> dataRowMap = new LinkedHashMap<>();
+        for (int headerId = 0; headerId < headers.size(); headerId++) {
+          dataRowMap.put(headers.get(headerId), result[i][headerId]);
+        }
+        AnonymizationItem item = new AnonymizationItem(x.get(i).getId(), dataRowMap,
+            x.get(i).getNonAnonymizedValues());
+        outputResult.add(item);
+      }
+      if (outputResult.isEmpty()) {
+        return outputResult;
+      } else {
+        // We return only one last item, since previous were output in previous calls
+        return List.of(outputResult.get(outputResult.size()-1));
+      }
+    }
+
+    // Doca Implementation
     for (AnonymizationItem docaInput : x) {
       DocaItem currentItem = new DocaItem(docaInput.getId(), docaInput.getValues(), docaInput.getNonAnonymizedValues(),
           docaInput.getValues().keySet().stream().toList());
 
-      // If Delta is 1 no suppression (Domain Bounding) is applied
-      if (this.delta != 1) {
-        this.stableDomainReached = this.addToDomain(currentItem);
+      this.stableDomainReached = this.addToDomain(currentItem);
 
-        // If stable domain is reached
-        if (this.stableDomainReached) {
-          this.leftOverItems.addAll(x.subList(x.indexOf(docaInput), x.size()));
-          break;
-        }
-      } else {
-        this.domain.add(currentItem);
+      // If stable domain is reached
+      if (this.stableDomainReached) {
+        break;
       }
     }
 
@@ -234,7 +262,7 @@ public class Doca implements AnonymizationAlgorithm {
    */
   private DocaCluster onlineClustering(DocaItem tuple) {
 
-    DocaCluster bestCluster = this.findBestCluster(tuple, DocaUtil.getAttributeDiff(this.rangeMap));
+    DocaCluster bestCluster = this.findBestCluster(tuple);
 
     if (bestCluster == null) {
       DocaCluster newCluster = new DocaCluster(tuple.getHeaders(), this.headerWeights);
@@ -270,12 +298,10 @@ public class Doca implements AnonymizationAlgorithm {
    * Find the best cluster for a given data point.
    *
    * @param dataPoint Data point to be clustered
-   * @param dif       Difference of global ranges
    * @return Best cluster for the data point or null if no fitting cluster was found
    */
-  private DocaCluster findBestCluster(DocaItem dataPoint, HashMap<String, Double> dif) {
+  private DocaCluster findBestCluster(DocaItem dataPoint) {
     int bestCluster = -1;
-    int numAttributes = dataPoint.getHeaders().size();
     List<DocaCluster> clusters = this.clusterList;
 
     // Calculate enlargement (the value is not yet divided by the number of attributes!)
@@ -308,12 +334,6 @@ public class Doca implements AnonymizationAlgorithm {
       if (enl == minEnlarge) {
         minClusters.add(c);
 
-        HashMap<String, Double> difCluster = new HashMap<>();
-        for (Map.Entry<String, Range<Double>> clusterRange : clusters.get(c).getRanges()
-            .entrySet()) {
-          difCluster.put(clusterRange.getKey(),
-              clusterRange.getValue().getMaximum() - clusterRange.getValue().getMinimum());
-        }
         // Function tupleEnlargment calculates Loss (which is a bit confusing)
         double overallLoss = clusters.get(c).tupleEnlargement(dataPoint, this.rangeMap);
         if (overallLoss <= this.tau) {
@@ -349,15 +369,7 @@ public class Doca implements AnonymizationAlgorithm {
    */
   private List<DocaItem> releaseExpiredCluster(DocaCluster expiredCluster) {
     // update values
-    HashMap<String, Double> dif = DocaUtil.getAttributeDiff(this.rangeMap);
-    HashMap<String, Double> difCluster = new HashMap<>();
-    for (Map.Entry<String, Range<Double>> clusterRange : expiredCluster.getRanges().entrySet()) {
-      difCluster.put(clusterRange.getKey(),
-          clusterRange.getValue().getMaximum() - clusterRange.getValue().getMinimum());
-    }
-    double loss =
-        DocaUtil.divisionWith0(difCluster, dif).values().stream().reduce(0.0, Double::sum)
-            / (float) difCluster.keySet().size();
+    double loss = expiredCluster.informationLoss(this.rangeMap);
     this.losses.add(loss);
     //TODO: tau should only be calculated from the last m losses
     this.tau = this.losses.subList(Math.max(losses.size() - 80, 0), losses.size()).stream().mapToDouble(Double::doubleValue).sum() / Math.min(losses.size(), 80);
@@ -426,6 +438,183 @@ public class Doca implements AnonymizationAlgorithm {
         this.sensitivityList.put(header, Math.abs(minimums.get(header) - maximums.get(header)));
       }
     }
+  }
+
+
+  public double[][] docaAlternative(double[][] x) {
+    String[] parameters = getParameters();
+    double eps = Double.parseDouble(parameters[0]);
+    int delayConstraint = Integer.parseInt(parameters[1]);
+    int beta = Integer.parseInt(parameters[2]);
+    boolean inplace = Boolean.parseBoolean(parameters[3]);
+    int numInstances = x.length;
+    int numAttributes = x[0].length;
+
+    //TODO: This could be problematic when more headers with different value ranges are used
+    //double sensitivity = Math.abs((DocaUtil.getMax(x) - DocaUtil.getMin(x)));
+    double sensitivity = 1.0;
+
+    List<List<Integer>> clusters = new ArrayList<>();
+    List<List<Integer>> clustersFinal = new ArrayList<>();
+
+    // Cluster attribute minimum/maximum
+    List<double[]> mnC = new ArrayList<>();
+    List<double[]> mxC = new ArrayList<>();
+
+    // Global Attribute Minimum/Maximum
+    double[] mn = new double[numAttributes];
+    double[] mx = new double[numAttributes];
+    for (int i = 0; i < numAttributes; i++) {
+      mn[i] = Double.POSITIVE_INFINITY;
+      mx[i] = Double.NEGATIVE_INFINITY;
+    }
+    // TODO: Tau should be calculated as mean of the last m losses
+    // Losses saved for tau
+    List<Double> losses = new ArrayList<>();
+    double tau = 0;
+
+    // Create Output structure
+    double[][] output;
+    if (inplace) {
+      output = x;
+    } else {
+      output = new double[numInstances][numAttributes];
+    }
+
+    int TODOREMOVE_Perfect = 0;
+
+    for (int clock = 0; clock < numInstances; clock++) {
+      if (clock % 1000 == 0) {
+        System.out.println("Clock " + clock + " " + TODOREMOVE_Perfect);
+      }
+
+      double[] dataPoint = x[clock];
+
+      // Update min/max
+      for (int i = 0; i < numAttributes; i++) {
+        mn[i] = Math.min(mn[i], dataPoint[i]);
+        mx[i] = Math.max(mx[i], dataPoint[i]);
+      }
+
+      double[] dif = new double[numAttributes];
+      for (int i = 0; i < numAttributes; i++) {
+        dif[i] = mx[i] - mn[i];
+      }
+
+      // Find best Cluster
+      Integer bestCluster = null;
+      if (!clusters.isEmpty()) {
+        // Calculate enlargement (the value is not yet divided by the number of attributes!)
+        double[] enlargement = new double[clusters.size()];
+        for (int c = 0; c < clusters.size(); c++) {
+          double sum = 0;
+          for (int i = 0; i < numAttributes; i++) {
+            sum +=
+                Math.max(0, dataPoint[i] - mxC.get(c)[i])
+                    - Math.min(0, dataPoint[i] - mnC.get(c)[i]);
+          }
+          enlargement[c] = sum;
+        }
+
+        double minEnlarge = Double.MAX_VALUE;
+
+        List<Integer> okClusters = new ArrayList<>();
+        List<Integer> minClusters = new ArrayList<>();
+
+        for (int c = 0; c < clusters.size(); c++) {
+          double enl = enlargement[c];
+          if (enl == minEnlarge) {
+            minClusters.add(c);
+            // TODO: Does enl need to be added here?
+            double overallLoss = (enl + DocaUtil.getSumOfElementsInArray(DocaUtil.divisionWith0(mxC.get(c), dif)))
+                / numAttributes;
+            if (overallLoss <= tau) {
+              okClusters.add(c);
+            }
+          }
+        }
+
+        if (!okClusters.isEmpty()) {
+          TODOREMOVE_Perfect += 1;
+          bestCluster =
+              okClusters.stream()
+                  .min(
+                      (c1, c2) -> Integer.compare(clusters.get(c1).size(), clusters.get(c2).size()))
+                  .orElse(null);
+        } else if (clusters.size() >= beta) {
+          bestCluster =
+              minClusters.stream()
+                  .min(
+                      (c1, c2) -> Integer.compare(clusters.get(c1).size(), clusters.get(c2).size()))
+                  .orElse(null);
+        }
+      }
+
+      if (bestCluster == null) {
+        // Add new Cluster
+        List<Integer> newCluster = new ArrayList<>();
+        newCluster.add(clock);
+        clusters.add(newCluster);
+
+        // Set Min/Max of new Cluster
+        mnC.add(dataPoint.clone());
+        mxC.add(dataPoint.clone());
+      } else {
+        clusters.get(bestCluster).add(clock);
+        // Update min/max
+        double[] mnCluster = mnC.get(bestCluster);
+        double[] mxCluster = mxC.get(bestCluster);
+        mnCluster[bestCluster] = Math.min(mnCluster[bestCluster], dataPoint[bestCluster]);
+        mxCluster[bestCluster] = Math.max(mxCluster[bestCluster], dataPoint[bestCluster]);
+      }
+
+      List<Integer> overripeClusters = new ArrayList<>();
+      for (int c = 0; c < clusters.size(); c++) {
+        if (clusters.get(c).contains(clock - delayConstraint)) {
+          overripeClusters.add(c);
+        }
+      }
+      assert overripeClusters.size() <= 1
+          : "Every datapoint should only be able to be in one cluster!?";
+      if (!overripeClusters.isEmpty()) {
+        int c = overripeClusters.get(0);
+        double[] difCluster = new double[numAttributes];
+        for (int i = 0; i < numAttributes; i++) {
+          difCluster[i] = mxC.get(c)[i] - mnC.get(c)[i];
+        }
+        double loss = DocaUtil.getSumOfElementsInArray(DocaUtil.divisionWith0(difCluster, dif))
+            / numAttributes;
+        losses.add(loss);
+        clustersFinal.add(clusters.get(c));
+        clusters.remove(c);
+        mnC.remove(c);
+        mxC.remove(c);
+      }
+    }
+
+    clustersFinal.addAll(clusters);
+
+    for (List<Integer> cs : clustersFinal) {
+      double[] mean = new double[numAttributes];
+      for (int i : cs) {
+        for (int j = 0; j < numAttributes; j++) {
+          mean[j] += x[i][j];
+        }
+      }
+      for (int j = 0; j < numAttributes; j++) {
+        mean[j] /= cs.size();
+      }
+      double scale = (sensitivity / (cs.size() * eps));
+      double[] laplace = new double[numAttributes];
+      for (int j = 0; j < numAttributes; j++) {
+        laplace[j] = Math.random() - 0.5;
+      }
+      for (int j = 0; j < numAttributes; j++) {
+        output[cs.get(0)][j] = mean[j] + scale * laplace[j];
+      }
+    }
+
+    return output;
   }
 
 }

@@ -12,10 +12,10 @@ public class Utils {
     this.random = new Random();
   }
 
-  public static Range<Float> updateRange(Range<Float> range, float newVal) {
-    float max = Math.max(range.getMaximum(), newVal);
-    float min = Math.min(range.getMinimum(), newVal);
-    Range<Float> newRange = Range.between(min, max);
+  public static Range<Double> updateRange(Range<Double> range, Double newVal) {
+    Double max = Math.max(range.getMaximum(), newVal);
+    Double min = Math.min(range.getMinimum(), newVal);
+    Range<Double> newRange = Range.between(min, max);
     return newRange;
   }
 
@@ -51,20 +51,20 @@ public class Utils {
     return sampled;
   }
 
-  public float rangeInformationLoss(Range<Float> actual, Range<Float> other) {
-    float diff_self = Math.abs(actual.getMaximum() - actual.getMinimum());
-    float diff_other = Math.abs(other.getMaximum() - other.getMinimum());
+  public Double rangeInformationLoss(Range<Double> actual, Range<Double> other) {
+    Double diff_self = Math.abs(actual.getMaximum() - actual.getMinimum());
+    Double diff_other = Math.abs(other.getMaximum() - other.getMinimum());
     if (diff_other == 0) {
-      return 0F;
+      return 0.0;
     }
     return (diff_self / diff_other);
   }
 
-  public float rangeInformationLoss(Range<Float> actual, Range<Float> other, Float weight) {
-    float diff_self = Math.abs(actual.getMaximum() - actual.getMinimum());
-    float diff_other = Math.abs(other.getMaximum() - other.getMinimum());
+  public Double rangeInformationLoss(Range<Double> actual, Range<Double> other, Double weight) {
+    Double diff_self = Math.abs(actual.getMaximum() - actual.getMinimum());
+    Double diff_other = Math.abs(other.getMaximum() - other.getMinimum());
     if (diff_other == 0) {
-      return 0F;
+      return 0.0;
     }
     return weight * (diff_self / diff_other);
   }
@@ -91,7 +91,7 @@ public class Utils {
    * @param range: Range Object with Floats
    * @return: the maximum difference within Range object
    */
-  public float rangeDifference(Range<Float> range) {
+  public Double rangeDifference(Range<Double> range) {
     return Math.abs(range.getMaximum() - range.getMinimum());
   }
 }

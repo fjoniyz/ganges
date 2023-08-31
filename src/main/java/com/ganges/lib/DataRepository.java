@@ -48,7 +48,7 @@ public class DataRepository {
     }
   }
 
-  public List<AnonymizationItem> getValuesByKeys(List<String> valueKeys) {
+  public List<AnonymizationItem> getValuesByKeys(List<String> valueKeys, Map<String, Double> headerWeights) {
     List<String> keys = connection.keys("*");
     List<Integer> keysAsInts = new ArrayList<>();
     for (String key : keys) {
@@ -72,7 +72,7 @@ public class DataRepository {
       }
 
       AnonymizationItem anonymizationItem =
-          new AnonymizationItem(id, anonymizedValues, nonAnonymizedValues);
+          new AnonymizationItem(id, anonymizedValues, nonAnonymizedValues, headerWeights);
       values.add(anonymizationItem);
     }
     return values;

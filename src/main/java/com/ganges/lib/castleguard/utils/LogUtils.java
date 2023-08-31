@@ -10,7 +10,7 @@ public class LogUtils {
 
   private static final Logger logger = LoggerFactory.getLogger(CastleGuard.class);
 
-  public static void logGlobalRanges(HashMap<String, Range<Float>> ranges) {
+  public static void logGlobalRanges(HashMap<String, Range<Double>> ranges) {
     logger.info("Global range: ");
     for (String header : ranges.keySet()) {
       logger.info(header + ": " + ranges.get(header).toString() + ", ");
