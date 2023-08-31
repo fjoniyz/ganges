@@ -1,6 +1,7 @@
 from pandas import DataFrame, Timestamp, Timedelta, date_range, concat, Series
 from numpy import zeros, array, ceil, concatenate
-
+import random
+import pandas as pd
 from numpy.random import seed
 
 from random import choices
@@ -410,4 +411,3 @@ def simulate_ev_forecast(df: DataFrame, cfg: TaskSimEvCharging) -> DataFrame:
     # return only pipo
 
     return df_f
-
