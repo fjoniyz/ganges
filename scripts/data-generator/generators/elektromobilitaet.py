@@ -5,6 +5,7 @@ from time import sleep
 import os
 from typing import Iterable
 import uuid
+import argparse
 
 
 def generate_station_rows() -> Iterable:
@@ -23,12 +24,17 @@ def get_fields_names():
 if __name__ == "__main__":
     """ Writes into a electromobilitydata.csv file with random secondly 
     Endery Consumption we added information about which apartment is affected"""
+    parser = argparse.ArgumentParser()
+    parser.add_argument("number", type=int)
+    args = parser.parse_args()
     
     with open(os.path.dirname(os.path.realpath(__file__)) + '/../data/emobilitydata.csv', 'w', newline='') as file:
         writer = csv.writer(file)
         field = get_fields_names()
         writer.writerow(field)
+        number_rows = 0
         for row in generate_station_rows():
             writer.writerow(row)
-            sleep(0.1)
-            
+            number_rows += 1
+            if number_rows >= args.number:
+                break

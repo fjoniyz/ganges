@@ -10,6 +10,7 @@ from time import sleep
 import logging
 import os
 from generators_list import GENERATORS_LIST
+import time
 
 def preprocess_value(value):
     if type(value) == datetime.datetime:
@@ -29,9 +30,11 @@ def send_dataset(bootstrap_servers: List[str], dataset: Iterable, topic: str, he
 
     for instance in dataset:
         instance_dict = {headers[i]: preprocess_value(instance[i]) for i in range(len(instance))}
-        msg = json.dumps(instance_dict, default=str)
-        logging.info(f"{topic} {str(msg)}")
-        producer.send(topic, value=str(msg).encode('utf-8'))
+        instance_dict['producer_timestamp'] = int(time.time() * 1000)
+        msg = json.dumps(instance_dict)
+        logging.info(f"{topic} {instance_dict['ae_session_id']} {str(msg)}")
+        producer.send(topic, value=str(msg).encode(
+            'utf-8'), key=instance_dict["ae_session_id"].encode('utf-8')) # change the key here??
         producer.flush()
         sleep(delay)
 
@@ -43,6 +46,10 @@ def read_and_send(config: dict, dataset: str, topic: str):
     
     with open(dataset) as f:
         dataset = list(csv.reader(f, delimiter=","))
+        for row in dataset:
+            for i in range(len(row)):
+                if row[i].replace(".", "").replace(",", "").isnumeric():
+                    row[i] = float(row[i])
 
     send_dataset(bootstrap_servers=config["bootstrap_servers"], 
                  dataset=dataset, 

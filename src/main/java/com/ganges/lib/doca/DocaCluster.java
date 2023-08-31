@@ -1,5 +1,6 @@
 package com.ganges.lib.doca;
 
+import com.ganges.lib.AbstractCluster;
 import com.ganges.lib.castleguard.utils.Utils;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -8,18 +9,16 @@ import java.util.List;
 import java.util.Map;
 import org.apache.commons.lang3.Range;
 
-public class DocaCluster {
+public class DocaCluster extends AbstractCluster {
 
   private final List<DocaItem> contents;
-  private Map<String, Range<Double>> ranges;
-  private final Utils utils;
 
-  public DocaCluster(List<String> headers) {
+
+  public DocaCluster(List<String> headers, Map<String, Double> headerWeights) {
     // Initialises the cluster
+    super(headers, headerWeights);
     this.contents = new ArrayList<>();
-    this.ranges = new LinkedHashMap<>();
-    headers.forEach(header -> this.ranges.put(header, Range.between(0.0, 0.0)));
-    this.utils =  new Utils();
+
   }
 
   public List<DocaItem> getContents() {
@@ -30,13 +29,6 @@ public class DocaCluster {
     return this.contents.size();
   }
 
-  public Map<String, Range<Double>> getRanges() {
-    return this.ranges;
-  }
-
-  public void setRanges(HashMap<String, Range<Double>> value) {
-    this.ranges = value;
-  }
 
   /**
    * Perturbs the cluster with header specific but constant noise.
@@ -53,15 +45,12 @@ public class DocaCluster {
     }
   }
 
-
-
   /**
    * Inserts a tuple into the cluster.
    *
    * @param element The element to insert into the cluster
    */
   public void insert(DocaItem element) {
-
     // checks for an empty cluster
     boolean firstElem = this.contents.isEmpty();
     this.contents.add(element);
@@ -106,8 +95,7 @@ public class DocaCluster {
    */
   public Double tupleEnlargement(DocaItem item, HashMap<String, Range<Double>> globalRanges) {
     Double given = this.informationLossGivenT(item, globalRanges);
-    Double current = this.informationLoss(globalRanges);
-    return (given - current) / this.ranges.size();
+    return given  / this.ranges.size();
   }
 
   /**
@@ -131,7 +119,7 @@ public class DocaCluster {
           Range.between(
               (Math.min(header.getValue().getMinimum(), item.getData().get(header.getKey()))),
               Math.max(header.getValue().getMaximum(), item.getData().get(header.getKey())));
-      loss += this.utils.doubleRangeInformationLoss(updated, ranges);
+      loss += this.utils.doubleRangeInformationLoss(updated, ranges, this.headerWeights.get(header.getKey()));
     }
     return loss;
   }
@@ -162,27 +150,11 @@ public class DocaCluster {
               Math.max(
                   header.getValue().getMaximum(),
                   cluster.ranges.get(header.getKey()).getMaximum()));
-      loss += this.utils.doubleRangeInformationLoss(updated, range);
+      loss += this.utils.doubleRangeInformationLoss(updated, range, this.headerWeights.get(header.getKey()));
     }
     return loss;
   }
 
-  /**
-   * Calculates the information loss of this cluster.
-   *
-   * @param globalRanges The globally known ranges for each attribute
-   * @return The current information loss of the cluster
-   */
-  public Double informationLoss(HashMap<String, Range<Double>> globalRanges) {
-    Double loss = 0.0;
 
-    // For each range, check if <item> would extend it
-    Range<Integer> updated = null;
-    for (Map.Entry<String, Range<Double>> header : this.ranges.entrySet()) {
-      Range<Double> range = globalRanges.get(header.getKey());
-      loss += this.utils.doubleRangeInformationLoss(header.getValue(), range);
-    }
-    return loss;
-  }
 
 }
