@@ -99,14 +99,6 @@ public class CastleGuard implements AnonymizationAlgorithm {
     }
   }
 
-  public Optional<CGItem> tryGetOutputLine() {
-    if (outputQueue.isEmpty()) {
-      return Optional.empty();
-    }
-    CGItem output = outputQueue.pop();
-    return Optional.of(output);
-  }
-
   @Override
   public List<AnonymizationItem> anonymize(List<AnonymizationItem> X) {
     this.headerWeights = X.get(0).getHeaderWeights();
@@ -127,7 +119,7 @@ public class CastleGuard implements AnonymizationAlgorithm {
     ).toList();
     outputQueue.clear();
 
-    // Filter out median of cluster values. TODO: Check if we only need this median, or if we want min, max or spc as well
+    // Filter out median of cluster values.
     List<AnonymizationItem> updatedOutput = outputItems.stream()
         .map(item -> {
           Map<String, Double> hashMap = item.getValues();
@@ -225,7 +217,7 @@ public class CastleGuard implements AnonymizationAlgorithm {
   }
 
   /**
-   * Decides whether to suppress <item> or not
+   * Decides whether to suppress <item> or not.
    *
    * @param item : The tuple to make decisions based on
    */
@@ -327,8 +319,6 @@ public class CastleGuard implements AnonymizationAlgorithm {
   private Optional<CGCluster> bestSelection(CGItem item) {
     List<CGCluster> notAnonCGClusters = this.clusterManagement.getNonAnonymizedClusters();
 
-    // Need to be tested
-
     Set<Double> e = new HashSet<>();
 
     for (CGCluster CGCluster : notAnonCGClusters) {
@@ -388,8 +378,6 @@ public class CastleGuard implements AnonymizationAlgorithm {
     }
 
     LogUtils.logGlobalRanges(globalRanges);
-    // globalRanges.replaceAll(
-    //        (h, v) -> Utils.updateRange(globalRanges.get(h), item.getData().get(h)));
   }
 
 

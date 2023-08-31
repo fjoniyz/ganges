@@ -57,21 +57,8 @@ public class CGCluster extends AbstractCluster {
     return this.diversity.size();
   }
 
-
-  public Map<String, Double> getSampleValues() {
-    return this.sampleValues;
-  }
-
-  public void setSampleValues(Map<String, Double> value) {
-    this.sampleValues = value;
-  }
-
   public Set<Double> getDiversity() {
     return this.diversity;
-  }
-
-  public void setDiversity(Set<Double> value) {
-    this.diversity = value;
   }
 
   /**

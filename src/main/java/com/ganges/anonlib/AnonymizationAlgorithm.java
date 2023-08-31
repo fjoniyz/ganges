@@ -3,5 +3,5 @@ package com.ganges.anonlib;
 import java.util.List;
 
 public interface AnonymizationAlgorithm {
-  List<AnonymizationItem> anonymize(List<AnonymizationItem> X);
+  List<AnonymizationItem> anonymize(List<AnonymizationItem> x);
 }

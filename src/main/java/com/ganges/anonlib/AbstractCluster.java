@@ -46,7 +46,6 @@ public abstract class AbstractCluster {
     float loss = 0f;
 
     // For each range, check if <item> would extend it
-    Range<Integer> updated = null;
     for (Map.Entry<String, Range<Double>> header : this.ranges.entrySet()) {
       Range<Double> range = globalRanges.get(header.getKey());
       loss += this.utils.rangeInformationLoss(header.getValue(), range,
