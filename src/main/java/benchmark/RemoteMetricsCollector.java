@@ -24,16 +24,16 @@ public class RemoteMetricsCollector {
   public static final String[] CSV_HEADERS = new String[] {"ID", "Producer", "EntryPipe",
       "EntryAnonymization", "ExitAnonymization", "ExitPipe",
       "Consumer"};
-  public static final String[] REQUIRED_TIMESTAMPS = new String[] {};
   private static String fileName;
   private static int port;
-  public static final String[] OPTIONAL_TIMESTAMPS = new String[] {"producer", "pipeEntry",
-      "anonEntry", "anonExit", "pipeExit", "Consumer"};
+  public static String[] requiredTimestamps;
+  public static String[] optionalTimestamps;
   private static Integer maxCheckCount = 50;
-  private static final HashMap<String, HashMap<String, Long>> timestamps = new HashMap<>();
+  private static final HashMap<String, HashMap<String, Long>> metrics = new HashMap<>();
   private static final HashMap<String, Integer> recordCheckCount = new HashMap<>();
   private static final ObjectMapper objectMapper = new ObjectMapper();
   private static CSVWriter writer;
+  private static final Properties properties = new Properties();
 
   public static void main(String[] args)
       throws ExecutionException, InterruptedException, IOException {
@@ -42,11 +42,16 @@ public class RemoteMetricsCollector {
     try (InputStream configStream = Files.newInputStream(
         Paths.get(userDirectory + "/src/main/resources/monitoring/remote-metrics-collector"
             + ".properties"))) {
-      Properties props = new Properties();
-      props.load(configStream);
-      port = Integer.parseInt(props.getProperty("collector-socket-port"));
-      maxCheckCount = Integer.valueOf(props.getProperty("max-check-count"));
-      fileName = props.getProperty("csv-file-name");
+      properties.load(configStream);
+      port = Integer.parseInt(properties.getProperty("collector-socket-port"));
+      maxCheckCount = Integer.valueOf(properties.getProperty("max-check-count"));
+      fileName = properties.getProperty("csv-file-name");
+
+      requiredTimestamps = properties.getProperty("required-timestamps").split(",");
+      optionalTimestamps = properties.getProperty("optional-timestamps").split(",");
+
+      System.out.println("Required metrics: " + Arrays.toString(requiredTimestamps));
+      System.out.println("Optional metrics: " + Arrays.toString(optionalTimestamps));
     } catch (IOException e) {
       e.printStackTrace();
     }
@@ -91,8 +96,8 @@ public class RemoteMetricsCollector {
       JsonNode idNode = rootNode.get(id);
 
       // Create a hashmap if not exists
-      if (!timestamps.containsKey(id)) {
-        timestamps.put(id, new HashMap<>());
+      if (!metrics.containsKey(id)) {
+        metrics.put(id, new HashMap<>());
       }
 
       // Put all timestamps for this id
@@ -100,39 +105,34 @@ public class RemoteMetricsCollector {
         String timestampName = idNodeTimestamp.next();
         long timestamp = Long.parseLong(idNode.get(timestampName).toString());
 
-        timestamps.get(id).put(timestampName, timestamp);
+        metrics.get(id).put(timestampName, timestamp);
       }
     }
 
     saveMetricsToCsv();
   }
 
-  private static void saveMetricsToCsv() throws IOException {
+  private static void saveMetricsToCsv() {
     System.out.println("Saving metrics to CSV...");
     List<String> outputIds = new ArrayList<>();
-    for (String id : timestamps.keySet()) {
-      HashMap<String, Long> recordTimestamps = timestamps.get(id);
-      if (Arrays.stream(REQUIRED_TIMESTAMPS)
+    for (String id : metrics.keySet()) {
+      HashMap<String, Long> recordTimestamps = metrics.get(id);
+      if (Arrays.stream(requiredTimestamps)
           .allMatch(recordTimestamps::containsKey)) {
-        if (Arrays.stream(OPTIONAL_TIMESTAMPS)
+        if (Arrays.stream(optionalTimestamps)
             .allMatch(recordTimestamps::containsKey)
             || (recordCheckCount.containsKey(id) && recordCheckCount.get(id) >= maxCheckCount)) {
+          List<String> dataList = new ArrayList<>(List.of(id));
+          for (String timestampName : CSV_HEADERS) {
+            if (recordTimestamps.containsKey(timestampName)) {
+              dataList.add(recordTimestamps.get(timestampName).toString());
+            } else {
+              dataList.add("");
+            }
+          }
+          String[] data = new String[dataList.size()];
+          dataList.toArray(data);
 
-          String[] data = {
-            id,
-            !recordTimestamps.containsKey("producer") ? "" :
-                recordTimestamps.get("producer").toString(),
-            !recordTimestamps.containsKey("pipeEntry") ? "" :
-                recordTimestamps.get("pipeEntry").toString(),
-            !recordTimestamps.containsKey("anonEntry") ? "" :
-                recordTimestamps.get("anonEntry").toString(),
-            !recordTimestamps.containsKey("anonExit") ? "" :
-                recordTimestamps.get("anonExit").toString(),
-            !recordTimestamps.containsKey("pipeExit") ? "" :
-                recordTimestamps.get("pipeExit").toString(),
-            !recordTimestamps.containsKey("consumer") ? "" :
-                recordTimestamps.get("consumer").toString()
-          };
           try {
             System.out.println("WRITING");
             writer.writeNext(data);
@@ -152,7 +152,7 @@ public class RemoteMetricsCollector {
       }
     }
     outputIds.forEach(id -> {
-      timestamps.remove(id);
+      metrics.remove(id);
       recordCheckCount.remove(id);
     });
   }
