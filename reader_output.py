@@ -15,6 +15,7 @@ group_id = 'my-consumer-group'
 topic = 'output16'
 redis_port = 6379
 
+
 def information_loss(message):
     '''
     returns the information loss (with euclidan distance) of anonymizes messages 
@@ -26,7 +27,7 @@ def information_loss(message):
     return_value = None
     information_loss = 0
     for key in all_keys:
-        all_values.append({'id':key, 'values':r.hgetall(key)})
+        all_values.append({'id': key, 'values': r.hgetall(key)})
 
     for value in all_values:
         byte_str = value['id']
@@ -41,19 +42,22 @@ def information_loss(message):
                     information_loss += norm(np.array([first])- np.array([second]))
     return information_loss, return_value
 
+
 def get_min_duration(messages):
     min_duration = math.inf
     for msg in messages:
-        if((int(msg["end_time_loading"]) - int(msg["start_time_loading"])) < min_duration):
+        if ((int(msg["end_time_loading"]) - int(msg["start_time_loading"])) < min_duration):
             min_duration = int(msg["end_time_loading"]) - int(msg["start_time_loading"])
     return min_duration
+
 
 def get_max_duration(messages):
     max_duration = -math.inf
     for msg in messages:
-        if((int(msg["end_time_loading"]) - int(msg["start_time_loading"])) > max_duration):
+        if ((int(msg["end_time_loading"]) - int(msg["start_time_loading"])) > max_duration):
             max_duration = int(msg["end_time_loading"]) - int(msg["start_time_loading"])
     return max_duration
+
 
 def create_TaskSimEvCharging(messages, power):
     # each max is just min value plus one hour
@@ -67,14 +71,15 @@ def create_TaskSimEvCharging(messages, power):
 
     min_start = min([int((msg["start_time_loading"])) for msg in messages])
     max_start = max([int((msg["start_time_loading"])) for msg in messages])
-    
+
     min_duration = get_min_duration(messages)
     max_duration = get_max_duration(messages)
-    
+
     min_demand = min([float((msg["kwh"])) for msg in messages])
     max_demand = max([float((msg["kwh"])) for msg in messages])
 
     return prognose.TaskSimEvCharging(min_duration, max_duration, min_demand, max_demand, min_start, max_start, power)
+
 
 # Kafka consumer configuration
 consumer_config = {
