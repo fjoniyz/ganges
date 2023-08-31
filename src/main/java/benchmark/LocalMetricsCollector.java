@@ -2,7 +2,6 @@ package benchmark;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -23,8 +22,8 @@ public class LocalMetricsCollector {
   private LocalMetricsCollector() {
     String userDirectory = System.getProperty("user.dir");
     try (InputStream configStream = Files.newInputStream(
-        Paths.get(userDirectory + "/src/main/resources/monitoring/local-metrics-collector" +
-            ".properties"))) {
+        Paths.get(userDirectory + "/src/main/resources/monitoring/local-metrics-collector"
+            + ".properties"))) {
       Properties props = new Properties();
       props.load(configStream);
       remoteMetricsAddress = props.getProperty("remote-collector-address");

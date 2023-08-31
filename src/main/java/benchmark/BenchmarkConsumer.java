@@ -59,7 +59,8 @@ public class BenchmarkConsumer {
           }
         }
 
-        System.out.printf("offset = %d, key = %s, value = %s%n", record.offset(), record.key(), record.value());
+        System.out.printf("offset = %d, key = %s, value = %s%n",
+            record.offset(), record.key(), record.value());
       }
     }
   }
