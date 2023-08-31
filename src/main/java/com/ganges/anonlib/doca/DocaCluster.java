@@ -93,13 +93,13 @@ public class DocaCluster extends AbstractCluster {
    */
   public Double tupleEnlargement(DocaItem item, HashMap<String, Range<Double>> globalRanges) {
     Double given = this.informationLossGivenT(item, globalRanges);
-    return given  / this.ranges.size();
+    return given / this.ranges.size();
   }
 
   /**
    * Calculates the information loss upon adding item into this cluster.
    *
-   * @param item          The tuple to calculate information loss based on
+   * @param item         The tuple to calculate information loss based on
    * @param globalRanges The globally known ranges for each attribute
    * @return The information loss given that we insert item into this cluster
    */
@@ -117,41 +117,12 @@ public class DocaCluster extends AbstractCluster {
           Range.between(
               (Math.min(header.getValue().getMinimum(), item.getData().get(header.getKey()))),
               Math.max(header.getValue().getMaximum(), item.getData().get(header.getKey())));
-      loss += this.utils.doubleRangeInformationLoss(updated, ranges, this.headerWeights.get(header.getKey()));
+      loss += this.utils.rangeInformationLoss(updated, ranges,
+          this.headerWeights.get(header.getKey()));
     }
     return loss;
   }
 
-  /**
-   * Calculates the information loss upon merging cluster into this cluster.
-   *
-   * @param cluster       The cluster to calculate information loss based on
-   * @param globalRanges The globally known ranges for each attribute
-   * @return The information loss given that we merge cluster with this cluster
-   */
-  public Double informationLossGivenC(DocaCluster cluster, HashMap<String,
-      Range<Double>> globalRanges) {
-    Double loss = 0.0;
-    if (this.contents.isEmpty()) {
-      return cluster.informationLoss(globalRanges);
-    } else if (cluster.contents.isEmpty()) {
-      return this.informationLoss(globalRanges);
-    }
-    // For each range, check if <item> would extend it
-    Range<Double> updated;
-    for (Map.Entry<String, Range<Double>> header : this.ranges.entrySet()) {
-      Range<Double> range = globalRanges.get(header.getKey());
-      updated =
-          Range.between(
-              Math.min(
-                  header.getValue().getMinimum(), cluster.ranges.get(header.getKey()).getMinimum()),
-              Math.max(
-                  header.getValue().getMaximum(),
-                  cluster.ranges.get(header.getKey()).getMaximum()));
-      loss += this.utils.doubleRangeInformationLoss(updated, range, this.headerWeights.get(header.getKey()));
-    }
-    return loss;
-  }
 
 
 

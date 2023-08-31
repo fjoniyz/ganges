@@ -11,13 +11,13 @@ import java.util.Objects;
 import java.util.Set;
 import org.apache.commons.lang3.Range;
 
-public class Cluster extends AbstractCluster {
+public class CGCluster extends AbstractCluster {
   private final List<CGItem> contents;
   private Set<Double> diversity;
   private Map<String, Double> sampleValues;
   //private final Map<String, Double> headerWeights;
 
-  public Cluster(List<String> headers, Map<String, Double> headerWeights) {
+  public CGCluster(List<String> headers, Map<String, Double> headerWeights) {
     super(headers, headerWeights);
     // Initialises the cluster
     this.diversity = new HashSet<>();
@@ -57,21 +57,8 @@ public class Cluster extends AbstractCluster {
     return this.diversity.size();
   }
 
-
-  public Map<String, Double> getSampleValues() {
-    return this.sampleValues;
-  }
-
-  public void setSampleValues(Map<String, Double> value) {
-    this.sampleValues = value;
-  }
-
   public Set<Double> getDiversity() {
     return this.diversity;
-  }
-
-  public void setDiversity(Set<Double> value) {
-    this.diversity = value;
   }
 
   /**
@@ -177,8 +164,8 @@ public class Cluster extends AbstractCluster {
     return (given - current) / this.ranges.size();
   }
 
-  public Double clusterEnlargement(Cluster cluster, HashMap<String, Range<Double>> globalRanges) {
-    Double given = this.informationLossGivenC(cluster, globalRanges);
+  public Double clusterEnlargement(CGCluster CGCluster, HashMap<String, Range<Double>> globalRanges) {
+    Double given = this.informationLossGivenC(CGCluster, globalRanges);
     Double current = this.informationLoss(globalRanges);
     return (given - current) / this.ranges.size();
   }
@@ -211,15 +198,15 @@ public class Cluster extends AbstractCluster {
   /**
    * Calculates the information loss upon merging <cluster> into this cluster
    *
-   * @param cluster:       The cluster to calculate information loss based on
+   * @param CGCluster:       The cluster to calculate information loss based on
    * @param global_ranges: The globally known ranges for each attribute
    * @return: The information loss given that we merge cluster with this cluster
    */
-  public Double informationLossGivenC(Cluster cluster, HashMap<String, Range<Double>> global_ranges) {
+  public Double informationLossGivenC(CGCluster CGCluster, HashMap<String, Range<Double>> global_ranges) {
     Double loss = 0.0;
     if (this.contents.isEmpty()) {
-      return cluster.informationLoss(global_ranges);
-    } else if (cluster.contents.isEmpty()) {
+      return CGCluster.informationLoss(global_ranges);
+    } else if (CGCluster.contents.isEmpty()) {
       return this.informationLoss(global_ranges);
     }
     // For each range, check if <item> would extend it
@@ -229,10 +216,10 @@ public class Cluster extends AbstractCluster {
       updated =
           Range.between(
               Math.min(
-                  header.getValue().getMinimum(), cluster.ranges.get(header.getKey()).getMinimum()),
+                  header.getValue().getMinimum(), CGCluster.ranges.get(header.getKey()).getMinimum()),
               Math.max(
                   header.getValue().getMaximum(),
-                  cluster.ranges.get(header.getKey()).getMaximum()));
+                  CGCluster.ranges.get(header.getKey()).getMaximum()));
       loss += this.utils.rangeInformationLoss(updated, global_range, this.headerWeights.get(header.getKey()));
     }
     return loss;

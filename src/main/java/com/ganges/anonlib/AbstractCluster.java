@@ -5,28 +5,23 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.Getter;
 import org.apache.commons.lang3.Range;
 
 public abstract class AbstractCluster {
 
-  protected Map<String, Range<Double>> ranges;
-  protected Map<String, Double> headerWeights;
   protected final Utils utils;
+  @Getter
+  protected Map<String, Range<Double>> ranges;
+  @Getter
+  protected Map<String, Double> headerWeights;
 
   public AbstractCluster(List<String> headers, Map<String, Double> headerWeights) {
     // Initialises the cluster
     this.ranges = new LinkedHashMap<>();
     headers.forEach(header -> this.ranges.put(header, Range.between(0.0, 0.0)));
-    this.utils =  new Utils();
+    this.utils = new Utils();
     this.headerWeights = headerWeights;
-  }
-
-  public Map<String, Double> getHeaderWeights() {
-    return this.headerWeights;
-  }
-
-  public Map<String, Range<Double>> getRanges() {
-    return this.ranges;
   }
 
   public void setRanges(HashMap<String, Range<Double>> value) {
@@ -51,10 +46,10 @@ public abstract class AbstractCluster {
     float loss = 0f;
 
     // For each range, check if <item> would extend it
-    Range<Integer> updated = null;
     for (Map.Entry<String, Range<Double>> header : this.ranges.entrySet()) {
       Range<Double> range = globalRanges.get(header.getKey());
-      loss += this.utils.rangeInformationLoss(header.getValue(), range, this.headerWeights.get(header.getKey()));
+      loss += this.utils.rangeInformationLoss(header.getValue(), range,
+          this.headerWeights.get(header.getKey()));
     }
     return loss;
   }

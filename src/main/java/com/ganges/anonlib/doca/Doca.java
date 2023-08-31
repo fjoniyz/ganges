@@ -30,9 +30,6 @@ public class Doca implements AnonymizationAlgorithm {
   private static List<Double> Vinf = new ArrayList<>(); // List of all lower bounds for each header
   private static List<Double> Vsup = new ArrayList<>();  // List of all upper bounds for each header
   private final double LAMBDA = 0.8;      // tolerance parameter for domain building
-  private final int beta;   // maximum number of clusters that can be stored
-  private final int delayConstraint;  // maximum time a tuple can be stored before it's released
-  private final double delta;   // suppression rate
   private boolean stableDomainReached = false;
   private static final int processingWindowSize = 200; //size of process window for domain bounding
   private Map<DocaItem, Double> sortedCurrentDomain = new HashMap<>(); // Sorted Map of current domain
@@ -44,9 +41,13 @@ public class Doca implements AnonymizationAlgorithm {
   private final double eps; // privacy budget
   private final List<Double> losses = new ArrayList<>();   // Losses to use when calculating tau
   private double tau; // average loss of last M expired clusters
+  private final int beta;   // maximum number of clusters that can be stored
+  private final int delayConstraint;  // maximum time a tuple can be stored before it's released
+  private final double delta;   // suppression rate
   private List<DocaItem> domain;
   private final Map<String, Double> sensitivityList = new HashMap<>();
   private Map<String, Double> headerWeights;
+  private int numberOfClustersForTau = 80;
 
 
   public Doca() {
@@ -81,12 +82,7 @@ public class Doca implements AnonymizationAlgorithm {
   @Override
   public List<AnonymizationItem> anonymize(List<AnonymizationItem> x) {
     // Initialize header weights
-    this.headerWeights = x.get(0).getHeaderWeights().entrySet()
-        .stream()
-        .collect(Collectors.toMap(
-            Map.Entry::getKey,
-            entry -> entry.getValue().doubleValue() // Convert Float to Double
-        ));
+    this.headerWeights = x.get(0).getHeaderWeights();
 
     if (x.isEmpty() || x.get(0).getValues().isEmpty()) {
       return new ArrayList<>();
@@ -124,14 +120,15 @@ public class Doca implements AnonymizationAlgorithm {
         return outputResult;
       } else {
         // We return only one last item, since previous were output in previous calls
-        return List.of(outputResult.get(outputResult.size()-1));
+        return List.of(outputResult.get(outputResult.size() - 1));
       }
     }
 
     // Doca Implementation
     for (AnonymizationItem docaInput : x) {
-      DocaItem currentItem = new DocaItem(docaInput.getId(), docaInput.getValues(), docaInput.getNonAnonymizedValues(),
-          docaInput.getValues().keySet().stream().toList());
+      DocaItem currentItem =
+          new DocaItem(docaInput.getId(), docaInput.getValues(), docaInput.getNonAnonymizedValues(),
+              docaInput.getValues().keySet().stream().toList());
 
       this.stableDomainReached = this.addToDomain(currentItem);
 
@@ -221,7 +218,7 @@ public class Doca implements AnonymizationAlgorithm {
         sortedCurrentDomain = new HashMap<>();
 
         // Reset Doca Stage when using StableDomains
-        this.clusterList =  new ArrayList<>();
+        this.clusterList = new ArrayList<>();
         this.rangeMap = new HashMap<>();
         this.tau = 0;
 
@@ -239,7 +236,7 @@ public class Doca implements AnonymizationAlgorithm {
    * Adds a Tuple to the domain and checks if it is stable.
    * if domain is stable, it will be released
    *
-   * @param dataTuple     Tuple to be added
+   * @param dataTuple Tuple to be added
    * @return the domain if it is stable, otherwise null
    */
   protected List<DocaItem> doca(DocaItem dataTuple) {
@@ -275,7 +272,8 @@ public class Doca implements AnonymizationAlgorithm {
     // update global ranges
     for (String header : tuple.getHeaders()) {
       if (this.rangeMap.containsKey(header)) {
-        this.rangeMap.put(header, Utils.updateDoubleRange(this.rangeMap.get(header), tuple.getData().get(header)));
+        this.rangeMap.put(header,
+            Utils.updateRange(this.rangeMap.get(header), tuple.getData().get(header)));
       } else {
         this.rangeMap.put(header, Range.is(tuple.getData().get(header)));
       }
@@ -363,16 +361,16 @@ public class Doca implements AnonymizationAlgorithm {
   /**
    * Release an expired cluster after perturbation.
    *
-   * @param expiredCluster  Cluster to be released
+   * @param expiredCluster Cluster to be released
    * @return an expired cluster or empty list if no cluster was released (e.g. delay constraint not
-   *        reached)
+   *  reached).
    */
   private List<DocaItem> releaseExpiredCluster(DocaCluster expiredCluster) {
     // update values
     double loss = expiredCluster.informationLoss(this.rangeMap);
     this.losses.add(loss);
-    //TODO: tau should only be calculated from the last m losses
-    this.tau = this.losses.subList(Math.max(losses.size() - 80, 0), losses.size()).stream().mapToDouble(Double::doubleValue).sum() / Math.min(losses.size(), 80);
+    this.tau = this.losses.subList(Math.max(losses.size() - this.numberOfClustersForTau, 0), losses.size())
+        .stream().mapToDouble(Double::doubleValue).sum() / Math.min(losses.size(), 80);
     // release cluster from list
     this.clusterList.remove(expiredCluster);
 
@@ -450,7 +448,7 @@ public class Doca implements AnonymizationAlgorithm {
     int numInstances = x.length;
     int numAttributes = x[0].length;
 
-    //TODO: This could be problematic when more headers with different value ranges are used
+    //This could be problematic when more headers with different value ranges are used
     //double sensitivity = Math.abs((DocaUtil.getMax(x) - DocaUtil.getMin(x)));
     double sensitivity = 1.0;
 
@@ -468,7 +466,7 @@ public class Doca implements AnonymizationAlgorithm {
       mn[i] = Double.POSITIVE_INFINITY;
       mx[i] = Double.NEGATIVE_INFINITY;
     }
-    // TODO: Tau should be calculated as mean of the last m losses
+
     // Losses saved for tau
     List<Double> losses = new ArrayList<>();
     double tau = 0;
@@ -525,9 +523,9 @@ public class Doca implements AnonymizationAlgorithm {
           double enl = enlargement[c];
           if (enl == minEnlarge) {
             minClusters.add(c);
-            // TODO: Does enl need to be added here?
-            double overallLoss = (enl + DocaUtil.getSumOfElementsInArray(DocaUtil.divisionWith0(mxC.get(c), dif)))
-                / numAttributes;
+            double overallLoss =
+                (enl + DocaUtil.getSumOfElementsInArray(DocaUtil.divisionWith0(mxC.get(c), dif)))
+                    / numAttributes;
             if (overallLoss <= tau) {
               okClusters.add(c);
             }

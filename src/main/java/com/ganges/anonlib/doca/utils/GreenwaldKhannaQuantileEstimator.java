@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import lombok.Getter;
 
 /***
  * Implementation of the Greenwald-Khanna Quantile Estimator algorithm for estimating quantiles in a data stream.
@@ -13,47 +14,17 @@ import java.util.List;
  * Migrated to Java
  ***/
 public class GreenwaldKhannaQuantileEstimator {
-  private static class Tuple {
-    public static final Comparator<Tuple> COMPARATOR = Comparator.comparingDouble(Tuple::getValue);
-
-    private final double value; // Observation v[i]
-    private int gap; // g[i] = rMin(v[i]) - rMin(v[i - 1])
-    private int delta; // delta[i] = rMax(v[i]) - rMin(v[i])
-    private DocaItem item;
-
-    public Tuple(double value, int gap, int delta, DocaItem item) {
-      this.value = value;
-      this.gap = gap;
-      this.delta = delta;
-      this.item = item;
-    }
-
-    public double getValue() {
-      return value;
-    }
-
-    public int getGap() {
-      return gap;
-    }
-
-    public int getDelta() {
-      return delta;
-    }
-
-    public DocaItem getItem() {
-      return item;
-    }
-  }
-
-  private List<Tuple> tuples;
-  private int compressingInterval;
   private final double epsilon;
+  @Getter
+  private final List<Tuple> tuples;
+  private final int compressingInterval;
   private int observedElements;
 
   /***
+   * Greenwald-Khanna Quantile Estimator constructor.
    *
-   * @param epsilon - desired accuracy of the quantile estimation, the smaller the epsilon,
-   *                the more accurate the estimation
+   * @param epsilon: desired accuracy of the quantile estimation, the smaller the epsilon,
+   *               the more accurate the estimation
    */
   public GreenwaldKhannaQuantileEstimator(double epsilon) {
     this.epsilon = epsilon;
@@ -62,8 +33,24 @@ public class GreenwaldKhannaQuantileEstimator {
     this.observedElements = 0;
   }
 
-  public List<Tuple> getTuples() {
-    return tuples;
+  private static <T> int binarySearch(List<? extends T> list, T key, Comparator<? super T> c) {
+    int low = 0;
+    int high = list.size() - 1;
+
+    while (low <= high) {
+      int mid = (low + high) >>> 1;
+      T midVal = list.get(mid);
+      int cmp = c.compare(midVal, key);
+
+      if (cmp < 0) {
+        low = mid + 1;
+      } else if (cmp > 0) {
+        high = mid - 1;
+      } else {
+        return mid; // key found
+      }
+    }
+    return -(low + 1); // key not found
   }
 
   public List<DocaItem> getDomain() {
@@ -100,26 +87,6 @@ public class GreenwaldKhannaQuantileEstimator {
   private int getInsertIndex(Tuple v) {
     int index = binarySearch(this.tuples, v, Tuple.COMPARATOR);
     return index >= 0 ? index : ~index;
-  }
-
-  private static <T> int binarySearch(List<? extends T> list, T key, Comparator<? super T> c) {
-    int low = 0;
-    int high = list.size() - 1;
-
-    while (low <= high) {
-      int mid = (low + high) >>> 1;
-      T midVal = list.get(mid);
-      int cmp = c.compare(midVal, key);
-
-      if (cmp < 0) {
-        low = mid + 1;
-      } else if (cmp > 0) {
-        high = mid - 1;
-      } else {
-        return mid; // key found
-      }
-    }
-    return -(low + 1); // key not found
   }
 
   public HashMap<DocaItem, Double> getQuantile(double p) {
@@ -173,5 +140,23 @@ public class GreenwaldKhannaQuantileEstimator {
       return true;
     }
     return false;
+  }
+
+  @Getter
+  private static class Tuple {
+    public static final Comparator<Tuple> COMPARATOR = Comparator.comparingDouble(Tuple::getValue);
+
+    private final double value; // Observation v[i]
+    private int gap; // g[i] = rMin(v[i]) - rMin(v[i - 1])
+    private int delta; // delta[i] = rMax(v[i]) - rMin(v[i])
+    private final DocaItem item;
+
+    public Tuple(double value, int gap, int delta, DocaItem item) {
+      this.value = value;
+      this.gap = gap;
+      this.delta = delta;
+      this.item = item;
+    }
+
   }
 }
