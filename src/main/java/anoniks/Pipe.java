@@ -83,7 +83,11 @@ public class Pipe {
     while (it.hasNext()) {
       Map.Entry<String, JsonNode> jsonEntry = it.next();
       if (!anonFields.contains(jsonEntry.getKey())) {
-        values.put(jsonEntry.getKey(), jsonEntry.getValue().textValue());
+        if (jsonEntry.getValue().isNumber()) {
+          values.put(jsonEntry.getKey(), jsonEntry.getValue().toString());
+        } else {
+          values.put(jsonEntry.getKey(), jsonEntry.getValue().textValue());
+        }
       }
     }
     return values;
