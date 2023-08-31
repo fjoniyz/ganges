@@ -35,7 +35,8 @@ public class Doca implements AnonymizationAlgorithm {
   private final double delta;   // suppression rate
   private boolean stableDomainReached = false;
   private static final int processingWindowSize = 200; //size of process window for domain bounding
-  private Map<DocaItem, Double> sortedCurrentDomain = new HashMap<>(); // Sorted Map of current domain
+  private Map<DocaItem, Double> sortedCurrentDomain = new HashMap<>();
+      // Sorted Map of current domain
 
   //-----------Parameters/Variables for DOCA Phase----------------//
   private List<DocaCluster> clusterList;  // List of all current active clusters
@@ -124,14 +125,15 @@ public class Doca implements AnonymizationAlgorithm {
         return outputResult;
       } else {
         // We return only one last item, since previous were output in previous calls
-        return List.of(outputResult.get(outputResult.size()-1));
+        return List.of(outputResult.get(outputResult.size() - 1));
       }
     }
 
     // Doca Implementation
     for (AnonymizationItem docaInput : x) {
-      DocaItem currentItem = new DocaItem(docaInput.getId(), docaInput.getValues(), docaInput.getNonAnonymizedValues(),
-          docaInput.getValues().keySet().stream().toList());
+      DocaItem currentItem =
+          new DocaItem(docaInput.getId(), docaInput.getValues(), docaInput.getNonAnonymizedValues(),
+              docaInput.getValues().keySet().stream().toList());
 
       this.stableDomainReached = this.addToDomain(currentItem);
 
@@ -221,7 +223,7 @@ public class Doca implements AnonymizationAlgorithm {
         sortedCurrentDomain = new HashMap<>();
 
         // Reset Doca Stage when using StableDomains
-        this.clusterList =  new ArrayList<>();
+        this.clusterList = new ArrayList<>();
         this.rangeMap = new HashMap<>();
         this.tau = 0;
 
@@ -239,7 +241,7 @@ public class Doca implements AnonymizationAlgorithm {
    * Adds a Tuple to the domain and checks if it is stable.
    * if domain is stable, it will be released
    *
-   * @param dataTuple     Tuple to be added
+   * @param dataTuple Tuple to be added
    * @return the domain if it is stable, otherwise null
    */
   protected List<DocaItem> doca(DocaItem dataTuple) {
@@ -275,7 +277,8 @@ public class Doca implements AnonymizationAlgorithm {
     // update global ranges
     for (String header : tuple.getHeaders()) {
       if (this.rangeMap.containsKey(header)) {
-        this.rangeMap.put(header, Utils.updateDoubleRange(this.rangeMap.get(header), tuple.getData().get(header)));
+        this.rangeMap.put(header,
+            Utils.updateDoubleRange(this.rangeMap.get(header), tuple.getData().get(header)));
       } else {
         this.rangeMap.put(header, Range.is(tuple.getData().get(header)));
       }
@@ -363,16 +366,17 @@ public class Doca implements AnonymizationAlgorithm {
   /**
    * Release an expired cluster after perturbation.
    *
-   * @param expiredCluster  Cluster to be released
+   * @param expiredCluster Cluster to be released
    * @return an expired cluster or empty list if no cluster was released (e.g. delay constraint not
-   *        reached)
+   * reached)
    */
   private List<DocaItem> releaseExpiredCluster(DocaCluster expiredCluster) {
     // update values
     double loss = expiredCluster.informationLoss(this.rangeMap);
     this.losses.add(loss);
     //TODO: tau should only be calculated from the last m losses
-    this.tau = this.losses.subList(Math.max(losses.size() - 80, 0), losses.size()).stream().mapToDouble(Double::doubleValue).sum() / Math.min(losses.size(), 80);
+    this.tau = this.losses.subList(Math.max(losses.size() - 80, 0), losses.size()).stream()
+        .mapToDouble(Double::doubleValue).sum() / Math.min(losses.size(), 80);
     // release cluster from list
     this.clusterList.remove(expiredCluster);
 
@@ -526,8 +530,9 @@ public class Doca implements AnonymizationAlgorithm {
           if (enl == minEnlarge) {
             minClusters.add(c);
             // TODO: Does enl need to be added here?
-            double overallLoss = (enl + DocaUtil.getSumOfElementsInArray(DocaUtil.divisionWith0(mxC.get(c), dif)))
-                / numAttributes;
+            double overallLoss =
+                (enl + DocaUtil.getSumOfElementsInArray(DocaUtil.divisionWith0(mxC.get(c), dif)))
+                    / numAttributes;
             if (overallLoss <= tau) {
               okClusters.add(c);
             }

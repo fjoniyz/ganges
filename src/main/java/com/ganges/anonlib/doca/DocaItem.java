@@ -9,7 +9,7 @@ public class DocaItem extends AbstractItem {
   private DocaCluster parent;
 
   public DocaItem(String externalId, Map<String, Double> data,
-                Map<String, String> nonAnonymizedData, List<String> headers) {
+                  Map<String, String> nonAnonymizedData, List<String> headers) {
     super(externalId, data, nonAnonymizedData, headers);
   }
 

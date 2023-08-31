@@ -24,6 +24,7 @@ import java.util.Properties;
 import java.util.Random;
 import java.util.Set;
 import java.util.stream.Collectors;
+import lombok.Getter;
 import org.apache.commons.lang3.Range;
 import org.apache.commons.math3.distribution.LaplaceDistribution;
 import org.apache.commons.math3.random.JDKRandomGenerator;
@@ -36,7 +37,9 @@ public class CastleGuard implements AnonymizationAlgorithm {
   private final Logger logger = LoggerFactory.getLogger(CastleGuard.class);
   private final List<String> headers;
   private final String sensitiveAttr;
+  @Getter
   private final Deque<CGItem> items = new ArrayDeque<>(); // a.k.a. global_tuples in castle.py
+  @Getter
   private final HashMap<String, Range<Double>> globalRanges = new HashMap<>();
   private final double tau = Double.POSITIVE_INFINITY;
   private final int delta;
@@ -46,33 +49,10 @@ public class CastleGuard implements AnonymizationAlgorithm {
   private final int k;
   private final int l;
   private final boolean useDiffPrivacy;
+  @Getter
   private final ClusterManagement clusterManagement;
   private final Deque<CGItem> outputQueue = new ArrayDeque<>();
   private Map<String, Double> headerWeights;
-
-  /**
-   * !Deprecated constructor
-   */
-  public CastleGuard(CGConfig config, List<String> headers, String sensitiveAttr) {
-    String[] parameters = getParameters();
-    this.k = Integer.parseInt(parameters[0]);
-    this.delta = Integer.parseInt(parameters[1]);
-    this.beta = Integer.parseInt(parameters[2]);
-    this.bigBeta = Integer.parseInt(parameters[3]);
-    int mu = Integer.parseInt(parameters[4]);
-    this.l = Integer.parseInt(parameters[5]);
-    this.phi = Double.parseDouble(parameters[6]);
-    this.useDiffPrivacy = Boolean.parseBoolean(parameters[7]);
-    this.headers = Arrays.asList(parameters[8].split(","));
-    this.sensitiveAttr = parameters[9];
-
-    for (String header : this.headers) {
-      globalRanges.put(header, null);
-    }
-    this.clusterManagement =
-        new ClusterManagement(
-            this.k, this.l, mu, this.headers, this.sensitiveAttr);
-  }
 
 
   public CastleGuard() {
@@ -119,18 +99,6 @@ public class CastleGuard implements AnonymizationAlgorithm {
     }
   }
 
-  public HashMap<String, Range<Double>> getGlobalRanges() {
-    return globalRanges;
-  }
-
-  public ClusterManagement getClusterManagement() {
-    return clusterManagement;
-  }
-
-  public Deque<CGItem> getItems() {
-    return items;
-  }
-
   public Optional<CGItem> tryGetOutputLine() {
     if (outputQueue.isEmpty()) {
       return Optional.empty();
@@ -143,9 +111,10 @@ public class CastleGuard implements AnonymizationAlgorithm {
   public List<AnonymizationItem> anonymize(List<AnonymizationItem> X) {
     this.headerWeights = X.get(0).getHeaderWeights();
     for (AnonymizationItem dataPoint : X) {
-      CGItem item = new CGItem(dataPoint.getId(), dataPoint.getValues(), dataPoint.getNonAnonymizedValues(),
-          this.headers,
-          this.sensitiveAttr);
+      CGItem item =
+          new CGItem(dataPoint.getId(), dataPoint.getValues(), dataPoint.getNonAnonymizedValues(),
+              this.headers,
+              this.sensitiveAttr);
       insertData(item);
     }
     List<AnonymizationItem> outputItems = outputQueue.stream().map(cgItem -> {
@@ -197,12 +166,12 @@ public class CastleGuard implements AnonymizationAlgorithm {
     if (this.useDiffPrivacy) {
       perturb(item);
     }
-    Optional<Cluster> cluster = bestSelection(item);
+    Optional<CGCluster> cluster = bestSelection(item);
     if (!cluster.isPresent()) {
       // Create new cluster
-      Cluster newCluster = new Cluster(this.headers, this.headerWeights);
-      this.clusterManagement.addToNonAnonymizedClusters(newCluster);
-      newCluster.insert(item);
+      CGCluster newCGCluster = new CGCluster(this.headers, this.headerWeights);
+      this.clusterManagement.addToNonAnonymizedClusters(newCGCluster);
+      newCGCluster.insert(item);
     } else {
       cluster.get().insert(item);
     }
@@ -217,25 +186,25 @@ public class CastleGuard implements AnonymizationAlgorithm {
   /**
    * Previously outputCluster
    *
-   * @param cluster
+   * @param CGCluster
    */
-  public void checkAndOutputCluster(Cluster cluster) {
+  public void checkAndOutputCluster(CGCluster CGCluster) {
     Set<Double> outputPids = new HashSet<>();
     Set<Double> outputDiversity = new HashSet<>();
     boolean splittable =
-        cluster.getKSize() >= 2 * this.k && cluster.getDiversitySize() >= this.l;
-    List<Cluster> splitted =
+        CGCluster.getKSize() >= 2 * this.k && CGCluster.getDiversitySize() >= this.l;
+    List<CGCluster> splitted =
         splittable
-            ? this.clusterManagement.splitL(cluster, this.headers, this.globalRanges)
-            : List.of(cluster);
-    Iterator<Cluster> clusterIterator = splitted.iterator();
+            ? this.clusterManagement.splitL(CGCluster, this.headers, this.globalRanges)
+            : List.of(CGCluster);
+    Iterator<CGCluster> clusterIterator = splitted.iterator();
     List<CGItem> itemsToSuppress = new ArrayList<>();
     while (clusterIterator.hasNext()) {
-      Cluster sCluster = clusterIterator.next();
-      Iterator<CGItem> itemIterator = sCluster.getContents().iterator();
+      CGCluster sCGCluster = clusterIterator.next();
+      Iterator<CGItem> itemIterator = sCGCluster.getContents().iterator();
       while (itemIterator.hasNext()) {
         CGItem item = itemIterator.next();
-        CGItem generalized = sCluster.generalise(item);
+        CGItem generalized = sCGCluster.generalise(item);
         outputItem(generalized);
 
         outputPids.add(item.getData().get("pid"));
@@ -245,13 +214,13 @@ public class CastleGuard implements AnonymizationAlgorithm {
       itemsToSuppress.forEach(this::suppressItem);
 
       // Calculate loss
-      this.clusterManagement.updateLoss(sCluster, globalRanges);
+      this.clusterManagement.updateLoss(sCGCluster, globalRanges);
 
       assert outputPids.size() >= this.k;
       assert outputDiversity.size() >= this.l;
 
-      this.clusterManagement.addToAnonymizedClusters(cluster);
-      this.clusterManagement.removeFromNonAnonymizedClusters(cluster);
+      this.clusterManagement.addToAnonymizedClusters(CGCluster);
+      this.clusterManagement.removeFromNonAnonymizedClusters(CGCluster);
     }
   }
 
@@ -261,18 +230,18 @@ public class CastleGuard implements AnonymizationAlgorithm {
    * @param item : The tuple to make decisions based on
    */
   private void delayConstraint(@NonNull CGItem item) {
-    List<Cluster> nonAnonClusters = this.clusterManagement.getNonAnonymizedClusters();
-    List<Cluster> anonClusters = this.clusterManagement.getAnonymizedClusters();
+    List<CGCluster> nonAnonCGClusters = this.clusterManagement.getNonAnonymizedClusters();
+    List<CGCluster> anonCGClusters = this.clusterManagement.getAnonymizedClusters();
 
-    Cluster itemCluster = item.getCluster();
-    if (this.k <= itemCluster.getSize()
-        && this.l < itemCluster.getDiversitySize()) {
-      checkAndOutputCluster(itemCluster);
+    CGCluster itemCGCluster = item.getCluster();
+    if (this.k <= itemCGCluster.getSize()
+        && this.l < itemCGCluster.getDiversitySize()) {
+      checkAndOutputCluster(itemCGCluster);
       return;
     }
 
-    Optional<Cluster> randomCluster =
-        anonClusters.stream().filter(c -> c.withinBounds(item)).findAny();
+    Optional<CGCluster> randomCluster =
+        anonCGClusters.stream().filter(c -> c.withinBounds(item)).findAny();
     if (randomCluster.isPresent()) {
       CGItem generalised = randomCluster.get().generalise(item);
       suppressItem(item);
@@ -281,16 +250,16 @@ public class CastleGuard implements AnonymizationAlgorithm {
     }
 
     int biggerClustersNum = 0;
-    for (Cluster cluster : nonAnonClusters) {
-      if (itemCluster.getSize() < cluster.getSize()) {
+    for (CGCluster CGCluster : nonAnonCGClusters) {
+      if (itemCGCluster.getSize() < CGCluster.getSize()) {
         biggerClustersNum++;
       }
     }
-    if (biggerClustersNum > nonAnonClusters.size() / 2) {
+    if (biggerClustersNum > nonAnonCGClusters.size() / 2) {
       suppressItem(item);
       return;
     }
-    Cluster merged = this.clusterManagement.mergeClusters(itemCluster, globalRanges);
+    CGCluster merged = this.clusterManagement.mergeClusters(itemCGCluster, globalRanges);
     checkAndOutputCluster(merged);
   }
 
@@ -306,13 +275,13 @@ public class CastleGuard implements AnonymizationAlgorithm {
    */
   public void suppressItem(CGItem item) {
     if (this.items.contains(item)) {
-      List<Cluster> nonAnonClusters = this.clusterManagement.getNonAnonymizedClusters();
+      List<CGCluster> nonAnonCGClusters = this.clusterManagement.getNonAnonymizedClusters();
       this.items.remove(item);
-      Cluster parentCluster = item.getCluster();
-      parentCluster.remove(item);
+      CGCluster parentCGCluster = item.getCluster();
+      parentCGCluster.remove(item);
 
-      if (parentCluster.getSize() == 0) {
-        nonAnonClusters.remove(parentCluster);
+      if (parentCGCluster.getSize() == 0) {
+        nonAnonCGClusters.remove(parentCGCluster);
       }
     }
   }
@@ -338,7 +307,7 @@ public class CastleGuard implements AnonymizationAlgorithm {
         // Draw random noise from Laplace distribution
         JDKRandomGenerator rg = new JDKRandomGenerator();
         LaplaceDistribution laplaceDistribution = new LaplaceDistribution(rg, 0, scale);
-        Double noise = (Double) laplaceDistribution.sample();
+        Double noise = laplaceDistribution.sample();
 
         // Add noise to original value
         Double originalValue = data.get(header);
@@ -355,15 +324,15 @@ public class CastleGuard implements AnonymizationAlgorithm {
    * @return Either a cluster for item to be inserted into, or null if a new cluster should be
    * created
    */
-  private Optional<Cluster> bestSelection(CGItem item) {
-    List<Cluster> notAnonClusters = this.clusterManagement.getNonAnonymizedClusters();
+  private Optional<CGCluster> bestSelection(CGItem item) {
+    List<CGCluster> notAnonCGClusters = this.clusterManagement.getNonAnonymizedClusters();
 
     // Need to be tested
 
     Set<Double> e = new HashSet<>();
 
-    for (Cluster cluster : notAnonClusters) {
-      e.add(cluster.tupleEnlargement(item, globalRanges));
+    for (CGCluster CGCluster : notAnonCGClusters) {
+      e.add(CGCluster.tupleEnlargement(item, globalRanges));
     }
 
     if (e.isEmpty()) {
@@ -372,36 +341,36 @@ public class CastleGuard implements AnonymizationAlgorithm {
 
     Double minima = Collections.min(e);
 
-    List<Cluster> setCmin = new ArrayList<>();
+    List<CGCluster> setCmin = new ArrayList<>();
 
-    for (Cluster cluster : notAnonClusters) {
-      Double enl = cluster.tupleEnlargement(item, globalRanges);
+    for (CGCluster CGCluster : notAnonCGClusters) {
+      Double enl = CGCluster.tupleEnlargement(item, globalRanges);
       if (enl.equals(minima)) {
-        setCmin.add(cluster);
+        setCmin.add(CGCluster);
       }
     }
 
-    Set<Cluster> setCok = new HashSet<>();
+    Set<CGCluster> setCok = new HashSet<>();
 
-    for (Cluster cluster : setCmin) {
-      double ilcj = cluster.informationLossGivenT(item, globalRanges);
+    for (CGCluster CGCluster : setCmin) {
+      double ilcj = CGCluster.informationLossGivenT(item, globalRanges);
       if (ilcj <= tau) {
-        setCok.add(cluster);
+        setCok.add(CGCluster);
       }
     }
 
     if (setCok.isEmpty()) {
-      if (this.beta <= notAnonClusters.size()) {
+      if (this.beta <= notAnonCGClusters.size()) {
         Random rand = new Random();
         int randomIndex = rand.nextInt(setCmin.size());
-        List<Cluster> setCminList = new ArrayList<>(setCmin);
+        List<CGCluster> setCminList = new ArrayList<>(setCmin);
         return Optional.of(setCminList.get(randomIndex));
       }
 
       return Optional.empty();
     }
 
-    List<Cluster> setCokList = new ArrayList<>(setCok);
+    List<CGCluster> setCokList = new ArrayList<>(setCok);
     Random rand = new Random();
     int randomIndex = rand.nextInt(setCokList.size());
     return Optional.of(setCokList.get(randomIndex));

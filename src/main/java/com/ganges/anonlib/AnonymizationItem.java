@@ -9,13 +9,15 @@ public class AnonymizationItem {
   private Map<String, Double> headerWeights;
   private final Map<String, String> nonAnonymizedValues;
 
-  public AnonymizationItem(String id, Map<String, Double> values, Map<String, String> nonAnonymizedValues) {
+  public AnonymizationItem(String id, Map<String, Double> values,
+                           Map<String, String> nonAnonymizedValues) {
     this.id = id;
     this.values = values;
     this.nonAnonymizedValues = nonAnonymizedValues;
   }
 
-  public AnonymizationItem(String id, Map<String, Double> values, Map<String, String> nonAnonymizedValues,
+  public AnonymizationItem(String id, Map<String, Double> values,
+                           Map<String, String> nonAnonymizedValues,
                            Map<String, Double> headerWeights) {
     this.id = id;
     this.values = values;
@@ -24,7 +26,7 @@ public class AnonymizationItem {
   }
 
   public Map<String, Double> getHeaderWeights() {
-      return headerWeights;
+    return headerWeights;
   }
 
   public Map<String, Double> getValues() {
@@ -41,8 +43,12 @@ public class AnonymizationItem {
 
   @Override
   public boolean equals(Object o) {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
     AnonymizationItem item = (AnonymizationItem) o;
     return Objects.equals(id, item.id);
   }

@@ -3,12 +3,15 @@ package com.ganges.anonlib.castleguard;
 import com.ganges.anonlib.AbstractItem;
 import java.util.List;
 import java.util.Map;
+import lombok.Getter;
 
 public class CGItem extends AbstractItem {
 
+  @Getter
   private final Double sensitiveAttr;
-  private Cluster parent;
-  private Double pid;
+  private CGCluster parent;
+  @Getter
+  private final Double pid;
 
 
   public CGItem(String externalId, Map<String, Double> data,
@@ -19,17 +22,11 @@ public class CGItem extends AbstractItem {
     this.pid = data.get("pid");
   }
 
-  public Double getPid() {
-    return this.pid;
-  }
-  public Double getSensitiveAttr() {
-    return sensitiveAttr;
+  public CGCluster getCluster() {
+    return parent;
   }
 
-    public Cluster getCluster() {
-        return parent;
-    }
-    public void setCluster(Cluster cluster) {
-    this.parent = cluster;
+  public void setCluster(CGCluster CGCluster) {
+    this.parent = CGCluster;
   }
 }
