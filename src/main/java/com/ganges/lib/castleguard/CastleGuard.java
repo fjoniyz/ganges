@@ -143,6 +143,10 @@ public class CastleGuard implements AnonymizationAlgorithm {
     for (AnonymizationItem dataPoint : X) {
       HashMap<String, Float> data = new HashMap<>();
       for (String header : headers) {
+        if (!dataPoint.getValues().containsKey(header)) {
+          System.err.println("Invalid key for anonimization: " + header);
+          throw new RuntimeException();
+        }
         float floatData = dataPoint.getValues().get(header).floatValue();
         data.put(header, floatData);
       }
