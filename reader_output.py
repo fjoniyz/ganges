@@ -15,7 +15,6 @@ group_id = 'my-consumer-group'
 topic = 'output'
 redis_port = 6379
 
-
 def information_loss(message):
     '''
     returns the information loss (with euclidan distance) of anonymizes messages 
@@ -30,9 +29,7 @@ def information_loss(message):
         all_values.append({'id': key, 'values': r.hgetall(key)})
 
     for value in all_values:
-        byte_str = value['id']
-        id_integer = int(byte_str)
-        if int(message['id']) == id_integer:
+        if message['id'] == value['id']:
             return_value = {k.decode('utf8'): v.decode('utf8') for k, v in value['values'].items()}
             for a in value['values'].keys():
                 if type(message[a.decode('utf-8')]) == float:
