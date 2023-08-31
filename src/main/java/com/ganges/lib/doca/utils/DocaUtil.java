@@ -20,12 +20,10 @@ public class DocaUtil {
    * @param b the second array of doubles
    * @return the division of the two arrays
    */
-  public static HashMap<String, Double> divisionWith0(HashMap<String, Double> a,
-                                                     HashMap<String, Double> b) {
-    HashMap<String, Double> result = new HashMap<>();
-    for (Map.Entry<String, Double> aEntry : a.entrySet()) {
-      result.put(aEntry.getKey(),
-          (b.get(aEntry.getKey()) != 0) ? aEntry.getValue() / b.get(aEntry.getKey()) : 0);
+  public static double[] divisionWith0(double[] a, double[] b) {
+    double[] result = new double[a.length];
+    for (int i = 0; i < a.length; i++) {
+      result[i] = (b[i] != 0) ? a[i] / b[i] : 0;
     }
     return result;
   }
@@ -82,28 +80,6 @@ public class DocaUtil {
     return sum;
   }
 
-  /**
-   * Converts a list of data points to a list of items.
-   *
-   * @param dataSet the list of data points to be converted
-   * @return a list of items created from the data points
-   */
-  public static List<CGItem> dataPointsToItems(List<List<Double>> dataSet) {
-    List<CGItem> items = new ArrayList<>();
-    int i = 0;
-    for (List<Double> dataPoint : dataSet) {
-      int attrIndex = 0;
-      HashMap<String, Float> attributeValue = new HashMap<>();
-      for (double attr : dataPoint) {
-        attributeValue.put(String.valueOf(attrIndex), (float) attr);
-        attrIndex++;
-      }
-      CGItem item = new CGItem(String.valueOf(currentID++), attributeValue, null, new ArrayList<>(attributeValue.keySet()), String.valueOf(i));
-      items.add(item);
-      i++;
-    }
-    return items;
-  }
 
   /**
    * Calculates the standard deviation of a list of numbers

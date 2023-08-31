@@ -6,8 +6,7 @@ import java.util.Objects;
 public class AnonymizationItem {
   private final String id;
   private Map<String, Double> values;
-  private Map<String, Float> headerWeights;
-
+  private Map<String, Double> headerWeights;
   private final Map<String, String> nonAnonymizedValues;
 
   public AnonymizationItem(String id, Map<String, Double> values, Map<String, String> nonAnonymizedValues) {
@@ -17,14 +16,14 @@ public class AnonymizationItem {
   }
 
   public AnonymizationItem(String id, Map<String, Double> values, Map<String, String> nonAnonymizedValues,
-                           Map<String, Float> headerWeights) {
+                           Map<String, Double> headerWeights) {
     this.id = id;
     this.values = values;
     this.nonAnonymizedValues = nonAnonymizedValues;
     this.headerWeights = headerWeights;
   }
 
-  public Map<String, Float> getHeaderWeights() {
+  public Map<String, Double> getHeaderWeights() {
       return headerWeights;
   }
 
