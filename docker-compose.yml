@@ -30,16 +30,20 @@ services:
       # See https://docs.confluent.io/kafka/operations-tools/kafka-tools.html#kafka-storage-sh
       CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
 
-  streams:
+  redis-cache:
+    image: redis:6.2-alpine
+    restart: always
+    ports:
+      - '6379:6379'
+    command: redis-server --loglevel warning
+
+  anoniks:
     build: .
-    hostname: streams
-    container_name: streams
-    environment:
-      BOOTSTRAP_SERVERS_CONFIG: "broker:29092"
-      INPUT_TOPIC: "streams-input"
-      OUTPUT_TOPIC: "streams-output"
+    hostname: anoniks
+    container_name: anoniks
     depends_on:
       - broker
+      - redis-cache
 
   rest-proxy:
     image: confluentinc/cp-kafka-rest:7.3.0
