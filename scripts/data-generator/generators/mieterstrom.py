@@ -6,10 +6,12 @@ import os
 from typing import Iterable
 import numpy as np
 import os
+import uuid
 
 def generate_electricity_rows() -> Iterable:
-    """Returns value in format [Datetime, Seconds_EnergyConsumption, apartment_number]"""
+    """Returns value in format [id, Datetime, Seconds_EnergyConsumption, apartment_number]"""
     while True:   
+        id = uuid.uuid4()
         locations = ["street a", "street b", "street c", "street c"]
         locations = int(len(apartments)/len(locations) + 1)*locations
         apartments = np.random.randint(1,6,100) 
@@ -17,10 +19,10 @@ def generate_electricity_rows() -> Iterable:
             date = datetime.now()
             # the number of inhabitants effects energy consumption
             EV = round(uniform(1000*inhabitants, 10000*inhabitants), 2)
-            yield [date, f"{apartment}"+"sanierung-apartment", EV, location, inhabitants]
+            yield [id, date, f"{apartment}"+"sanierung-apartment", EV, location, inhabitants]
         
 def get_fields_names():
-    return ["Datetime","Seconds_EnergyConsumption", "apartment_number"]
+    return ["id","Datetime","Seconds_EnergyConsumption", "apartment_number"]
 
 # What is realistic for a second in energy consumption in a household of 1 to 4 persons
 # order of magnitude is completely wrong

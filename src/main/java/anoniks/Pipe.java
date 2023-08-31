@@ -1,5 +1,6 @@
 package anoniks;
 
+import benchmark.LocalMetricsCollector;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -21,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import org.apache.kafka.common.serialization.Serde;
 import org.apache.kafka.common.serialization.Serdes;
 import org.apache.kafka.streams.KafkaStreams;
@@ -40,6 +42,8 @@ public class Pipe {
   private static final String DOCA_ALT_KEY = "doca-alt";
   private static AnonymizationAlgorithm algorithm;
   private static Properties props = new Properties();
+
+  private static LocalMetricsCollector metricsCollector;
 
   /**
    * This method extracts values from a JSON message based on keys specified in the
@@ -110,14 +114,22 @@ public class Pipe {
    */
   private static JsonNode processing(JsonNode message, DataRepository dataRepository,
                                      String[] anonFields,
-                                     boolean addUnanonymizedHistory) throws IOException {
+                                     boolean addUnanonymizedHistory, boolean enableMetrics) throws IOException {
+
+
+    // Get values of current message
+    System.out.println("message: " + message);
+    String id = message.get("ae_session_id").textValue();
+    if (enableMetrics) {
+      metricsCollector.setProducerTimestamps(message);
+      metricsCollector.setPipeEntryTimestamps(message.get("ae_session_id").textValue(),
+          System.currentTimeMillis());
+    }
 
     ObjectMapper mapper = new ObjectMapper();
     Map<String, String> messageMap = mapper.convertValue(message, new TypeReference<>() {
     });
 
-    // Get values of current message
-    String id = message.get("ae_session_id").textValue();
     List<String> anonFieldsList = List.of(anonFields);
     HashMap<String, Double> valuesMap = getValuesListByKeys(message, anonFieldsList);
     HashMap<String, String> nonAnonymizedValuesMap = getNonAnonymizedValuesByKeys(message,
@@ -148,9 +160,30 @@ public class Pipe {
     dataRepository.close();
 
     // Anonymization
+    if (enableMetrics) {
+      metricsCollector.setAnonEntryTimestamps(id,
+          System.currentTimeMillis());
+    }
     List<AnonymizationItem> output = algorithm.anonymize(contextValues);
+    if (enableMetrics) {
+      long anonExitTimestamp = System.currentTimeMillis();
+      for (AnonymizationItem item : output) {
+        metricsCollector.setAnonExitTimestamps(item.getId(), anonExitTimestamp);
+      }
+    }
 
     ArrayNode outputMessage = getJsonFromItems(output);
+
+    if (enableMetrics) {
+      long pipeExitTimestamp = System.currentTimeMillis();
+      for (AnonymizationItem item : output) {
+        metricsCollector.setPipeExitTimestamps(item.getId(), pipeExitTimestamp);
+      }
+      if (!output.isEmpty()) {
+        metricsCollector.sendCurrentResultsToRemote();
+      }
+    }
+
     System.out.println("OUTPUT " + outputMessage);
     return outputMessage;
   }
@@ -194,21 +227,25 @@ public class Pipe {
   public static String[] getFieldsToAnonymize() throws IOException {
     String userDirectory = System.getProperty("user.dir");
     try (InputStream inputStream = Files.newInputStream(
-        Paths.get(userDirectory + "/src/main/resources/pipe.properties"))) {
+        Paths.get(userDirectory + "/src/main/resources/anoniks/pipe.properties"))) {
       Properties properties = new Properties();
       properties.load(inputStream);
-      String docaFieldsString = properties.getProperty("anonymized_fields");
-      String[] anonFields = docaFieldsString.split(",");
+      String fieldsStr = properties.getProperty("anonymized_fields");
+      String[] anonFields = fieldsStr.split(",");
       System.out.println("Fields to be anonymized: " + String.join(" ", anonFields));
       return anonFields;
     }
   }
 
-  public static void main(final String[] args) {
+  public static void main(final String[] args)
+      throws IOException, ExecutionException, InterruptedException {
     String userDirectory = System.getProperty("user.dir");
 
+    metricsCollector = LocalMetricsCollector.getInstance();
+    System.out.println("Created local metrics collector");
+
     try (InputStream inputStream = Files.newInputStream(
-        Paths.get(userDirectory + "/src/main/resources/pipe.properties"))) {
+        Paths.get(userDirectory + "/src/main/resources/anoniks/pipe.properties"))) {
       props.load(inputStream);
     } catch (IOException e) {
       throw new RuntimeException(e);
@@ -217,6 +254,7 @@ public class Pipe {
     String inputTopic = props.getProperty("input-topic");
     String outputTopic = props.getProperty("output-topic");
     String anonymizationAlgoName = props.getProperty("algorithm");
+    boolean enableMetrics = Boolean.parseBoolean(props.getProperty("enable-metrics"));
 
     boolean addUnanonymizedHistory = anonymizationAlgoName.equals(DOCA_ALT_KEY);
     if (anonymizationAlgoName.equals(CASTLEGUARD_KEY)) {
@@ -232,7 +270,7 @@ public class Pipe {
     Deserializer deserializer = new Deserializer();
     Serde<JsonNode> jsonSerde = Serdes.serdeFrom(serializer, deserializer);
     try (InputStream inputStream = Files.newInputStream(
-        Paths.get(userDirectory + "/src/main/resources/kafka.properties"))) {
+        Paths.get(userDirectory + "/src/main/resources/anoniks/kafka.properties"))) {
       props.load(inputStream);
       props.put(StreamsConfig.METADATA_MAX_AGE_CONFIG,
           "1000"); // Needed to prevent timeouts during broker startup.
@@ -249,7 +287,7 @@ public class Pipe {
       String[] fields = getFieldsToAnonymize();
       src.mapValues(value -> {
         try {
-          return processing(value, dataRepository, fields, addUnanonymizedHistory);
+          return processing(value, dataRepository, fields, addUnanonymizedHistory, enableMetrics);
         } catch (IOException e) {
           throw new RuntimeException(e);
         }
