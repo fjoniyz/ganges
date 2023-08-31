@@ -12,9 +12,8 @@ import numpy as np
 # Kafka broker configuration
 bootstrap_servers = 'localhost:9092'
 group_id = 'my-consumer-group'
-topic = 'output99'
+topic = 'output111'
 redis_port = 6379
-
 
 def information_loss(message):
     '''
@@ -41,7 +40,6 @@ def information_loss(message):
                     # creating the euclidean distance
                     information_loss += norm(np.array([first])- np.array([second]))
     return information_loss, return_value
-
 
 def get_min_duration(messages):
     min_duration = math.inf
@@ -102,7 +100,7 @@ diff_arr = []
 # Start consuming messages
 try:
     i = 0
-    while i < 500:
+    while i < 100:
         info_loss_value = 0
         while(len(messages) < 4):
             msg = consumer.poll(1.0)
@@ -125,7 +123,7 @@ try:
             print("The information Loss of this forecast is: ", info_loss_value)       
         # Process the message
         prognose.random.seed(prognose.pd.Timestamp.utcnow().dayofyear)
-        power = [11.0, 22.0]
+        power = [11.0, 22.0] 
         task_instance = create_TaskSimEvCharging(messages, power)
         task_instance_from_value = create_TaskSimEvCharging(non_anon_messages, power)
         print("Task instance: ", task_instance.max_start)
@@ -210,13 +208,13 @@ try:
     print(len(info_loss))
     print(len(placeholder_2))
 
-    averages = [np.average(placeholder), np.average(placeholder_1), np.average(placeholder_2), np.average(diff_arr)]
-    x_values = [50, 100, 200, 400]
+    averages = [placeholder, placeholder_1, placeholder_2, diff_arr]
     # df = pd.DataFrame(data=averages, columns=[50, 100, 200, 400], index=['50', '100', '200', '400'])
 
-    plt.scatter(x_values, averages, color='blue', marker='o', label='Integers')
-    plt.xlabel('value of k')
-    plt.ylabel('average difference of prognosis')
+    chart = sns.violinplot(data=averages, cut=0)
+    chart.set_xlabel('value of k')
+    chart.set_ylabel('average difference of prognosis')
+    chart.set_xticklabels(["50","100","200","400"])
     plt.show()
 
 except KeyboardInterrupt:
