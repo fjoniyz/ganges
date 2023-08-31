@@ -81,7 +81,11 @@ public class Pipe {
     while (it.hasNext()) {
       Map.Entry<String, JsonNode> jsonEntry = it.next();
       if (!anonFields.contains(jsonEntry.getKey())) {
-        values.put(jsonEntry.getKey(), jsonEntry.getValue().textValue());
+        if (jsonEntry.getValue().isNumber()) {
+          values.put(jsonEntry.getKey(), jsonEntry.getValue().toString());
+        } else {
+          values.put(jsonEntry.getKey(), jsonEntry.getValue().textValue());
+        }
       }
     }
     return values;
@@ -205,7 +209,7 @@ public class Pipe {
     String outputTopic = props.getProperty("output-topic");
     String anonymizationAlgoName = props.getProperty("algorithm");
 
-    boolean addUnanonymizedHistory = anonymizationAlgoName.equals(DOCA_KEY);
+    boolean addUnanonymizedHistory = Boolean.parseBoolean(props.getProperty("use-redis"));
     if (anonymizationAlgoName.equals(CASTLEGUARD_KEY)) {
       algorithm = new CastleGuard();
     } else if (anonymizationAlgoName.equals(DOCA_KEY)) {

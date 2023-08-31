@@ -9,7 +9,6 @@ bootstrap_servers = 'localhost:9092'
 group_id = 'my-consumer-group'
 topic = 'fjoni1'
 
-
 def get_min_duration(messages):
     min_duration = math.inf
     for msg in messages:

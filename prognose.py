@@ -1,6 +1,7 @@
 from pandas import DataFrame, Timestamp, Timedelta, date_range, concat, Series
 from numpy import zeros, array, ceil, concatenate
-
+import pandas as pd
+import random
 from numpy.random import seed
 
 from random import choices
@@ -55,29 +56,46 @@ def simulate_ev_forecast(df: DataFrame, cfg: TaskSimEvCharging) -> DataFrame:
 
     dec_charge = Normal(0.5, 0.1)
 
+    print("Min start: ", cfg.min_start + (cfg.max_start - cfg.min_start) * 0.5)
+
+    max_start = (cfg.max_start - cfg.min_start) * 0.15
+    if max_start == 0:
+        max_start = 1
+
+    print("Max start: ", max_start)
     dec_start = Normal(
 
         cfg.min_start + (cfg.max_start - cfg.min_start) * 0.5,
 
-        (cfg.max_start - cfg.min_start) * 0.15,
+        max_start,
 
     )
 
     noise = Normal(0, 0.3)
 
+    max_duration = (cfg.max_duration - cfg.min_duration) * 0.15
+    if max_duration == 0:
+        max_duration = 1
+
     dec_duration = Normal(
 
         cfg.min_duration + (cfg.max_duration - cfg.min_duration) * 0.5,
 
-        (cfg.max_duration - cfg.min_duration) * 0.15,
+        max_duration,
 
     )
+
+    max_demand = (cfg.max_demand - cfg.min_demand) * 0.15
+    if max_demand == 0:
+        max_demand = 1
+
+    print("Max demand: ", max_demand)
 
     dec_demand = Normal(
 
         cfg.min_demand + (cfg.max_demand - cfg.min_demand) * 0.5,
 
-        (cfg.max_demand - cfg.min_demand) * 0.15,
+        max_demand,
 
     )
 
@@ -118,7 +136,7 @@ def simulate_ev_forecast(df: DataFrame, cfg: TaskSimEvCharging) -> DataFrame:
     mduration_dec = noise.sample(nr_days)  # fore measurement
 
     # how how much energy is needed
-    trunc_dist = Trunc(dec_demand, lower=0)
+    trunc_dist = Trunc(dec_demand, lower=1)
     demand_dec = trunc_dist.sample(nr_days)  # for forecast
 
     mdemand_dec = noise.sample(nr_days)  # for measurement
