@@ -6,7 +6,7 @@ from typing import Iterable
 import uuid
 
 def generate_station_rows() -> Iterable:
-    for station in range(300):
+    for station in range(1000):
         ae_session_id = str(uuid.uuid4())
         building_type = random.choice(["Residental", 'Commercial', "Healthcare", "Educational"])
         urbanisation_level = random.uniform(0, 1)
@@ -15,8 +15,8 @@ def generate_station_rows() -> Iterable:
         start_time_loading = random.randint(1, 720)
         end_time_loading = random.randint(start_time_loading, 1440)
         loading_time = (end_time_loading-start_time_loading)
-        kwh = random.uniform(10, 100)
-        loading_potential = random.randint(1000, 10000)
+        kwh = random.uniform(10, 800)
+        loading_potential = random.randint(100, 10000)
         yield [ae_session_id, building_type,
                urbanisation_level, number_loading_stations,
                number_parking_spaces, start_time_loading, end_time_loading, loading_time,
