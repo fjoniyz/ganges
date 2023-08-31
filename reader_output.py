@@ -12,7 +12,7 @@ import numpy as np
 # Kafka broker configuration
 bootstrap_servers = 'localhost:9092'
 group_id = 'my-consumer-group'
-topic = 'output16'
+topic = 'output'
 redis_port = 6379
 
 
@@ -180,18 +180,6 @@ try:
         diff_arr.append(abs(prognose.simulate_ev_forecast(df=df_msg, cfg=task_instance)['demand'].iloc[0] - prognose.simulate_ev_forecast(df=df_vals, cfg=task_instance_from_value)['demand'].iloc[0]))
         print("Diff arr ", diff_arr)
         print("Info loss ", info_loss)
-    data_to_plot = []
-    f = open("placeholder.txt", "r")
-    for value in f:
-        data_to_plot.append(float(value[:-2]))
-    f.close()
-    print(len(data_to_plot))
-    df = pd.DataFrame({'20': data_to_plot, '200': info_loss})
-    print("Df: ", df)
-    chart = sns.violinplot(data=df, cut=0)
-    chart.set_xlabel("eps")
-    chart.set_ylabel("information loss")
-    plt.show()
 
 except KeyboardInterrupt:
     # User interrupted
