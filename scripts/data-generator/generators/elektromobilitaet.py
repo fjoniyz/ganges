@@ -19,7 +19,7 @@ def generate_station_rows() -> Iterable:
             yield [str(id), date, f"{station}" + "EMobility", EV_usage]
         
 def get_fields_names():
-    return ["id", "Timestamp","timeseries_id", "Seconds_EnergyConsumption"]
+    return ["id", "Timestamp", "timeseries_id", "evUsage"]
     
 if __name__ == "__main__":
     """ Writes into a electromobilitydata.csv file with random secondly 

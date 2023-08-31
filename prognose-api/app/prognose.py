@@ -1,12 +1,13 @@
 from pandas import DataFrame, Timestamp, Timedelta, date_range, concat, Series
 from numpy import zeros, array, ceil, concatenate
+from numpy.random import seed
+from random import choices
 import random
 import pandas as pd
-from numpy.random import seed
-
-from random import choices
 
 from chaospy import Normal, Trunc
+
+
 class TaskSimEvCharging:
     def __init__(self, min_duration, max_duration, min_demand, max_demand, min_start, max_start, power):
         self.min_start = min_start
@@ -17,6 +18,7 @@ class TaskSimEvCharging:
         self.max_demand = max_demand
         self.power = power
 
+
 class EvChargingPlan:
     def __init__(self, charge, start, mstart, duration, mduration, demand, mdemand, power):
         self.charge = charge
@@ -24,7 +26,7 @@ class EvChargingPlan:
         self.mstart = start + mstart * 30
         self.duration = duration
         self.mduration = duration + mduration * 60
-        self.demand = demand 
+        self.demand = demand
         self.mdemand = demand + mdemand * 5
         self.power = power
 
@@ -155,7 +157,8 @@ def simulate_ev_forecast(df: DataFrame, cfg: TaskSimEvCharging) -> DataFrame:
 
                 demand=demand_dec[i] if charge_dec[i] else 0,
 
-                mdemand=demand_dec[i] + mdemand_dec[i] * 5 if charge_dec[i] else 0,
+                mdemand=demand_dec[i] + mdemand_dec[i] *
+                5 if charge_dec[i] else 0,
 
                 power=power_dec[i] if charge_dec[i] else 0,
 
@@ -211,13 +214,13 @@ def simulate_ev_forecast(df: DataFrame, cfg: TaskSimEvCharging) -> DataFrame:
 
             d_demand[item.start - 1: item.start - 1 + item.duration] = (
 
-                    item.demand / item.duration
+                item.demand / item.duration
 
             )
 
             d_mdemand[item.mstart - 1: item.mstart - 1 + item.mduration] = (
 
-                    item.mdemand / item.mduration
+                item.mdemand / item.mduration
 
             )
 
@@ -231,7 +234,8 @@ def simulate_ev_forecast(df: DataFrame, cfg: TaskSimEvCharging) -> DataFrame:
 
             for k in range(item.mstart - 1, 2159):
                 seed(Timestamp.utcnow().dayofyear)
-                d_mpower[k] = item.power - abs(noise.sample(1)) * 0.1 * item.power
+                d_mpower[k] = item.power - \
+                    abs(noise.sample(1)) * 0.1 * item.power
 
         # add history
 
