@@ -40,6 +40,7 @@ public class Pipe {
   private static final String CASTLEGUARD_KEY = "castleguard";
   private static final String DOCA_KEY = "doca";
   private static AnonymizationAlgorithm algorithm;
+  private static Properties props = new Properties();
 
   private static LocalMetricsCollector metricsCollector;
 
@@ -114,6 +115,7 @@ public class Pipe {
                                      String[] anonFields,
                                      boolean addUnanonymizedHistory, boolean enableMetrics) throws IOException {
 
+
     // Get values of current message
     System.out.println("message: " + message);
     String id = message.get("ae_session_id").textValue();
@@ -126,10 +128,12 @@ public class Pipe {
     ObjectMapper mapper = new ObjectMapper();
     Map<String, String> messageMap = mapper.convertValue(message, new TypeReference<>() {
     });
+
     List<String> anonFieldsList = List.of(anonFields);
     HashMap<String, Double> valuesMap = getValuesListByKeys(message, anonFieldsList);
     HashMap<String, String> nonAnonymizedValuesMap = getNonAnonymizedValuesByKeys(message,
         anonFieldsList);
+    System.out.println(message);
 
     // Get all entries needed for anonymization
     List<AnonymizationItem> contextValues = new ArrayList<>();
@@ -143,7 +147,12 @@ public class Pipe {
       // fields are present in cache)
       contextValues = dataRepository.getValuesByKeys(anonFieldsList);
     } else {
-      contextValues.add(new AnonymizationItem(id, valuesMap, nonAnonymizedValuesMap));
+      String[] weights = props.getProperty("prioritization").split(",");
+      Map<String, Float> headerWeights = new HashMap<>();
+      for (int i = 0; i < weights.length; i++) {
+        headerWeights.put(anonFields[i], Float.parseFloat(weights[i]));
+      }
+      contextValues.add(new AnonymizationItem(id, valuesMap, nonAnonymizedValuesMap, headerWeights));
     }
     dataRepository.close();
 
@@ -228,7 +237,6 @@ public class Pipe {
   public static void main(final String[] args)
       throws IOException, ExecutionException, InterruptedException {
     String userDirectory = System.getProperty("user.dir");
-    Properties props = new Properties();
 
     metricsCollector = LocalMetricsCollector.getInstance();
     System.out.println("Created local metrics collector");
