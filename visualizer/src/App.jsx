@@ -45,7 +45,7 @@ const App = () => {
   };
 
   const setConsumer = async (proxyUrl) => {
-    // TODO: Check if consumer already exists
+    // Future work: Check if consumer already exists
     // If not, create a new consumer
     try {
       await axios.post(`http://${proxyUrl}/consumers/frontend`, {

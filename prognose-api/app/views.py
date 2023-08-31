@@ -11,7 +11,6 @@ def handle_prognose():
         topic = request.args.get('topic', type=str, default='test')
         response = {}
 
-        # TODO
         response['result'] = prog_reader.generate_prognose(topic)
 
         return response

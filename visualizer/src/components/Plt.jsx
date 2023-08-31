@@ -11,15 +11,19 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 const Plt = ({ restProxyUrl, topic, messages }) => {
   const [vizKey, setVizKey] = useState('');
   const [progCheck, setprogCheck] = useState(false);
-  const [progResult, setProgResult] = useState('');
-  const [messageIdKey, setMessageIdKey] = useState('id');
+  const progResultList = [];
+  const progResultListRef = useRef([]);
+  const [messageIdKey, setMessageIdKey] = useState('ae_session_id');
   const [comparedTopic, setCompareTopic] = useState('')
   const chartRef = useRef(null);
   const compareChartRef = useRef(null);
   const distributionChartRef = useRef(null);
+  const demandChartRef = useRef(null);
+  const powerChartRef = useRef(null);
   const messageListRef = useRef([]);
 
   let porgPollIntervalId = null;
+  const average = list => list.reduce((prev, curr) => prev + curr) / list.length;
 
   const fetchProgResults = async (progApiUrl, topic) => {
     try {
@@ -52,15 +56,51 @@ const Plt = ({ restProxyUrl, topic, messages }) => {
   const handleProgCheckChange = async () => {
     setprogCheck(!progCheck);
     if (!progCheck) {
+      if (demandChartRef.current) {
+        demandChartRef.current = null;
+      }
+      if (powerChartRef.current) {
+        powerChartRef.current = null;
+      }
+      // Start polling for progResults
       (async function pollProgResults() {
         const messageResponse = await fetchProgResults("localhost:8080", topic);
         const progResult = JSON.parse(messageResponse.result)
-        if (progResult) setProgResult(progResult);
+
+        if (progResult) {
+          progResultList.push(progResult)
+          progResultListRef.current = progResultList;
+        }
+
+        if (document.getElementById('demandCanvas')) {
+          if (demandChartRef.current) {
+            const values = progResultList.map((progResult) => progResult.demand[0]);
+            demandChartRef.current.data.labels = progResultList.map((progResult) => progResultList.indexOf(progResult));
+            demandChartRef.current.data.datasets[0].data = values;
+            demandChartRef.current.update();
+          } else {
+            createDemandGraph();
+          }
+        }
+
+        if (document.getElementById('powerCanvas')) {
+          if (powerChartRef.current) {
+            const values = progResultList.map((progResult) => progResult.power[0]);
+            powerChartRef.current.data.labels = progResultList.map((progResult) => progResultList.indexOf(progResult));
+            powerChartRef.current.data.datasets[0].data = values;
+            powerChartRef.current.update();
+          } else {
+            createPowerGraph();
+          }
+        }
+
         setTimeout(pollProgResults, 1);
       })();
 
     } else {
       //clearInterval(porgPollIntervalId);
+      demandChartRef.current = null;
+      powerChartRef.current = null;
     }
   };
 
@@ -113,6 +153,81 @@ const Plt = ({ restProxyUrl, topic, messages }) => {
       console.error('Error creating graphs:', error);
     }
   };
+
+  const createDemandGraph = () => {
+    try {
+      const canvas = document.getElementById('demandCanvas');
+      const ctx = canvas.getContext('2d');
+
+      demandChartRef.current = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [
+            {
+              label: 'Demand',
+              data: [],
+              backgroundColor: 'rgba(75, 192, 192, 0.2)',
+              borderColor: 'rgba(75, 192, 192, 1)',
+              borderWidth: 1,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: {
+              display: true,
+            },
+            y: {
+              display: true,
+              beginAtZero: true,
+            },
+          },
+        },
+      });
+    } catch (error) {
+      console.error('Error creating graphs:', error);
+    }
+  };
+
+  const createPowerGraph = () => {
+    try {
+      const canvas = document.getElementById('powerCanvas');
+      const ctx = canvas.getContext('2d');
+
+      powerChartRef.current = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [
+            {
+              label: 'Power',
+              data: [],
+              backgroundColor: 'rgba(75, 192, 192, 0.2)',
+              borderColor: 'rgba(75, 192, 192, 1)',
+              borderWidth: 1,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: {
+              display: true,
+            },
+            y: {
+              display: true,
+              beginAtZero: true,
+            },
+          },
+        },
+      });
+    } catch (error) {
+      console.error('Error creating graphs:', error);
+    }
+  };
+
 
   const createDistributionGraph = () => {
     try {
@@ -244,7 +359,6 @@ const Plt = ({ restProxyUrl, topic, messages }) => {
     messageListRef.current = messages;
   }, [messages]);
 
-
   // Calculate value distribution
   const calculateValueDistribution = (values) => {
 
@@ -289,16 +403,40 @@ const Plt = ({ restProxyUrl, topic, messages }) => {
         </AccordionDetails>
       </Accordion>
 
-      <label class="mt-3  flex items-center">
+      <label class="mt-3 flex items-center">
         <input type="checkbox" class="m-2" checked={progCheck} onChange={handleProgCheckChange} />
         <span>Run prognose-demo on topic</span>
       </label>
 
-      {progResult && progCheck && (
+      {progResultListRef.current.length > 0 && progCheck && (
         <>
-          <h3 class="text-lg">Prognose Result</h3>
-          <p>Predicted demand: {(progResult.demand[0].toFixed(2))}</p>
-          <p>Predicted power: {(progResult.power[0]).toFixed(2)}</p>
+          <h3 class="mt-3 mb-4 text-lg">EV-charing prognosis results</h3>
+          <p>Average predicted demand: {(average(progResultListRef.current.map((progResult) => progResult.demand[0])).toFixed(2))} </p>
+          <p>Average predicted power: {(average(progResultListRef.current.map((progResult) => progResult.power[0])).toFixed(2))} </p>
+          <Accordion>
+            <AccordionSummary
+              expandIcon={<ExpandMoreIcon />}
+              aria-controls="panel-demand-content"
+              id="panel-demand-header"
+            >
+              <Typography>Demand Line-Plot</Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <canvas id="demandCanvas" />
+            </AccordionDetails>
+          </Accordion>
+          <Accordion>
+            <AccordionSummary
+              expandIcon={<ExpandMoreIcon />}
+              aria-controls="panel-power-content"
+              id="panel-power-header"
+            >
+              <Typography>Power Line-Plot</Typography>
+            </AccordionSummary>
+            <AccordionDetails>
+              <canvas id="powerCanvas" />
+            </AccordionDetails>
+          </Accordion>
         </>
       )}
 
@@ -308,7 +446,7 @@ const Plt = ({ restProxyUrl, topic, messages }) => {
         <input
           type="text"
           name="vizKey"
-          defaultValue="evUsage"
+          defaultValue="kwh"
           class="p-2 rounded mr-2" />
         <br />
         <button type="submit" class="my-2">Submit</button>
