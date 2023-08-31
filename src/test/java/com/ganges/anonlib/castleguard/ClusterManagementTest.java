@@ -19,51 +19,57 @@ import org.junit.Test;
 
 public class ClusterManagementTest {
 
-    private final HashMap<String, Range<Float>> globalRanges = new HashMap<>();
+    private final HashMap<String, Range<Double>> globalRanges = new HashMap<>();
     private List<String> headers;
+    private HashMap<String, Double> headerWeights = new HashMap<>();
     private String sensitiveAttributeHeader;
 
 
-    private CGItem createItem(List<String> headers, Float pid, Float loadingTime, Float kwh, Float loadingPotential, Float sensitiveAttribute) {
-        HashMap<String, Float> data = new HashMap<>();
+    private CGItem createItem(List<String> headers, Double pid, Double loadingTime, Double kwh,
+                              Double loadingPotential, Double sensitiveAttribute) {
+        HashMap<String, Double> data = new HashMap<>();
         data.put("pid", pid);
         data.put("loading_time", loadingTime);
         data.put("loading_potential", loadingPotential);
         data.put("kwH", kwh);
         data.put("building_type", sensitiveAttribute);
 
-        return new CGItem(data, headers, this.sensitiveAttributeHeader);
+        return new CGItem("1", data, new HashMap<>(), headers,
+            "station");
     }
 
     @Before
     public void setUp() {
         this.headers = Arrays.asList("pid", "loading_time", "kwH", "loading_potential");
+        for (String header : this.headers) {
+            this.headerWeights.put(header, 1.0);
+        }
         this.sensitiveAttributeHeader = "building_type";
 
-        globalRanges.put("loading_time", Range.between(100F, 20000F));
-        globalRanges.put("kwH", Range.between(0F, 100F));
-        globalRanges.put("loading_potential", Range.between(0F, 20000F));
-        globalRanges.put("pid", Range.between(1F, 10F));
-        globalRanges.put("building_type", Range.between(1F, 4F));
+        globalRanges.put("loading_time", Range.between(100.0, 20000.0));
+        globalRanges.put("kwH", Range.between(0.0, 100.0));
+        globalRanges.put("loading_potential", Range.between(0.0, 20000.0));
+        globalRanges.put("pid", Range.between(1.0, 10.0));
+        globalRanges.put("building_type", Range.between(1.0, 4.0));
     }
 
     @Test
     public void merge3of3ClustersTest() {
         // Create dummy clusters
-        Cluster c1 = new Cluster(this.headers);
-        Cluster c2 = new Cluster(this.headers);
-        Cluster c3 = new Cluster(this.headers);
+        Cluster c1 = new Cluster(this.headers, this.headerWeights);
+        Cluster c2 = new Cluster(this.headers, this.headerWeights);
+        Cluster c3 = new Cluster(this.headers, this.headerWeights);
 
 
         // Set up dummy data for clusters
-        CGItem item1 = createItem(this.headers, 1F, 7000F, 44.5F, 7000F, 1F);
-        CGItem item2 = createItem(this.headers, 2F, 8000F, 55.5F, 9000F, 1F);
-        CGItem item3 = createItem(this.headers, 3F, 9000F, 66.5F, 9000F, 1F);
+        CGItem item1 = createItem(this.headers, 1.0, 7000.0, 44.5, 7000.0, 1.0);
+        CGItem item2 = createItem(this.headers, 2.0, 8000.0, 55.5, 9000.0, 1.0);
+        CGItem item3 = createItem(this.headers, 3.0, 9000.0, 66.5, 9000.0, 1.0);
 
-        CGItem item4 = createItem(this.headers, 4F, 10000F, 77.5F, 12000F, 2F);
-        CGItem item5 = createItem(this.headers, 5F, 6000F, 38.5F, 20000F, 2F);
-        CGItem item6 = createItem(this.headers, 6F, 7000F, 44.5F, 15000F, 3F);
-        CGItem item7 = createItem(this.headers, 2F, 2000F, 10.5F, 9000F, 1F);
+        CGItem item4 = createItem(this.headers, 4.0, 10000.0, 77.5, 12000.0, 2.0);
+        CGItem item5 = createItem(this.headers, 5.0, 6000.0, 38.5, 20000.0, 2.0);
+        CGItem item6 = createItem(this.headers, 6.0, 7000.0, 44.5, 15000.0, 3.0);
+        CGItem item7 = createItem(this.headers, 2.0, 2000.0, 10.5, 9000.0, 1.0);
 
 
         List<CGItem> c1_items = new ArrayList<>();
@@ -113,17 +119,19 @@ public class ClusterManagementTest {
     @Test
     public void splitLTest1() {
         // Create dummy clusters
-        Cluster c1 = new Cluster(this.headers);
+        HashMap<String, Double> weights = new HashMap<>();
+        headers.forEach(header -> weights.put(header, 1.0));
+        Cluster c1 = new Cluster(this.headers, weights);
 
         // Set up dummy data for clusters
-        CGItem item1 = createItem(this.headers, 1F, 7000F, 44.5F, 7000F, 1F);
-        CGItem item2 = createItem(this.headers, 2F, 8000F, 55.5F, 9000F, 1F);
-        CGItem item3 = createItem(this.headers, 3F, 9000F, 66.5F, 9000F, 1F);
+        CGItem item1 = createItem(this.headers, 1.0, 7000.0, 44.5, 7000.0, 1.0);
+        CGItem item2 = createItem(this.headers, 2.0, 8000.0, 55.5, 9000.0, 1.0);
+        CGItem item3 = createItem(this.headers, 3.0, 9000.0, 66.5, 9000.0, 1.0);
 
-        CGItem item4 = createItem(this.headers, 4F, 10000F, 77.5F, 12000F, 2F);
-        CGItem item5 = createItem(this.headers, 5F, 6000F, 38.5F, 20000F, 2F);
-        CGItem item6 = createItem(this.headers, 6F, 7000F, 44.5F, 15000F, 3F);
-        CGItem item7 = createItem(this.headers, 2F, 2000F, 10.5F, 9000F, 1F);
+        CGItem item4 = createItem(this.headers, 4.0, 10000.0, 77.5, 12000.0, 2.0);
+        CGItem item5 = createItem(this.headers, 5.0, 6000.0, 38.5, 20000.0, 2.0);
+        CGItem item6 = createItem(this.headers, 6.0, 7000.0, 44.5, 15000.0, 3.0);
+        CGItem item7 = createItem(this.headers, 2.0, 2000.0, 10.5, 9000.0, 1.0);
 
         List<CGItem> c1_items = new ArrayList<>();
 
@@ -162,19 +170,21 @@ public class ClusterManagementTest {
     @Test
     public void splitLTest2() {
         // Create dummy clusters
-        Cluster c1 = new Cluster(this.headers);
+        HashMap<String, Double> weights = new HashMap<>();
+        this.headers.forEach(header -> weights.put(header, 1.0));
+        Cluster c1 = new Cluster(this.headers, weights);
 
         // Set up dummy data for clusters
-        CGItem item1 = createItem(this.headers, 2F, 1000F, 44.5F, 7000F, 0F);
-        CGItem item2 = createItem(this.headers, 3F, 1000F, 44.5F, 7000F, 0F);
-        CGItem item3 = createItem(this.headers, 3F, 1000F, 44.5F, 7000F, 0F);
-        CGItem item4 = createItem(this.headers, 1F, 1000F, 44.5F, 7000F, 0F);
-        CGItem item5 = createItem(this.headers, 1F, 1000F, 44.5F, 7000F, 0F);
-        CGItem item6 = createItem(this.headers, 4F, 1000F, 44.5F, 7000F, 0F);
-        CGItem item7 = createItem(this.headers, 1F, 1000F, 44.5F, 7000F, 0F);
-        CGItem item8 = createItem(this.headers, 1F, 1000F, 44.5F, 7000F, 0F);
-        CGItem item9 = createItem(this.headers, 5F, 1000F, 44.5F, 7000F, 0F);
-        CGItem item10 = createItem(this.headers, 1F, 1000F, 44.5F, 7000F, 0F);
+        CGItem item1 = createItem(this.headers, 2.0, 1000.0, 44.5, 7000.0, 0.0);
+        CGItem item2 = createItem(this.headers, 3.0, 1000.0, 44.5, 7000.0, 0.0);
+        CGItem item3 = createItem(this.headers, 3.0, 1000.0, 44.5, 7000.0, 0.0);
+        CGItem item4 = createItem(this.headers, 1.0, 1000.0, 44.5, 7000.0, 0.0);
+        CGItem item5 = createItem(this.headers, 1.0, 1000.0, 44.5, 7000.0, 0.0);
+        CGItem item6 = createItem(this.headers, 4.0, 1000.0, 44.5, 7000.0, 0.0);
+        CGItem item7 = createItem(this.headers, 1.0, 1000.0, 44.5, 7000.0, 0.0);
+        CGItem item8 = createItem(this.headers, 1.0, 1000.0, 44.5, 7000.0, 0.0);
+        CGItem item9 = createItem(this.headers, 5.0, 1000.0, 44.5, 7000.0, 0.0);
+        CGItem item10 = createItem(this.headers, 1.0, 1000.0, 44.5, 7000.0, 0.0);
 
 
         List<CGItem> c1_items = new ArrayList<>();
@@ -217,29 +227,31 @@ public class ClusterManagementTest {
     @Test
     public void splitLTest3() {
         // Create dummy clusters
-        Cluster c1 = new Cluster(this.headers);
+        HashMap<String, Double> weights = new HashMap<>();
+        this.headers.forEach(header -> weights.put(header, 1.0));
+        Cluster c1 = new Cluster(this.headers, weights);
 
         // Set up dummy data for clusters
-        CGItem item1 = createItem(this.headers, 1F, 7000F, 44.5F, 7000F, 0F);
-        CGItem item2 = createItem(this.headers, 2F, 8000F, 55.5F, 9000F, 0F);
-        CGItem item3 = createItem(this.headers, 3F, 9000F, 66.5F, 9000F, 0F);
-        CGItem item4 = createItem(this.headers, 4F, 10000F, 77.5F, 12000F, 0F);
-        CGItem item5 = createItem(this.headers, 5F, 6000F, 38.5F, 20000F, 0F);
-        CGItem item6 = createItem(this.headers, 6F, 7000F, 44.5F, 15000F, 0F);
-        CGItem item7 = createItem(this.headers, 7F, 2000F, 10.5F, 9000F, 0F);
-        CGItem item8 = createItem(this.headers, 8F, 2300F, 30.5F, 9000F, 0F);
-        CGItem item9 = createItem(this.headers, 9F, 5000F, 20.5F, 9000F, 0F);
-        CGItem item10 = createItem(this.headers, 10F, 1000F, 17.5F, 9000F, 0F);
-        CGItem item11 = createItem(this.headers, 1F, 1000F, 17.5F, 9000F, 1F);
-        CGItem item12 = createItem(this.headers, 2F, 1000F, 17.5F, 9000F, 1F);
-        CGItem item13 = createItem(this.headers, 3F, 1000F, 17.5F, 9000F, 1F);
-        CGItem item14 = createItem(this.headers, 4F, 1000F, 17.5F, 9000F, 1F);
-        CGItem item15 = createItem(this.headers, 5F, 1000F, 17.5F, 9000F, 1F);
-        CGItem item16 = createItem(this.headers, 6F, 1000F, 17.5F, 9000F, 1F);
-        CGItem item17 = createItem(this.headers, 7F, 1000F, 17.5F, 9000F, 1F);
-        CGItem item18 = createItem(this.headers, 8F, 1000F, 17.5F, 9000F, 1F);
-        CGItem item19 = createItem(this.headers, 9F, 1000F, 17.5F, 9000F, 1F);
-        CGItem item20 = createItem(this.headers, 10F, 1000F, 17.5F, 9000F, 1F);
+        CGItem item1 = createItem(this.headers, 1.0, 7000.0, 44.5, 7000.0, 0.0);
+        CGItem item2 = createItem(this.headers, 2.0, 8000.0, 55.5, 9000.0, 0.0);
+        CGItem item3 = createItem(this.headers, 3.0, 9000.0, 66.5, 9000.0, 0.0);
+        CGItem item4 = createItem(this.headers, 4.0, 10000.0, 77.5, 12000.0, 0.0);
+        CGItem item5 = createItem(this.headers, 5.0, 6000.0, 38.5, 20000.0, 0.0);
+        CGItem item6 = createItem(this.headers, 6.0, 7000.0, 44.5, 15000.0, 0.0);
+        CGItem item7 = createItem(this.headers, 7.0, 2000.0, 10.5, 9000.0, 0.0);
+        CGItem item8 = createItem(this.headers, 8.0, 2300.0, 30.5, 9000.0, 0.0);
+        CGItem item9 = createItem(this.headers, 9.0, 5000.0, 20.5, 9000.0, 0.0);
+        CGItem item10 = createItem(this.headers, 10.0, 1000.0, 17.5, 9000.0, 0.0);
+        CGItem item11 = createItem(this.headers, 1.0, 1000.0, 17.5, 9000.0, 1.0);
+        CGItem item12 = createItem(this.headers, 2.0, 1000.0, 17.5, 9000.0, 1.0);
+        CGItem item13 = createItem(this.headers, 3.0, 1000.0, 17.5, 9000.0, 1.0);
+        CGItem item14 = createItem(this.headers, 4.0, 1000.0, 17.5, 9000.0, 1.0);
+        CGItem item15 = createItem(this.headers, 5.0, 1000.0, 17.5, 9000.0, 1.0);
+        CGItem item16 = createItem(this.headers, 6.0, 1000.0, 17.5, 9000.0, 1.0);
+        CGItem item17 = createItem(this.headers, 7.0, 1000.0, 17.5, 9000.0, 1.0);
+        CGItem item18 = createItem(this.headers, 8.0, 1000.0, 17.5, 9000.0, 1.0);
+        CGItem item19 = createItem(this.headers, 9.0, 1000.0, 17.5, 9000.0, 1.0);
+        CGItem item20 = createItem(this.headers, 10.0, 1000.0, 17.5, 9000.0, 1.0);
 
 
         List<CGItem> c1_items = new ArrayList<>();
@@ -290,41 +302,43 @@ public class ClusterManagementTest {
     }
 
 
-    private List<Float> splitLTestSetup(int k, int l) {
+    private List<Double> splitLTestSetup(int k, int l) {
         // Create dummy clusters
-        Cluster c1 = new Cluster(this.headers);
+        HashMap<String, Double> weights = new HashMap<>();
+        this.headers.forEach(header -> weights.put(header, 1.0));
+        Cluster c1 = new Cluster(this.headers, weights);
 
         // Set up dummy data for clusters
-        CGItem item1 = createItem(this.headers, 1F, 7000F, 44.5F, 7000F, 0F);
-        CGItem item2 = createItem(this.headers, 2F, 8000F, 55.5F, 9000F, 0F);
-        CGItem item3 = createItem(this.headers, 3F, 9000F, 66.5F, 9000F, 0F);
-        CGItem item4 = createItem(this.headers, 4F, 10000F, 77.5F, 12000F, 0F);
-        CGItem item5 = createItem(this.headers, 5F, 6000F, 38.5F, 20000F, 0F);
-        CGItem item6 = createItem(this.headers, 6F, 7000F, 44.5F, 15000F, 0F);
-        CGItem item7 = createItem(this.headers, 7F, 2000F, 10.5F, 9000F, 0F);
-        CGItem item8 = createItem(this.headers, 8F, 2300F, 30.5F, 9000F, 0F);
-        CGItem item9 = createItem(this.headers, 9F, 5000F, 20.5F, 9000F, 0F);
-        CGItem item10 = createItem(this.headers, 10F, 1000F, 7.5F, 9000F, 0F);
-        CGItem item11 = createItem(this.headers, 1F, 1000F, 10.5F, 9000F, 1F);
-        CGItem item12 = createItem(this.headers, 2F, 1000F, 13.5F, 9000F, 1F);
-        CGItem item13 = createItem(this.headers, 3F, 1000F, 16.5F, 9000F, 1F);
-        CGItem item14 = createItem(this.headers, 4F, 1000F, 11.5F, 9000F, 1F);
-        CGItem item15 = createItem(this.headers, 5F, 1000F, 19.5F, 9000F, 1F);
-        CGItem item16 = createItem(this.headers, 6F, 1342F, 9.5F, 9000F, 1F);
-        CGItem item17 = createItem(this.headers, 7F, 1230F, 16.5F, 9000F, 1F);
-        CGItem item18 = createItem(this.headers, 6F, 1120F, 15.5F, 9000F, 1F);
-        CGItem item19 = createItem(this.headers, 7F, 1020F, 17.5F, 9000F, 1F);
-        CGItem item20 = createItem(this.headers, 5F, 1030F, 17.5F, 9000F, 1F);
-        CGItem item21 = createItem(this.headers, 2F, 1030F, 17.5F, 9000F, 1F);
-        CGItem item22 = createItem(this.headers, 15F, 1300F, 17.5F, 9000F, 1F);
-        CGItem item23 = createItem(this.headers, 14F, 1500F, 17.5F, 9000F, 1F);
-        CGItem item24 = createItem(this.headers, 13F, 1200F, 37.5F, 9000F, 1F);
-        CGItem item25 = createItem(this.headers, 13F, 1400F, 57.5F, 9000F, 1F);
-        CGItem item26 = createItem(this.headers, 12F, 7700F, 44.5F, 15000F, 0F);
-        CGItem item27 = createItem(this.headers, 12F, 2800F, 10.5F, 9000F, 0F);
-        CGItem item28 = createItem(this.headers, 12F, 2600F, 30.5F, 9000F, 3F);
-        CGItem item29 = createItem(this.headers, 12F, 5500F, 20.5F, 9000F, 3F);
-        CGItem item30 = createItem(this.headers, 11F, 1200F, 17.5F, 9000F, 3F);
+        CGItem item1 = createItem(this.headers, 1.0, 7000.0, 44.5, 7000.0, 0.0);
+        CGItem item2 = createItem(this.headers, 2.0, 8000.0, 55.5, 9000.0, 0.0);
+        CGItem item3 = createItem(this.headers, 3.0, 9000.0, 66.5, 9000.0, 0.0);
+        CGItem item4 = createItem(this.headers, 4.0, 10000.0, 77.5, 12000.0, 0.0);
+        CGItem item5 = createItem(this.headers, 5.0, 6000.0, 38.5, 20000.0, 0.0);
+        CGItem item6 = createItem(this.headers, 6.0, 7000.0, 44.5, 15000.0, 0.0);
+        CGItem item7 = createItem(this.headers, 7.0, 2000.0, 10.5, 9000.0, 0.0);
+        CGItem item8 = createItem(this.headers, 8.0, 2300.0, 30.5, 9000.0, 0.0);
+        CGItem item9 = createItem(this.headers, 9.0, 5000.0, 20.5, 9000.0, 0.0);
+        CGItem item10 = createItem(this.headers, 10.0, 1000.0, 7.5, 9000.0, 0.0);
+        CGItem item11 = createItem(this.headers, 1.0, 1000.0, 10.5, 9000.0, 1.0);
+        CGItem item12 = createItem(this.headers, 2.0, 1000.0, 13.5, 9000.0, 1.0);
+        CGItem item13 = createItem(this.headers, 3.0, 1000.0, 16.5, 9000.0, 1.0);
+        CGItem item14 = createItem(this.headers, 4.0, 1000.0, 11.5, 9000.0, 1.0);
+        CGItem item15 = createItem(this.headers, 5.0, 1000.0, 19.5, 9000.0, 1.0);
+        CGItem item16 = createItem(this.headers, 6.0, 1342.0, 9.5, 9000.0, 1.0);
+        CGItem item17 = createItem(this.headers, 7.0, 1230.0, 16.5, 9000.0, 1.0);
+        CGItem item18 = createItem(this.headers, 6.0, 1120.0, 15.5, 9000.0, 1.0);
+        CGItem item19 = createItem(this.headers, 7.0, 1020.0, 17.5, 9000.0, 1.0);
+        CGItem item20 = createItem(this.headers, 5.0, 1030.0, 17.5, 9000.0, 1.0);
+        CGItem item21 = createItem(this.headers, 2.0, 1030.0, 17.5, 9000.0, 1.0);
+        CGItem item22 = createItem(this.headers, 15.0, 1300.0, 17.5, 9000.0, 1.0);
+        CGItem item23 = createItem(this.headers, 14.0, 1500.0, 17.5, 9000.0, 1.0);
+        CGItem item24 = createItem(this.headers, 13.0, 1200.0, 37.5, 9000.0, 1.0);
+        CGItem item25 = createItem(this.headers, 13.0, 1400.0, 57.5, 9000.0, 1.0);
+        CGItem item26 = createItem(this.headers, 12.0, 7700.0, 44.5, 15000.0, 0.0);
+        CGItem item27 = createItem(this.headers, 12.0, 2800.0, 10.5, 9000.0, 0.0);
+        CGItem item28 = createItem(this.headers, 12.0, 2600.0, 30.5, 9000.0, 3.0);
+        CGItem item29 = createItem(this.headers, 12.0, 5500.0, 20.5, 9000.0, 3.0);
+        CGItem item30 = createItem(this.headers, 11.0, 1200.0, 17.5, 9000.0, 3.0);
 
         List<CGItem> c1_items = new ArrayList<>();
 
@@ -364,7 +378,7 @@ public class ClusterManagementTest {
         // Add items to clusters
         c1.addContents(c1_items);
 
-        float currentClusterInfoLoss = c1.informationLoss(globalRanges);
+        Double currentClusterInfoLoss = c1.informationLoss(globalRanges);
 
         ClusterManagement cm = new ClusterManagement(k, l, 2, this.headers, sensitiveAttributeHeader);
         List<Cluster> splitted = cm.splitL(c1, headers, globalRanges);
@@ -373,8 +387,8 @@ public class ClusterManagementTest {
         int b = 0;
 
 
-        List<Float> improvement = new ArrayList<>();
-        List<Float> infoLosses = new ArrayList<>();
+        List<Double> improvement = new ArrayList<>();
+        List<Double> infoLosses = new ArrayList<>();
 
         for (Cluster splitC : splitted) {
             if (splitC.getKSize() < k) {
@@ -390,14 +404,15 @@ public class ClusterManagementTest {
 
         }
 
-        float avgImprovement = 0F;
-        float avgNewInfoLoss = splitted.get(0).informationLoss(this.globalRanges);
+        Double avgImprovement = 0.0;
+        Double avgNewInfoLoss = splitted.get(0).informationLoss(this.globalRanges);
         if (improvement.size() != 0) {
-            avgNewInfoLoss = infoLosses.stream().reduce(0F, Float::sum) / infoLosses.size();
-            avgImprovement = improvement.stream().reduce(0F, Float::sum) / improvement.size();
+            avgNewInfoLoss = infoLosses.stream().reduce(0.0, Double::sum) / infoLosses.size();
+            avgImprovement = improvement.stream().reduce(0.0, Double::sum) / improvement.size();
         }
 
-        return Arrays.asList((float) splitted.size(), (float) a, (float) b, avgImprovement, avgNewInfoLoss);
+        return Arrays.asList((double) splitted.size(), (double) a, (double) b, avgImprovement,
+            avgNewInfoLoss);
     }
 
 
@@ -417,14 +432,14 @@ public class ClusterManagementTest {
             for (int k : kSizes) {
                 System.out.println("START RUN WITH K: " + k + ", L: " + l);
 
-                float avgImprovement = 0F;
-                float avgNewInfoLoss = 0F;
+                float avgImprovement = 0;
+                float avgNewInfoLoss = 0;
                 int optimalSplitCount = 0;
                 int correctKSizeCount = 0;
                 int correctDiversityCount = 0;
 
                 for (int i = 0; i < times; i++) {
-                    List<Float> res = splitLTestSetup(k, l);
+                    List<Double> res = splitLTestSetup(k, l);
                     if (res.get(0) >= 2) {
                         optimalSplitCount++;
                     }
@@ -434,7 +449,7 @@ public class ClusterManagementTest {
                     if (res.get(2) == 0) {
                         correctDiversityCount++;
                     }
-                    if (res.get(3) != 0F) {
+                    if (res.get(3) != 0) {
                         avgImprovement += res.get(3);
                     }
                     avgNewInfoLoss += res.get(4);
